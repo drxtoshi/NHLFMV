@@ -1487,9 +1487,6 @@
       const polyHome = polymarket?.homeProb || null;
       const polyAway = polymarket?.awayProb || null;
       
-      // Detect arbitrage opportunities across all books
-      const arb = detectArbitrage(g.homeAbbrev, g.awayAbbrev, kalshiHome, kalshiAway, polyHome, polyAway);
-
       return { 
         pregameHome, 
         pregameAway, 
@@ -1510,7 +1507,6 @@
         bestLineOdds,
         polyHome,
         polyAway,
-        arb,
         isLocked: g.state !== 'FUT'
       };
     }
@@ -1580,9 +1576,9 @@
         games = allGames;
         isLive = true;
         
-        // Sort by start time (FUT games first by time, then LIVE, then FINAL)
+        // Sort by state: LIVE first, then FUT, then FINAL
         games.sort((a, b) => {
-          const stateOrder = { 'FUT': 0, 'LIVE': 1, 'FINAL': 2 };
+          const stateOrder = { 'LIVE': 0, 'FUT': 1, 'FINAL': 2 };
           if (stateOrder[a.state] !== stateOrder[b.state]) {
             return stateOrder[a.state] - stateOrder[b.state];
           }
@@ -2323,10 +2319,8 @@
                     ${isLiveGame ? `<span class="live-badge px-2.5 py-1 text-white text-xs rounded-full pulse font-semibold">● LIVE</span><span class="text-xs text-gray-400 font-medium">${periodText} • ${g.clock}</span>` : ''}
                     ${isFinal ? `<span class="px-2.5 py-1 bg-gray-700/80 text-gray-300 text-xs rounded-full font-medium">FINAL</span>` : ''}
                     ${g.state === 'FUT' ? `<span class="text-xs text-gray-400 font-medium">🕐 ${g.startTime || 'Scheduled'}</span>` : ''}
-                    ${fmv.arb ? `<span class="px-2.5 py-1 bg-green-600/90 text-white text-xs rounded-full font-bold animate-pulse">💰 ARB +${fmv.arb.percent}%</span>` : ''}
                   </div>
                   <div class="flex items-center gap-2">
-                    ${fmv.arb ? `<span class="text-[10px] text-green-400 font-mono">${fmv.arb.homeBook} / ${fmv.arb.awayBook}</span>` : ''}
                     ${(isLiveGame || isFinal || history.length > 1) ? `<button onclick="toggleExpand('${g.id}')" class="btn-pill w-8 h-8 rounded-full flex items-center justify-center text-gray-400">${expanded ? '▲' : '▼'}</button>` : ''}
                   </div>
                 </div>
@@ -2339,7 +2333,6 @@
                     <div class="text-xs text-gray-500">
                       <div class="truncate">
                         ${fmv.bestLineOdds?.away ? `<span class="text-amber-400">Best:</span> <span class="mono text-amber-400">${fmv.bestLineOdds.away.odds > 0 ? '+' : ''}${fmv.bestLineOdds.away.odds}</span> <span class="text-gray-600">(${fmv.bestLineOdds.away.abbrev})</span>` : `Pre: <span class="mono">${fmtOdds(fmv.pregameAway)}</span>`}${fmv.isLocked ? ' 🔒' : ''}
-                        ${fmv.arb ? `<span class="ml-2 text-green-400 font-semibold">ARB: ${fmv.arb.awayBook} ${fmv.arb.awayOdds > 0 ? '+' : ''}${fmv.arb.awayOdds}</span>` : ''}
                       </div>
                       ${fmv.devigAway || fmv.polyAway || fmv.kalshiAway ? `<div>${fmv.devigAway ? `<span class="text-purple-400">DV: <span class="mono">${fmtOdds(fmv.devigAway)}</span></span>` : ''}${fmv.polyAway ? `<span class="${fmv.devigAway ? 'ml-2' : ''} text-pink-400">PM: <span class="mono">${fmtOdds(fmv.polyAway)}</span></span>` : ''}${fmv.kalshiAway ? `<span class="ml-2 text-blue-400">K: <span class="mono">${fmtOdds(fmv.kalshiAway)}</span></span>` : ''}</div>` : ''}
                     </div>
@@ -2362,7 +2355,6 @@
                     <div class="text-xs text-gray-500">
                       <div class="truncate">
                         ${fmv.bestLineOdds?.home ? `<span class="text-amber-400">Best:</span> <span class="mono text-amber-400">${fmv.bestLineOdds.home.odds > 0 ? '+' : ''}${fmv.bestLineOdds.home.odds}</span> <span class="text-gray-600">(${fmv.bestLineOdds.home.abbrev})</span>` : `Pre: <span class="mono">${fmtOdds(fmv.pregameHome)}</span>`}${fmv.isLocked ? ' 🔒' : ''}
-                        ${fmv.arb ? `<span class="ml-2 text-green-400 font-semibold">ARB: ${fmv.arb.homeBook} ${fmv.arb.homeOdds > 0 ? '+' : ''}${fmv.arb.homeOdds}</span>` : ''}
                       </div>
                       ${fmv.devigHome || fmv.polyHome || fmv.kalshiHome ? `<div>${fmv.devigHome ? `<span class="text-purple-400">DV: <span class="mono">${fmtOdds(fmv.devigHome)}</span></span>` : ''}${fmv.polyHome ? `<span class="${fmv.devigHome ? 'ml-2' : ''} text-pink-400">PM: <span class="mono">${fmtOdds(fmv.polyHome)}</span></span>` : ''}${fmv.kalshiHome ? `<span class="ml-2 text-blue-400">K: <span class="mono">${fmtOdds(fmv.kalshiHome)}</span></span>` : ''}</div>` : ''}
                     </div>
