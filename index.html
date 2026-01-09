@@ -3072,11 +3072,17 @@
                     </div>
                   </div>
                   <div class="text-2xl font-bold w-10 text-center text-gray-100 flex-shrink-0 mono">${g.state === 'FUT' ? '-' : g.awayScore}</div>
-                  <div class="stat-box text-right ml-2 w-20 h-16 flex flex-col justify-center flex-shrink-0">
-                    <div class="text-xs text-gray-500 mb-0.5 uppercase tracking-wide">${g.state === 'FUT' ? 'Kalshi' : 'FMV'}</div>
-                    <div class="text-base font-bold fmv-value">${g.state === 'FUT' ? (fmv.kalshiAway ? fmtOdds(fmv.kalshiAway) : '-') : fmtOdds(fmv.fmvAway)}</div>
-                    <div class="h-4 mono text-[10px] ${fmv.evAway && +fmv.evAway > 0 && g.state !== 'FUT' ? 'ev-value' : 'invisible'}">${fmv.evAway && +fmv.evAway > 0 && g.state !== 'FUT' ? `+${fmv.evAway}% EV` : '-'}</div>
+                  <div class="stat-box text-center ml-2 w-[72px] h-14 flex flex-col justify-center flex-shrink-0">
+                    <div class="text-[10px] text-gray-500 mb-0.5 uppercase tracking-wide">${g.state === 'FUT' ? 'Kalshi' : 'FMV'}</div>
+                    <div class="text-sm font-bold fmv-value">${g.state === 'FUT' ? (fmv.kalshiAway ? fmtOdds(fmv.kalshiAway) : '-') : fmtOdds(fmv.fmvAway)}</div>
+                    <div class="h-3 mono text-[9px] whitespace-nowrap ${fmv.evAway && +fmv.evAway > 0 && g.state !== 'FUT' ? 'ev-value' : 'invisible'}">${fmv.evAway && +fmv.evAway > 0 && g.state !== 'FUT' ? `+${fmv.evAway}%EV` : '-'}</div>
                   </div>
+                  ${isLiveGame ? `
+                  <div class="stat-box text-center ml-1.5 w-14 h-14 flex flex-col justify-center flex-shrink-0" style="background: rgba(16, 185, 129, 0.1);">
+                    <div class="text-[10px] text-gray-500 mb-0.5 uppercase tracking-wide">+Goal</div>
+                    <div class="text-sm font-bold text-emerald-400">${Math.round((1 - calcWinProb(fmv.pregameHome || 0.5, g.homeScore - (g.awayScore + 1), Math.max(1, calcSeconds(g.period, g.clock)))) * 100)}%</div>
+                  </div>
+                  ` : ''}
                 </div>
 
                 <div class="border-t border-white/10 my-3"></div>
@@ -3094,28 +3100,18 @@
                     </div>
                   </div>
                   <div class="text-2xl font-bold w-10 text-center text-gray-100 flex-shrink-0 mono">${g.state === 'FUT' ? '-' : g.homeScore}</div>
-                  <div class="stat-box text-right ml-2 w-20 h-16 flex flex-col justify-center flex-shrink-0">
-                    <div class="text-xs text-gray-500 mb-0.5 uppercase tracking-wide">${g.state === 'FUT' ? 'Kalshi' : 'FMV'}</div>
-                    <div class="text-base font-bold fmv-value">${g.state === 'FUT' ? (fmv.kalshiHome ? fmtOdds(fmv.kalshiHome) : '-') : fmtOdds(fmv.fmvHome)}</div>
-                    <div class="h-4 mono text-[10px] ${fmv.evHome && +fmv.evHome > 0 && g.state !== 'FUT' ? 'ev-value' : 'invisible'}">${fmv.evHome && +fmv.evHome > 0 && g.state !== 'FUT' ? `+${fmv.evHome}% EV` : '-'}</div>
+                  <div class="stat-box text-center ml-2 w-[72px] h-14 flex flex-col justify-center flex-shrink-0">
+                    <div class="text-[10px] text-gray-500 mb-0.5 uppercase tracking-wide">${g.state === 'FUT' ? 'Kalshi' : 'FMV'}</div>
+                    <div class="text-sm font-bold fmv-value">${g.state === 'FUT' ? (fmv.kalshiHome ? fmtOdds(fmv.kalshiHome) : '-') : fmtOdds(fmv.fmvHome)}</div>
+                    <div class="h-3 mono text-[9px] whitespace-nowrap ${fmv.evHome && +fmv.evHome > 0 && g.state !== 'FUT' ? 'ev-value' : 'invisible'}">${fmv.evHome && +fmv.evHome > 0 && g.state !== 'FUT' ? `+${fmv.evHome}%EV` : '-'}</div>
                   </div>
-                </div>
-
-                ${isLiveGame ? `
-                <div class="border-t border-white/10 mt-3 pt-3">
-                  <div class="text-xs text-gray-500 mb-2 font-medium">If Next Goal...</div>
-                  <div class="grid grid-cols-2 gap-2">
-                    <div class="stat-box p-2">
-                      <div class="text-xs text-gray-500">${home.name}:</div>
-                      <div class="text-sm font-bold fmv-value">${fmtOdds(calcWinProb(fmv.pregameHome || 0.5, (g.homeScore + 1) - g.awayScore, Math.max(1, calcSeconds(g.period, g.clock))))}</div>
-                    </div>
-                    <div class="stat-box p-2">
-                      <div class="text-xs text-gray-500">${away.name}:</div>
-                      <div class="text-sm font-bold fmv-value">${fmtOdds(1 - calcWinProb(fmv.pregameHome || 0.5, g.homeScore - (g.awayScore + 1), Math.max(1, calcSeconds(g.period, g.clock))))}</div>
-                    </div>
+                  ${isLiveGame ? `
+                  <div class="stat-box text-center ml-1.5 w-14 h-14 flex flex-col justify-center flex-shrink-0" style="background: rgba(16, 185, 129, 0.1);">
+                    <div class="text-[10px] text-gray-500 mb-0.5 uppercase tracking-wide">+Goal</div>
+                    <div class="text-sm font-bold text-emerald-400">${Math.round(calcWinProb(fmv.pregameHome || 0.5, (g.homeScore + 1) - g.awayScore, Math.max(1, calcSeconds(g.period, g.clock))) * 100)}%</div>
                   </div>
+                  ` : ''}
                 </div>
-                ` : ''}
               </div>
             </div>
           `;
