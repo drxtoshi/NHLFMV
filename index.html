@@ -270,8 +270,8 @@
     let expandedGames = {};
     let lastUpdate = null;
     let isLive = false;
-    let oddsFormat = 'american';
-    let refreshRate = 3;
+    let oddsFormat = 'probability';
+    let refreshRate = 2;
     let showSettings = false;
     let showAlerts = false;
     let showDevig = false;
@@ -407,7 +407,8 @@
 
     // Fetch Polymarket NHL game odds
     async function fetchPolymarketOdds() {
-      const polyUrl = 'https://gamma-api.polymarket.com/events?series_id=10346&active=true&closed=false&limit=100';
+      const timestamp = Date.now();
+      const polyUrl = `https://gamma-api.polymarket.com/events?series_id=10346&active=true&closed=false&limit=100&_t=${timestamp}`;
       const proxyUrls = [
         polyUrl,  // Try direct first
         'https://corsproxy.io/?' + encodeURIComponent(polyUrl),
@@ -420,7 +421,10 @@
       for (const url of proxyUrls) {
         try {
           console.log('Trying Polymarket:', url.substring(0, 50));
-          const res = await fetch(url);
+          const res = await fetch(url, {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+          });
           if (!res.ok) {
             console.log('Polymarket not ok:', res.status);
             continue;
@@ -1196,7 +1200,8 @@
 
     // Fetch Kalshi NHL markets
     async function fetchKalshiMarkets() {
-      const kalshiUrl = 'https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXNHLGAME&status=open&limit=200';
+      const timestamp = Date.now();
+      const kalshiUrl = `https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXNHLGAME&status=open&limit=200&_t=${timestamp}`;
       const proxyUrls = [
         'https://corsproxy.io/?' + encodeURIComponent(kalshiUrl),
         'https://api.allorigins.win/raw?url=' + encodeURIComponent(kalshiUrl)
@@ -1204,7 +1209,10 @@
 
       for (const url of proxyUrls) {
         try {
-          const res = await fetch(url);
+          const res = await fetch(url, {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+          });
           if (!res.ok) continue;
           const data = await res.json();
           const markets = data.markets || [];
@@ -1585,6 +1593,81 @@
       });
       return games;
     }
+    
+    // ESPN team abbreviation mapping to NHL standard
+    const ESPN_ABBREV_MAP = {
+      'ARI': 'UTA', // Arizona moved to Utah
+      'PHX': 'UTA',
+      'TB': 'TBL',
+      'NJ': 'NJD',
+      'SJ': 'SJS',
+      'LA': 'LAK',
+      'NY': 'NYR', // Rangers
+      'WSH': 'WSH',
+      'VGS': 'VGK',
+      'UTAH': 'UTA'
+    };
+    
+    function espnAbbrevToNHL(abbrev) {
+      return ESPN_ABBREV_MAP[abbrev] || abbrev;
+    }
+    
+    // Parse ESPN API data - more real-time for live games
+    function parseESPNData(data) {
+      const events = data?.events || [];
+      return events.map(event => {
+        const competition = event.competitions?.[0];
+        if (!competition) return null;
+        
+        const homeTeam = competition.competitors?.find(c => c.homeAway === 'home');
+        const awayTeam = competition.competitors?.find(c => c.homeAway === 'away');
+        
+        if (!homeTeam || !awayTeam) return null;
+        
+        // Get game status
+        const status = competition.status;
+        const statusType = status?.type?.name || '';
+        const statusState = status?.type?.state || '';
+        
+        let state = 'FUT';
+        if (statusState === 'in' || statusType === 'STATUS_IN_PROGRESS') {
+          state = 'LIVE';
+        } else if (statusState === 'post' || statusType === 'STATUS_FINAL') {
+          state = 'FINAL';
+        } else if (statusState === 'pre' || statusType === 'STATUS_SCHEDULED') {
+          state = 'FUT';
+        }
+        
+        // Parse clock - ESPN format is "12:34 - 2nd" or just the time
+        let period = status?.period || 0;
+        let clock = status?.displayClock || '20:00';
+        
+        // Handle intermission
+        if (statusType === 'STATUS_END_PERIOD') {
+          clock = '0:00';
+        }
+        
+        const startTimeRaw = event.date ? new Date(event.date).getTime() : 0;
+        
+        // ESPN uses different game IDs, we'll use the NHL format for consistency
+        // Try to extract from the event or create a composite
+        const gameId = event.id || `espn-${homeTeam.team?.abbreviation}-${awayTeam.team?.abbreviation}`;
+        
+        return {
+          id: gameId,
+          homeAbbrev: espnAbbrevToNHL(homeTeam.team?.abbreviation),
+          awayAbbrev: espnAbbrevToNHL(awayTeam.team?.abbreviation),
+          homeScore: parseInt(homeTeam.score) || 0,
+          awayScore: parseInt(awayTeam.score) || 0,
+          period,
+          clock,
+          state,
+          startTime: event.date ? new Date(event.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '',
+          startTimeRaw,
+          source: 'espn'
+        };
+      }).filter(g => g !== null);
+    }
 
     // Calculate FMV for a game
     function calcGameFMV(g) {
@@ -1749,6 +1832,8 @@
       const today = new Date().toISOString().split('T')[0];
       const timestamp = Date.now();
       
+      // ESPN API is more real-time for live games
+      const espnUrl = `https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard?_t=${timestamp}`;
       const scoreUrl = `https://api-web.nhle.com/v1/score/now?_t=${timestamp}`;
       const scheduleUrl = `https://api-web.nhle.com/v1/schedule/${today}?_t=${timestamp}`;
       
@@ -1761,8 +1846,9 @@
       let allGames = [];
       let seenGameIds = new Set();
       
-      // Fetch from /score/now first (has live game data)
-      for (const url of proxyUrls(scoreUrl)) {
+      // Try ESPN first (more real-time for live games)
+      let espnSuccess = false;
+      for (const url of proxyUrls(espnUrl)) {
         try {
           const res = await fetch(url, {
             cache: 'no-store',
@@ -1770,8 +1856,8 @@
           });
           if (!res.ok) continue;
           const data = await res.json();
-          const scoreGames = parseNHLData(data);
-          scoreGames.forEach(g => {
+          const espnGames = parseESPNData(data);
+          espnGames.forEach(g => {
             if (!seenGameIds.has(g.id)) {
               seenGameIds.add(g.id);
               // Apply manual override if exists and recent (within 30 min)
@@ -1784,11 +1870,45 @@
               allGames.push(g);
             }
           });
-          console.log('Score/now fetched:', scoreGames.length, 'games');
+          console.log('ESPN fetched:', espnGames.length, 'games');
+          espnSuccess = true;
           break; // Success
         } catch (e) {
-          console.log('Score fetch failed for:', url, e);
+          console.log('ESPN fetch failed for:', url, e);
           continue;
+        }
+      }
+      
+      // Fallback to NHL API if ESPN failed
+      if (!espnSuccess) {
+        for (const url of proxyUrls(scoreUrl)) {
+          try {
+            const res = await fetch(url, {
+              cache: 'no-store',
+              headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+            });
+            if (!res.ok) continue;
+            const data = await res.json();
+            const scoreGames = parseNHLData(data);
+            scoreGames.forEach(g => {
+              if (!seenGameIds.has(g.id)) {
+                seenGameIds.add(g.id);
+                // Apply manual override if exists and recent (within 30 min)
+                const override = manualGameOverrides[g.id];
+                if (override && Date.now() - override.timestamp < 30 * 60 * 1000) {
+                  g.period = override.period;
+                  g.clock = override.clock;
+                  g.manualOverride = true;
+                }
+                allGames.push(g);
+              }
+            });
+            console.log('Score/now fetched:', scoreGames.length, 'games');
+            break; // Success
+          } catch (e) {
+            console.log('Score fetch failed for:', url, e);
+            continue;
+          }
         }
       }
       
