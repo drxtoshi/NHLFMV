@@ -494,9 +494,9 @@
             }
           });
           
-          // Second pass: fetch live prices from CLOB API for all tokens
+          // Second pass: fetch live prices from CLOB API in background (non-blocking)
           if (tokenIdsToFetch.length > 0) {
-            await fetchClobLivePrices(tokenIdsToFetch, marketDataMap);
+            fetchClobLivePrices(tokenIdsToFetch, marketDataMap); // Don't await
           }
           
           console.log('Polymarket games loaded:', Object.keys(polymarketData).length);
@@ -1279,61 +1279,50 @@
             }
           });
           
-          // Fetch live orderbook prices for each ticker (more accurate than markets list)
-          for (const { ticker, gameKey, winner } of tickersToFetch) {
-            try {
-              const orderbookUrl = `https://api.elections.kalshi.com/trade-api/v2/markets/${ticker}/orderbook`;
-              const obProxyUrls = [
-                orderbookUrl,
-                'https://corsproxy.io/?' + encodeURIComponent(orderbookUrl)
-              ];
-              
-              for (const obUrl of obProxyUrls) {
-                try {
-                  const obRes = await fetch(obUrl, {
-                    cache: 'no-store',
-                    headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
-                  });
-                  if (!obRes.ok) continue;
-                  const obData = await obRes.json();
+          // Fetch live orderbook prices in background (non-blocking)
+          // This updates prices after initial render
+          (async () => {
+            for (const { ticker, gameKey, winner } of tickersToFetch.slice(0, 10)) { // Limit to 10 to avoid rate limits
+              try {
+                const orderbookUrl = `https://api.elections.kalshi.com/trade-api/v2/markets/${ticker}/orderbook`;
+                const obRes = await fetch(orderbookUrl, {
+                  cache: 'no-store',
+                  headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+                });
+                if (!obRes.ok) continue;
+                const obData = await obRes.json();
+                
+                const orderbook = obData.orderbook;
+                if (orderbook) {
+                  const yesBids = orderbook.yes || [];
+                  const noBids = orderbook.no || [];
                   
-                  const orderbook = obData.orderbook;
-                  if (orderbook) {
-                    // Calculate midpoint from best bids
-                    // YES bid is in orderbook.yes (last element is best), NO bid is in orderbook.no
-                    const yesBids = orderbook.yes || [];
-                    const noBids = orderbook.no || [];
-                    
-                    let midPrice = null;
-                    if (yesBids.length > 0 && noBids.length > 0) {
-                      const bestYesBid = yesBids[yesBids.length - 1][0]; // Last is highest
-                      const bestNoBid = noBids[noBids.length - 1][0];
-                      const impliedYesAsk = 100 - bestNoBid;
-                      midPrice = (bestYesBid + impliedYesAsk) / 2 / 100;
-                    } else if (yesBids.length > 0) {
-                      midPrice = yesBids[yesBids.length - 1][0] / 100;
-                    } else if (noBids.length > 0) {
-                      midPrice = (100 - noBids[noBids.length - 1][0]) / 100;
-                    }
-                    
-                    if (midPrice !== null && gameMarkets[gameKey]) {
-                      if (winner === gameMarkets[gameKey].team1) {
-                        gameMarkets[gameKey].team1Prob = midPrice;
-                      } else if (winner === gameMarkets[gameKey].team2) {
-                        gameMarkets[gameKey].team2Prob = midPrice;
-                      }
-                      console.log(`Kalshi orderbook ${ticker}: ${winner} = ${(midPrice*100).toFixed(1)}%`);
-                    }
+                  let midPrice = null;
+                  if (yesBids.length > 0 && noBids.length > 0) {
+                    const bestYesBid = yesBids[yesBids.length - 1][0];
+                    const bestNoBid = noBids[noBids.length - 1][0];
+                    const impliedYesAsk = 100 - bestNoBid;
+                    midPrice = (bestYesBid + impliedYesAsk) / 2 / 100;
+                  } else if (yesBids.length > 0) {
+                    midPrice = yesBids[yesBids.length - 1][0] / 100;
+                  } else if (noBids.length > 0) {
+                    midPrice = (100 - noBids[noBids.length - 1][0]) / 100;
                   }
-                  break; // Success
-                } catch (e) {
-                  continue;
+                  
+                  if (midPrice !== null && kalshiMarkets[gameKey]) {
+                    if (winner === kalshiMarkets[gameKey].team1Abbrev) {
+                      kalshiMarkets[gameKey].team1Prob = midPrice;
+                    } else if (winner === kalshiMarkets[gameKey].team2Abbrev) {
+                      kalshiMarkets[gameKey].team2Prob = midPrice;
+                    }
+                    console.log(`Kalshi orderbook ${ticker}: ${winner} = ${(midPrice*100).toFixed(1)}%`);
+                  }
                 }
+              } catch (e) {
+                // Silently fail - we already have fallback prices
               }
-            } catch (e) {
-              console.log(`Kalshi orderbook fetch failed for ${ticker}:`, e.message);
             }
-          }
+          })();
           
           // Only store games where we have both team probabilities
           Object.entries(gameMarkets).forEach(([key, v]) => {
