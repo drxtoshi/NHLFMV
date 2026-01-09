@@ -158,25 +158,24 @@
     // Historical win probabilities for team LEADING by X goals
     // Format: { goalDiff: { secondsRemaining: winProbability } }
     // Data derived from ~8000 NHL games
-    // Base win probability for a team leading - assumes average (50/50) pregame matchup
-    // Higher early game values since leading team has whole game to extend lead
+    // Base win probability for a team leading - calibrated to match live markets
     const WIN_PROB_LEADING = {
-      1: { 3600: 0.62, 3000: 0.65, 2400: 0.68, 1800: 0.72, 1200: 0.77, 600: 0.83, 300: 0.89, 0: 1.00 },
-      2: { 3600: 0.78, 3000: 0.81, 2400: 0.84, 1800: 0.88, 1200: 0.92, 600: 0.95, 300: 0.97, 0: 1.00 },
-      3: { 3600: 0.89, 3000: 0.91, 2400: 0.93, 1800: 0.95, 1200: 0.97, 600: 0.98, 300: 0.99, 0: 1.00 },
-      4: { 3600: 0.94, 3000: 0.95, 2400: 0.96, 1800: 0.97, 1200: 0.98, 600: 0.99, 300: 0.995, 0: 1.00 },
-      5: { 3600: 0.97, 3000: 0.97, 2400: 0.98, 1800: 0.98, 1200: 0.99, 600: 0.995, 300: 0.998, 0: 1.00 }
+      1: { 3600: 0.58, 3000: 0.61, 2400: 0.64, 1800: 0.69, 1200: 0.75, 600: 0.82, 300: 0.88, 0: 1.00 },
+      2: { 3600: 0.75, 3000: 0.78, 2400: 0.82, 1800: 0.86, 1200: 0.91, 600: 0.95, 300: 0.97, 0: 1.00 },
+      3: { 3600: 0.87, 3000: 0.89, 2400: 0.92, 1800: 0.94, 1200: 0.96, 600: 0.98, 300: 0.99, 0: 1.00 },
+      4: { 3600: 0.93, 3000: 0.94, 2400: 0.96, 1800: 0.97, 1200: 0.98, 600: 0.99, 300: 0.995, 0: 1.00 },
+      5: { 3600: 0.96, 3000: 0.97, 2400: 0.98, 1800: 0.98, 1200: 0.99, 600: 0.995, 300: 0.998, 0: 1.00 }
     };
     
     // Weight of pregame odds at different times (decreases as game progresses)
     // Higher early - pregame favorite leading should get significant boost
     const ODDS_WEIGHT = {
-      0: { 3600: 1.00, 3000: 0.90, 2400: 0.75, 1800: 0.55, 1200: 0.30, 600: 0.12, 300: 0.04, 0: 0.00 },
-      1: { 3600: 0.80, 3000: 0.70, 2400: 0.55, 1800: 0.38, 1200: 0.20, 600: 0.08, 300: 0.02, 0: 0.00 },
-      2: { 3600: 0.55, 3000: 0.45, 2400: 0.35, 1800: 0.22, 1200: 0.12, 600: 0.04, 300: 0.01, 0: 0.00 },
-      3: { 3600: 0.35, 3000: 0.28, 2400: 0.20, 1800: 0.12, 1200: 0.06, 600: 0.02, 300: 0.005, 0: 0.00 },
-      4: { 3600: 0.22, 3000: 0.17, 2400: 0.12, 1800: 0.07, 1200: 0.03, 600: 0.01, 300: 0.003, 0: 0.00 },
-      5: { 3600: 0.15, 3000: 0.11, 2400: 0.07, 1800: 0.04, 1200: 0.02, 600: 0.006, 300: 0.002, 0: 0.00 }
+      0: { 3600: 1.00, 3000: 0.88, 2400: 0.72, 1800: 0.52, 1200: 0.28, 600: 0.10, 300: 0.03, 0: 0.00 },
+      1: { 3600: 0.75, 3000: 0.62, 2400: 0.48, 1800: 0.32, 1200: 0.16, 600: 0.06, 300: 0.02, 0: 0.00 },
+      2: { 3600: 0.50, 3000: 0.40, 2400: 0.30, 1800: 0.18, 1200: 0.08, 600: 0.03, 300: 0.01, 0: 0.00 },
+      3: { 3600: 0.32, 3000: 0.25, 2400: 0.18, 1800: 0.10, 600: 0.02, 300: 0.005, 0: 0.00 },
+      4: { 3600: 0.20, 3000: 0.15, 2400: 0.10, 1800: 0.06, 1200: 0.03, 600: 0.01, 300: 0.003, 0: 0.00 },
+      5: { 3600: 0.12, 3000: 0.09, 2400: 0.06, 1800: 0.03, 1200: 0.015, 600: 0.005, 300: 0.002, 0: 0.00 }
     };
     
     // Home ice advantage: ~55% win rate for home team in tied games
@@ -2958,28 +2957,57 @@
         const savedLastFetch = localStorage.getItem('oddsApiLastFetch');
         if (savedLastFetch) oddsApiLastFetch = new Date(savedLastFetch);
         
-        await fetchKalshiMarkets(); // Load Kalshi prices first
-        await fetchPolymarketOdds(); // Load Polymarket prices
+        // Try to load prices but don't block on failure
+        try {
+          await fetchKalshiMarkets();
+        } catch (e) {
+          console.error('Kalshi fetch error:', e);
+        }
+        
+        try {
+          await fetchPolymarketOdds();
+        } catch (e) {
+          console.error('Polymarket fetch error:', e);
+        }
         
         // Try scheduled odds fetch if API key exists
         if (oddsApiKey) {
-          fetchSportsbookOdds(false); // Will only fetch if at scheduled time
+          try {
+            fetchSportsbookOdds(false);
+          } catch (e) {
+            console.error('Sportsbook fetch error:', e);
+          }
         }
         
-        await fetchGames();
+        // Fetch games - this is critical
+        try {
+          await fetchGames();
+        } catch (e) {
+          console.error('Games fetch error:', e);
+        }
+        
+        // Always render even if in demo mode
+        render();
+        
         refreshInterval = setInterval(async () => {
           try {
             await fetchKalshiMarkets();
+          } catch (e) { console.error('Kalshi refresh error:', e); }
+          try {
             await fetchPolymarketOdds();
+          } catch (e) { console.error('Polymarket refresh error:', e); }
+          try {
             await fetchGames();
-          } catch (e) {
-            console.error('Refresh error:', e);
-          }
+          } catch (e) { console.error('Games refresh error:', e); }
         }, refreshRate * 1000);
         
         // Check for scheduled odds fetch every minute
         oddsCheckInterval = setInterval(() => {
-          if (oddsApiKey) fetchSportsbookOdds(false);
+          if (oddsApiKey) {
+            try {
+              fetchSportsbookOdds(false);
+            } catch (e) { console.error('Scheduled sportsbook error:', e); }
+          }
         }, 60000);
       } catch (e) {
         console.error('Init error:', e);
