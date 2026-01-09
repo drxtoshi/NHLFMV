@@ -436,16 +436,13 @@
           // Clear old data
           polymarketData = {};
           
+          // First pass: collect all token IDs and basic data
+          const tokenIdsToFetch = [];
+          const marketDataMap = {};
+          
           events.forEach(event => {
-            // Log raw event for debugging
-            console.log('Polymarket event:', event.title, event.markets?.length, 'markets');
-            
-            // Parse the event title to extract teams
-            // Title format could be: "NHL: Team A vs Team B" or "Team A vs Team B" or "Team A - Team B"
             const title = event.title || '';
             let match = title.match(/(?:NHL:\s*)?(.+?)\s+vs\.?\s+(.+)/i);
-            
-            // If vs format didn't match, try dash format
             if (!match) {
               match = title.match(/(?:NHL:\s*)?(.+?)\s*[-–]\s*(.+)/i);
             }
@@ -456,76 +453,51 @@
               const team1Abbrev = normalizeTeamName(team1Name);
               const team2Abbrev = normalizeTeamName(team2Name);
               
-              console.log(`Polymarket: "${team1Name}" -> "${team1Abbrev}", "${team2Name}" -> "${team2Abbrev}"`);
+              const market = event.markets[0];
               
-              // Skip if normalization failed (returned same name)
-              if (team1Abbrev === team1Name || team2Abbrev === team2Name) {
-                console.log(`Polymarket normalization failed for: ${team1Name} or ${team2Name}`);
+              // Parse clobTokenIds for live price lookup
+              let clobTokenIds = [];
+              try {
+                if (typeof market.clobTokenIds === 'string') {
+                  clobTokenIds = JSON.parse(market.clobTokenIds);
+                } else if (Array.isArray(market.clobTokenIds)) {
+                  clobTokenIds = market.clobTokenIds;
+                }
+              } catch (e) {
+                console.log('Failed to parse clobTokenIds:', e);
               }
               
-              // Get the market prices
-              const market = event.markets[0];
+              const key = `${team1Abbrev}-${team2Abbrev}`;
+              
+              // Store token IDs for live price fetching
+              if (clobTokenIds.length >= 2) {
+                tokenIdsToFetch.push(clobTokenIds[0]);
+                marketDataMap[clobTokenIds[0]] = { key, team: 'team1', team1Abbrev, team2Abbrev, title: event.title };
+              }
+              
+              // Also store fallback from Gamma API prices
               const outcomes = JSON.parse(market.outcomes || '[]');
               const prices = JSON.parse(market.outcomePrices || '[]');
               
-              console.log('Polymarket outcomes:', outcomes, 'prices:', prices);
+              let team1Prob = parseFloat(prices[0]) || 0.5;
+              let team2Prob = parseFloat(prices[1]) || 0.5;
               
-              if (outcomes.length >= 2 && prices.length >= 2) {
-                // Find which outcome corresponds to which team
-                let team1Prob = null, team2Prob = null;
-                
-                outcomes.forEach((outcome, idx) => {
-                  const outcomeLower = outcome.toLowerCase();
-                  const team1Lower = team1Name.toLowerCase();
-                  const team2Lower = team2Name.toLowerCase();
-                  
-                  if (outcomeLower.includes(team1Lower) || team1Lower.includes(outcomeLower)) {
-                    team1Prob = parseFloat(prices[idx]);
-                  } else if (outcomeLower.includes(team2Lower) || team2Lower.includes(outcomeLower)) {
-                    team2Prob = parseFloat(prices[idx]);
-                  }
-                });
-                
-                // If we couldn't match by name, assume order matches title order
-                if (team1Prob === null && team2Prob === null) {
-                  team1Prob = parseFloat(prices[0]);
-                  team2Prob = parseFloat(prices[1]);
-                }
-                
-                if (team1Prob !== null && team2Prob !== null) {
-                  // Store with away-home key format (team1 is typically away in "away vs home" format)
-                  const key = `${team1Abbrev}-${team2Abbrev}`;
-                  
-                  // Get CLOB token IDs for historical price lookup
-                  // Note: clobTokenIds comes as a stringified JSON array from the Gamma API
-                  let clobTokenIds = [];
-                  try {
-                    if (typeof market.clobTokenIds === 'string') {
-                      clobTokenIds = JSON.parse(market.clobTokenIds);
-                    } else if (Array.isArray(market.clobTokenIds)) {
-                      clobTokenIds = market.clobTokenIds;
-                    }
-                  } catch (e) {
-                    console.log('Failed to parse clobTokenIds:', e);
-                  }
-                  
-                  polymarketData[key] = {
-                    team1: team1Abbrev,
-                    team2: team2Abbrev,
-                    team1Prob,
-                    team2Prob,
-                    title: event.title,
-                    slug: event.slug,
-                    tokenId1: clobTokenIds[0] || null,  // Token for team1/outcome1
-                    tokenId2: clobTokenIds[1] || null   // Token for team2/outcome2
-                  };
-                  console.log(`Polymarket stored: ${key} -> ${team1Abbrev}=${(team1Prob*100).toFixed(0)}%, ${team2Abbrev}=${(team2Prob*100).toFixed(0)}%, tokens: ${clobTokenIds[0] ? clobTokenIds[0].substring(0,8) + '...' : 'none'}`);
-                }
-              }
-            } else {
-              console.log('Polymarket no match for title:', title);
+              polymarketData[key] = {
+                team1: team1Abbrev,
+                team2: team2Abbrev,
+                team1Prob,
+                team2Prob,
+                title: event.title,
+                tokenId1: clobTokenIds[0] || null,
+                tokenId2: clobTokenIds[1] || null
+              };
             }
           });
+          
+          // Second pass: fetch live prices from CLOB API for all tokens
+          if (tokenIdsToFetch.length > 0) {
+            await fetchClobLivePrices(tokenIdsToFetch, marketDataMap);
+          }
           
           console.log('Polymarket games loaded:', Object.keys(polymarketData).length);
           return true;
@@ -536,6 +508,45 @@
       }
       console.log('All Polymarket API attempts failed');
       return false;
+    }
+    
+    // Fetch live prices from Polymarket CLOB API
+    async function fetchClobLivePrices(tokenIds, marketDataMap) {
+      const timestamp = Date.now();
+      
+      // Fetch midpoint for each token
+      for (const tokenId of tokenIds) {
+        const midpointUrl = `https://clob.polymarket.com/midpoint?token_id=${tokenId}&_t=${timestamp}`;
+        const proxyUrls = [
+          midpointUrl,
+          'https://corsproxy.io/?' + encodeURIComponent(midpointUrl),
+          'https://api.allorigins.win/raw?url=' + encodeURIComponent(midpointUrl)
+        ];
+        
+        for (const url of proxyUrls) {
+          try {
+            const res = await fetch(url, {
+              cache: 'no-store',
+              headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+            });
+            if (!res.ok) continue;
+            const data = await res.json();
+            
+            const midpoint = parseFloat(data.mid);
+            if (!isNaN(midpoint) && marketDataMap[tokenId]) {
+              const { key, team } = marketDataMap[tokenId];
+              if (polymarketData[key]) {
+                polymarketData[key].team1Prob = midpoint;
+                polymarketData[key].team2Prob = 1 - midpoint;
+                console.log(`CLOB live price for ${key}: ${(midpoint*100).toFixed(1)}% / ${((1-midpoint)*100).toFixed(1)}%`);
+              }
+            }
+            break; // Success
+          } catch (e) {
+            continue;
+          }
+        }
+      }
     }
     
     // Fetch historical Polymarket price at a specific timestamp
@@ -1223,6 +1234,7 @@
           
           // Group markets by game (each game has 2 markets - one per team)
           const gameMarkets = {};
+          const tickersToFetch = [];
           
           // Log all tickers for debugging
           console.log('Kalshi raw tickers:', markets.slice(0, 10).map(m => m.ticker));
@@ -1240,35 +1252,25 @@
             }
             
             const [, dateCode, team1, team2, winner] = match;
-            console.log(`Parsed: ${m.ticker} -> team1=${team1}, team2=${team2}, winner=${winner}`);
             
             // Store using the teams as they appear in the ticker
             const gameKey = `${team1}-${team2}`;
             
             if (!gameMarkets[gameKey]) {
-              gameMarkets[gameKey] = { team1, team2 };
+              gameMarkets[gameKey] = { team1, team2, tickers: {} };
             }
             
-            // Use last_price if available, otherwise calculate mid from bid/ask
-            // Kalshi prices are in cents (0-100)
-            let price;
-            if (m.last_price !== undefined && m.last_price > 0) {
-              // Use last traded price
-              price = m.last_price / 100;
-            } else if (m.yes_bid && m.yes_ask) {
-              // Calculate mid from bid/ask
+            // Store ticker for orderbook fetch
+            gameMarkets[gameKey].tickers[winner] = m.ticker;
+            tickersToFetch.push({ ticker: m.ticker, gameKey, winner });
+            
+            // Use yes_bid/yes_ask from markets list as fallback
+            let price = 0.5;
+            if (m.yes_bid && m.yes_ask) {
               price = (m.yes_bid + m.yes_ask) / 2 / 100;
-            } else if (m.yes_ask) {
-              // Only ask available
-              price = m.yes_ask / 100;
-            } else if (m.yes_bid) {
-              // Only bid available
-              price = m.yes_bid / 100;
-            } else {
-              price = 0.5; // Default fallback
+            } else if (m.last_price !== undefined && m.last_price > 0) {
+              price = m.last_price / 100;
             }
-            
-            console.log(`Kalshi ticker ${m.ticker}: ${winner} = ${(price*100).toFixed(0)}%`);
             
             if (winner === team1) {
               gameMarkets[gameKey].team1Prob = price;
@@ -1276,6 +1278,62 @@
               gameMarkets[gameKey].team2Prob = price;
             }
           });
+          
+          // Fetch live orderbook prices for each ticker (more accurate than markets list)
+          for (const { ticker, gameKey, winner } of tickersToFetch) {
+            try {
+              const orderbookUrl = `https://api.elections.kalshi.com/trade-api/v2/markets/${ticker}/orderbook`;
+              const obProxyUrls = [
+                orderbookUrl,
+                'https://corsproxy.io/?' + encodeURIComponent(orderbookUrl)
+              ];
+              
+              for (const obUrl of obProxyUrls) {
+                try {
+                  const obRes = await fetch(obUrl, {
+                    cache: 'no-store',
+                    headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+                  });
+                  if (!obRes.ok) continue;
+                  const obData = await obRes.json();
+                  
+                  const orderbook = obData.orderbook;
+                  if (orderbook) {
+                    // Calculate midpoint from best bids
+                    // YES bid is in orderbook.yes (last element is best), NO bid is in orderbook.no
+                    const yesBids = orderbook.yes || [];
+                    const noBids = orderbook.no || [];
+                    
+                    let midPrice = null;
+                    if (yesBids.length > 0 && noBids.length > 0) {
+                      const bestYesBid = yesBids[yesBids.length - 1][0]; // Last is highest
+                      const bestNoBid = noBids[noBids.length - 1][0];
+                      const impliedYesAsk = 100 - bestNoBid;
+                      midPrice = (bestYesBid + impliedYesAsk) / 2 / 100;
+                    } else if (yesBids.length > 0) {
+                      midPrice = yesBids[yesBids.length - 1][0] / 100;
+                    } else if (noBids.length > 0) {
+                      midPrice = (100 - noBids[noBids.length - 1][0]) / 100;
+                    }
+                    
+                    if (midPrice !== null && gameMarkets[gameKey]) {
+                      if (winner === gameMarkets[gameKey].team1) {
+                        gameMarkets[gameKey].team1Prob = midPrice;
+                      } else if (winner === gameMarkets[gameKey].team2) {
+                        gameMarkets[gameKey].team2Prob = midPrice;
+                      }
+                      console.log(`Kalshi orderbook ${ticker}: ${winner} = ${(midPrice*100).toFixed(1)}%`);
+                    }
+                  }
+                  break; // Success
+                } catch (e) {
+                  continue;
+                }
+              }
+            } catch (e) {
+              console.log(`Kalshi orderbook fetch failed for ${ticker}:`, e.message);
+            }
+          }
           
           // Only store games where we have both team probabilities
           Object.entries(gameMarkets).forEach(([key, v]) => {
