@@ -1573,6 +1573,181 @@
       return history;
     }
 
+    // Build initial history from current game state (for when we join mid-game)
+    // Creates synthetic history points for pregame, period starts, and current
+    function buildInitialHistory(g, pregameHome) {
+      const history = [];
+      const gameKey = `${g.homeAbbrev}-${g.awayAbbrev}`;
+      
+      // Get pregame odds
+      pregameHome = pregameHome || lockedPregamePrices[gameKey]?.home || 0.50;
+      
+      // Start with pregame
+      history.push({ 
+        home: Math.round(pregameHome * 100), 
+        away: Math.round((1 - pregameHome) * 100), 
+        timeStr: 'Pregame' 
+      });
+      
+      // Add current position
+      const currentPeriod = g.period || 1;
+      const homeScore = g.homeScore || 0;
+      const awayScore = g.awayScore || 0;
+      const currentDiff = homeScore - awayScore;
+      const currentSecs = calcSeconds(currentPeriod, g.clock);
+      const fmvCurrent = calcWinProb(pregameHome, currentDiff, currentSecs);
+      const periodName = currentPeriod === 1 ? '1st' : currentPeriod === 2 ? '2nd' : currentPeriod === 3 ? '3rd' : 'OT';
+      history.push({ 
+        home: Math.round(fmvCurrent * 100), 
+        away: Math.round((1 - fmvCurrent) * 100), 
+        timeStr: `${periodName} - ${g.clock}`,
+        score: `${awayScore}-${homeScore}`
+      });
+      
+      return history;
+    }
+    
+    // Fetch scoring plays from ESPN summary API
+    async function fetchESPNScoringPlays(gameId, homeAbbrev, awayAbbrev) {
+      // Skip if we already have good history
+      if (gameHistories[gameId] && gameHistories[gameId].length > 3) return;
+      
+      const summaryUrl = `https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/summary?event=${gameId}`;
+      const proxyUrls = [
+        summaryUrl,
+        'https://corsproxy.io/?' + encodeURIComponent(summaryUrl),
+        'https://api.allorigins.win/raw?url=' + encodeURIComponent(summaryUrl)
+      ];
+      
+      for (const url of proxyUrls) {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) continue;
+          const data = await res.json();
+          
+          const scoringPlays = data?.scoringPlays || [];
+          if (scoringPlays.length > 0) {
+            const history = buildHistoryFromESPNScoring(scoringPlays, homeAbbrev, awayAbbrev, gameId);
+            if (history.length > 1) {
+              gameHistories[gameId] = history;
+              render();
+            }
+          }
+          return;
+        } catch (e) {
+          console.log('ESPN summary fetch failed:', e.message);
+          continue;
+        }
+      }
+    }
+    
+    // Build win probability history from ESPN scoring plays
+    function buildHistoryFromESPNScoring(scoringPlays, homeAbbrev, awayAbbrev, gameId) {
+      const history = [];
+      const gameKey = `${homeAbbrev}-${awayAbbrev}`;
+      
+      // Get pregame odds
+      const pregameHome = lockedPregamePrices[gameKey]?.home || 0.50;
+      
+      // Start with pregame
+      history.push({ 
+        home: Math.round(pregameHome * 100), 
+        away: Math.round((1 - pregameHome) * 100), 
+        timeStr: 'Pregame',
+        score: '0-0'
+      });
+      
+      // Add start of game (0-0)
+      const fmv0 = calcWinProb(pregameHome, 0, 3600);
+      history.push({
+        home: Math.round(fmv0 * 100),
+        away: Math.round((1 - fmv0) * 100),
+        timeStr: '1st - 20:00',
+        score: '0-0'
+      });
+      
+      let homeScore = 0;
+      let awayScore = 0;
+      
+      // Process each scoring play
+      for (const play of scoringPlays) {
+        // Get period and time
+        const period = play.period?.number || 1;
+        const clockStr = play.clock?.displayValue || '20:00';
+        
+        // Parse clock to get time remaining in period
+        const [minStr, secStr] = clockStr.split(':');
+        const mins = parseInt(minStr) || 0;
+        const secs = parseInt(secStr) || 0;
+        const periodSecsRemaining = mins * 60 + secs;
+        
+        // Calculate total seconds remaining
+        let totalSecs;
+        if (period <= 3) {
+          totalSecs = periodSecsRemaining + (3 - period) * 1200;
+        } else {
+          totalSecs = Math.min(periodSecsRemaining, 300); // OT
+        }
+        
+        // Determine which team scored
+        const scoringTeam = play.team?.abbreviation;
+        const isHomeGoal = espnAbbrevToNHL(scoringTeam) === homeAbbrev;
+        
+        if (isHomeGoal) {
+          homeScore++;
+        } else {
+          awayScore++;
+        }
+        
+        const diff = homeScore - awayScore;
+        const fmv = calcWinProb(pregameHome, diff, totalSecs);
+        
+        const periodName = period === 1 ? '1st' : period === 2 ? '2nd' : period === 3 ? '3rd' : 'OT';
+        
+        history.push({
+          home: Math.round(fmv * 100),
+          away: Math.round((1 - fmv) * 100),
+          timeStr: `${periodName} - ${clockStr}`,
+          score: `${awayScore}-${homeScore}`,
+          goal: isHomeGoal ? 'home' : 'away'
+        });
+      }
+      
+      // Add current state from the game if available
+      const currentGame = games.find(g => g.id === gameId);
+      if (currentGame && currentGame.state === 'LIVE') {
+        const currentSecs = calcSeconds(currentGame.period, currentGame.clock);
+        const currentDiff = currentGame.homeScore - currentGame.awayScore;
+        const fmvCurrent = calcWinProb(pregameHome, currentDiff, currentSecs);
+        const periodName = currentGame.period === 1 ? '1st' : currentGame.period === 2 ? '2nd' : currentGame.period === 3 ? '3rd' : 'OT';
+        
+        // Only add if different from last point
+        const last = history[history.length - 1];
+        if (!last || Math.abs(last.home - Math.round(fmvCurrent * 100)) >= 1) {
+          history.push({
+            home: Math.round(fmvCurrent * 100),
+            away: Math.round((1 - fmvCurrent) * 100),
+            timeStr: `${periodName} - ${currentGame.clock}`,
+            score: `${currentGame.awayScore}-${currentGame.homeScore}`
+          });
+        }
+      }
+      
+      // For final games, add the result
+      if (currentGame && currentGame.state === 'FINAL') {
+        const finalHome = currentGame.homeScore > currentGame.awayScore ? 100 : 
+                         (currentGame.homeScore < currentGame.awayScore ? 0 : 50);
+        history.push({ 
+          home: finalHome, 
+          away: 100 - finalHome, 
+          timeStr: 'Final', 
+          score: `${currentGame.awayScore}-${currentGame.homeScore}` 
+        });
+      }
+      
+      return history;
+    }
+
     // Parse NHL API /score/now
     function parseNHLData(data) {
       if (!data?.games) return [];
@@ -1586,6 +1761,49 @@
         
         const startTimeRaw = g.startTimeUTC ? new Date(g.startTimeUTC).getTime() : 0;
         
+        // Extract situation/powerplay data
+        // NHL API has situation object with homeTeam/awayTeam strength
+        let homePP = null;
+        let awayPP = null;
+        let strength = null;
+        
+        if (g.situation) {
+          const homeSit = g.situation.homeTeam;
+          const awaySit = g.situation.awayTeam;
+          
+          // Check strength - if teams have different skater counts, it's a power play
+          if (homeSit?.strength && awaySit?.strength) {
+            const homeStr = parseInt(homeSit.strength) || 5;
+            const awayStr = parseInt(awaySit.strength) || 5;
+            
+            if (homeStr > awayStr) {
+              // Home team on power play
+              homePP = g.situation.timeRemaining || 'PP';
+              strength = `${homeStr}v${awayStr}`;
+            } else if (awayStr > homeStr) {
+              // Away team on power play  
+              awayPP = g.situation.timeRemaining || 'PP';
+              strength = `${awayStr}v${homeStr}`;
+            }
+          }
+          
+          // Also check situationCode like "1551" (home skaters, away skaters, home goalie, away goalie)
+          if (g.situation.situationCode) {
+            const code = g.situation.situationCode.toString();
+            if (code.length >= 2) {
+              const homeSk = parseInt(code[0]) || 5;
+              const awaySk = parseInt(code[1]) || 5;
+              if (homeSk > awaySk && !homePP) {
+                homePP = g.situation.timeRemaining || 'PP';
+                strength = `${homeSk}v${awaySk}`;
+              } else if (awaySk > homeSk && !awayPP) {
+                awayPP = g.situation.timeRemaining || 'PP';
+                strength = `${awaySk}v${homeSk}`;
+              }
+            }
+          }
+        }
+        
         return {
           id: g.id,
           homeAbbrev: g.homeTeam?.abbrev,
@@ -1596,7 +1814,10 @@
           clock: g.clock?.timeRemaining || '20:00',
           state,
           startTime: g.startTimeUTC ? new Date(g.startTimeUTC).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '',
-          startTimeRaw
+          startTimeRaw,
+          homePP,
+          awayPP,
+          strength
         };
       });
     }
@@ -1699,6 +1920,54 @@
         // Try to extract from the event or create a composite
         const gameId = event.id || `espn-${homeTeam.team?.abbreviation}-${awayTeam.team?.abbreviation}`;
         
+        // Extract powerplay/situation data
+        // ESPN puts this in competition.situation
+        const situation = competition.situation;
+        let homePP = null;
+        let awayPP = null;
+        
+        if (situation) {
+          // Check for power play info
+          // situation.powerPlay might be true, and situation.possession shows which team
+          // situation.shortDownDistance might have time remaining
+          if (situation.powerPlay) {
+            const ppTimeRemaining = situation.powerPlayTimeRemaining || situation.shortDownDistance;
+            // Determine which team has the power play
+            // Usually indicated by situation.possession or other fields
+            if (situation.possession) {
+              const possTeam = situation.possession;
+              if (espnAbbrevToNHL(possTeam) === espnAbbrevToNHL(homeTeam.team?.abbreviation)) {
+                homePP = ppTimeRemaining;
+              } else {
+                awayPP = ppTimeRemaining;
+              }
+            }
+          }
+          
+          // Also check lastPlay for penalty info
+          const lastPlay = situation.lastPlay;
+          if (lastPlay && lastPlay.type?.text?.toLowerCase().includes('power play')) {
+            // Extract time if available
+            const ppMatch = lastPlay.text?.match(/(\d+:\d+)/);
+            if (ppMatch) {
+              // Try to determine which team
+              if (lastPlay.team?.abbreviation) {
+                if (espnAbbrevToNHL(lastPlay.team.abbreviation) === espnAbbrevToNHL(homeTeam.team?.abbreviation)) {
+                  homePP = homePP || ppMatch[1];
+                } else {
+                  awayPP = awayPP || ppMatch[1];
+                }
+              }
+            }
+          }
+        }
+        
+        // Also check for strength indicator in broadcasts/notes
+        // Some ESPN responses have it in status.type.detail
+        const detail = status?.type?.detail || '';
+        const strengthMatch = detail.match(/(5-on-4|4-on-5|5-on-3|3-on-5|4-on-3|3-on-4)/i);
+        let strength = strengthMatch ? strengthMatch[1] : null;
+        
         return {
           id: gameId,
           homeAbbrev: espnAbbrevToNHL(homeTeam.team?.abbreviation),
@@ -1710,7 +1979,10 @@
           state,
           startTime: event.date ? new Date(event.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '',
           startTimeRaw,
-          source: 'espn'
+          source: 'espn',
+          homePP,
+          awayPP,
+          strength
         };
       }).filter(g => g !== null);
     }
@@ -2089,20 +2361,26 @@
               const h = gameHistories[g.id] || [];
               const np = { home: Math.round(fmv.fmvHome * 100), away: Math.round(fmv.fmvAway * 100) };
               const last = h[h.length - 1];
-              // Always add first point, then only add if changed by 1%
-              if (h.length === 0 || !last || Math.abs(last.home - np.home) >= 1) {
-                gameHistories[g.id] = [...h.slice(-30), np];
-              }
               
-              // If we just joined a live game, fetch play-by-play to reconstruct history
-              if (h.length <= 1) {
-                fetchPlayByPlay(g.id, g.homeAbbrev, g.awayAbbrev);
+              // If no history yet, build initial and fetch ESPN scoring plays
+              if (h.length === 0) {
+                const initialHistory = buildInitialHistory(g, fmv.pregameHome);
+                gameHistories[g.id] = initialHistory;
+                // Fetch actual goal times from ESPN
+                fetchESPNScoringPlays(g.id, g.homeAbbrev, g.awayAbbrev);
+              } else if (h.length <= 3) {
+                // Still building history, try ESPN
+                fetchESPNScoringPlays(g.id, g.homeAbbrev, g.awayAbbrev);
+              } else if (!last || Math.abs(last.home - np.home) >= 1) {
+                // Add new point if changed by 1%
+                gameHistories[g.id] = [...h.slice(-30), np];
               }
             }
             
-            // Fetch play-by-play for finished games to reconstruct history
-            if (g.state === 'FINAL' && (!gameHistories[g.id] || gameHistories[g.id].length <= 2)) {
-              fetchPlayByPlay(g.id, g.homeAbbrev, g.awayAbbrev);
+            // Build initial history for FINAL games too
+            if (g.state === 'FINAL' && (!gameHistories[g.id] || gameHistories[g.id].length <= 3)) {
+              // Fetch actual goal times from ESPN
+              fetchESPNScoringPlays(g.id, g.homeAbbrev, g.awayAbbrev);
             }
           });
           
@@ -2137,11 +2415,27 @@
       
       ctx.clearRect(0, 0, w, h);
       
-      if (history.length < 2) return;
-      
       // Background
       ctx.fillStyle = 'rgba(20, 20, 20, 0.8)';
       ctx.fillRect(0, 0, w, h);
+      
+      if (history.length < 1) {
+        // Show waiting message
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '24px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Collecting data...', w/2, h/2);
+        return;
+      }
+      
+      if (history.length < 2) {
+        // Show single point as starting position
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '20px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Starting: Home ${history[0].home}% - Away ${history[0].away}%`, w/2, h/2);
+        return;
+      }
       
       // 50% line
       ctx.strokeStyle = 'rgba(107, 114, 128, 0.5)';
@@ -2771,7 +3065,7 @@
                 <div class="flex items-center mb-3">
                   <div class="team-badge w-11 h-11 rounded-xl flex items-center justify-center text-xs font-bold text-white mr-3" style="background: linear-gradient(135deg, ${away.primary} 0%, ${away.primary}dd 100%)">${g.awayAbbrev}</div>
                   <div class="flex-1 min-w-0">
-                    <div class="font-semibold text-sm text-gray-100 tracking-tight">${away.name}</div>
+                    <div class="font-semibold text-sm text-gray-100 tracking-tight flex items-center gap-2">${away.name}${g.awayPP ? `<span class="text-xs px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded font-bold">PP ${g.awayPP}</span>` : ''}${g.strength && g.state === 'LIVE' ? `<span class="text-xs text-gray-500">${g.strength}</span>` : ''}</div>
                     <div class="text-xs text-gray-500">
                       <div class="truncate">
                         <span class="cursor-pointer hover:text-amber-400 ${fmv.isUserSet ? 'text-amber-400' : 'text-gray-400'}" onclick="promptPregame('${g.homeAbbrev}-${g.awayAbbrev}', '${home.name}', ${fmv.pregameHome})" title="Click to set pregame odds">Pre: <span class="mono">${fmtOdds(fmv.pregameAway)}</span>${fmv.isUserSet ? ' ✏️' : ''}</span>${fmv.isLocked ? ' 🔒' : ''}
@@ -2793,7 +3087,7 @@
                 <div class="flex items-center">
                   <div class="team-badge w-11 h-11 rounded-xl flex items-center justify-center text-xs font-bold text-white mr-3" style="background: linear-gradient(135deg, ${home.primary} 0%, ${home.primary}dd 100%)">${g.homeAbbrev}</div>
                   <div class="flex-1 min-w-0">
-                    <div class="font-semibold text-sm text-gray-100 tracking-tight">${home.name}</div>
+                    <div class="font-semibold text-sm text-gray-100 tracking-tight flex items-center gap-2">${home.name}${g.homePP ? `<span class="text-xs px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded font-bold">PP ${g.homePP}</span>` : ''}</div>
                     <div class="text-xs text-gray-500">
                       <div class="truncate">
                         <span class="cursor-pointer hover:text-amber-400 ${fmv.isUserSet ? 'text-amber-400' : 'text-gray-400'}" onclick="promptPregame('${g.homeAbbrev}-${g.awayAbbrev}', '${home.name}', ${fmv.pregameHome})" title="Click to set pregame odds">Pre: <span class="mono">${fmtOdds(fmv.pregameHome)}</span>${fmv.isUserSet ? ' ✏️' : ''}</span>${fmv.isLocked ? ' 🔒' : ''}
