@@ -278,6 +278,22 @@
     let showAlerts = false;
     let showDevig = false;
     let showSportsbookOdds = localStorage.getItem('showSportsbookOdds') === 'true';
+    
+    // View mode: 'live' or 'manual'
+    let viewMode = 'live';
+    
+    // Manual calculator state
+    let manualCalc = {
+      homeTeam: 'TOR',
+      awayTeam: 'MTL',
+      pregameHome: 50,
+      homeGoals: 0,
+      awayGoals: 0,
+      period: 1,
+      minutes: 20,
+      seconds: 0
+    };
+    
     let alertSettings = { 
       enabled: false, 
       gameStart: false,
@@ -2846,6 +2862,20 @@
           </div>
         </header>
 
+        <!-- View Mode Tabs -->
+        <div class="border-b border-white/10" style="background: rgba(30, 30, 30, 0.95);">
+          <div class="max-w-lg mx-auto px-3">
+            <div class="flex">
+              <button onclick="viewMode = 'live'; render()" class="flex-1 py-3 text-sm font-semibold text-center transition-colors ${viewMode === 'live' ? 'text-emerald-400 border-b-2 border-emerald-400' : 'text-gray-500 hover:text-gray-300'}">
+                📡 Live Games
+              </button>
+              <button onclick="viewMode = 'manual'; render()" class="flex-1 py-3 text-sm font-semibold text-center transition-colors ${viewMode === 'manual' ? 'text-emerald-400 border-b-2 border-emerald-400' : 'text-gray-500 hover:text-gray-300'}">
+                🧮 Manual Calculator
+              </button>
+            </div>
+          </div>
+        </div>
+
         ${showAlerts ? `
         <div class="border-b border-white/10" style="background: linear-gradient(180deg, rgba(45, 45, 45, 0.95) 0%, rgba(26, 26, 26, 0.9) 100%);">
           <div class="max-w-lg mx-auto px-3 py-4">
@@ -3033,6 +3063,144 @@
         <main class="max-w-lg mx-auto p-3 space-y-3">
       `;
 
+      // Manual Calculator View
+      if (viewMode === 'manual') {
+        const teamAbbrevs = Object.keys(TEAMS).sort();
+        const manualClock = manualCalc.minutes + ':' + String(manualCalc.seconds).padStart(2, '0');
+        const manualSecsRemaining = calcSeconds(manualCalc.period, manualClock);
+        const manualDiff = manualCalc.homeGoals - manualCalc.awayGoals;
+        const manualPregame = manualCalc.pregameHome / 100;
+        const manualFmvHome = calcWinProb(manualPregame, manualDiff, manualSecsRemaining);
+        const manualFmvAway = 1 - manualFmvHome;
+        
+        // Next goal projections
+        const nextGoalHome = calcWinProb(manualPregame, (manualCalc.homeGoals + 1) - manualCalc.awayGoals, manualSecsRemaining);
+        const nextGoalAway = 1 - calcWinProb(manualPregame, manualCalc.homeGoals - (manualCalc.awayGoals + 1), manualSecsRemaining);
+        
+        const homeTeamData = TEAMS[manualCalc.homeTeam] || { name: manualCalc.homeTeam, primary: '#666' };
+        const awayTeamData = TEAMS[manualCalc.awayTeam] || { name: manualCalc.awayTeam, primary: '#666' };
+        
+        const teamOptions = teamAbbrevs.map(t => '<option value="' + t + '"' + (manualCalc.awayTeam === t ? ' selected' : '') + '>' + t + ' - ' + (TEAMS[t]?.name || t) + '</option>').join('');
+        const homeTeamOptions = teamAbbrevs.map(t => '<option value="' + t + '"' + (manualCalc.homeTeam === t ? ' selected' : '') + '>' + t + ' - ' + (TEAMS[t]?.name || t) + '</option>').join('');
+        
+        html += `
+          <div class="game-card rounded-2xl overflow-hidden">
+            <div class="p-4">
+              <div class="text-xs text-gray-400 uppercase tracking-wide mb-4 font-medium">Manual FMV Calculator</div>
+              
+              <!-- Team Selection -->
+              <div class="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">Away Team</label>
+                  <select onchange="manualCalc.awayTeam = this.value; render()" class="w-full px-3 py-2 bg-neutral-700 border border-white/10 rounded-lg text-sm text-white">
+                    ${teamOptions}
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">Home Team</label>
+                  <select onchange="manualCalc.homeTeam = this.value; render()" class="w-full px-3 py-2 bg-neutral-700 border border-white/10 rounded-lg text-sm text-white">
+                    ${homeTeamOptions}
+                  </select>
+                </div>
+              </div>
+              
+              <!-- Pregame Odds -->
+              <div class="mb-4">
+                <label class="text-xs text-gray-500 mb-1 block">Pregame Home Win % (1-99)</label>
+                <input type="number" min="1" max="99" value="${manualCalc.pregameHome}" 
+                  oninput="manualCalc.pregameHome = Math.max(1, Math.min(99, parseInt(this.value) || 50)); render()"
+                  class="w-full px-3 py-2 bg-neutral-700 border border-white/10 rounded-lg text-sm text-white">
+                <div class="text-xs text-gray-600 mt-1">Away: ${100 - manualCalc.pregameHome}%</div>
+              </div>
+              
+              <!-- Score -->
+              <div class="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">Away Goals</label>
+                  <input type="number" min="0" max="20" value="${manualCalc.awayGoals}" 
+                    oninput="manualCalc.awayGoals = Math.max(0, parseInt(this.value) || 0); render()"
+                    class="w-full px-3 py-2 bg-neutral-700 border border-white/10 rounded-lg text-sm text-white text-center text-xl font-bold">
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">Home Goals</label>
+                  <input type="number" min="0" max="20" value="${manualCalc.homeGoals}" 
+                    oninput="manualCalc.homeGoals = Math.max(0, parseInt(this.value) || 0); render()"
+                    class="w-full px-3 py-2 bg-neutral-700 border border-white/10 rounded-lg text-sm text-white text-center text-xl font-bold">
+                </div>
+              </div>
+              
+              <!-- Period and Time -->
+              <div class="grid grid-cols-3 gap-3 mb-6">
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">Period</label>
+                  <select onchange="manualCalc.period = parseInt(this.value); render()" class="w-full px-3 py-2 bg-neutral-700 border border-white/10 rounded-lg text-sm text-white">
+                    <option value="1" ${manualCalc.period === 1 ? 'selected' : ''}>1st</option>
+                    <option value="2" ${manualCalc.period === 2 ? 'selected' : ''}>2nd</option>
+                    <option value="3" ${manualCalc.period === 3 ? 'selected' : ''}>3rd</option>
+                    <option value="4" ${manualCalc.period === 4 ? 'selected' : ''}>OT</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">Minutes</label>
+                  <input type="number" min="0" max="20" value="${manualCalc.minutes}" 
+                    oninput="manualCalc.minutes = Math.max(0, Math.min(20, parseInt(this.value) || 0)); render()"
+                    class="w-full px-3 py-2 bg-neutral-700 border border-white/10 rounded-lg text-sm text-white text-center">
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">Seconds</label>
+                  <input type="number" min="0" max="59" value="${manualCalc.seconds}" 
+                    oninput="manualCalc.seconds = Math.max(0, Math.min(59, parseInt(this.value) || 0)); render()"
+                    class="w-full px-3 py-2 bg-neutral-700 border border-white/10 rounded-lg text-sm text-white text-center">
+                </div>
+              </div>
+              
+              <div class="border-t border-white/10 pt-4">
+                <!-- Results -->
+                <div class="text-xs text-gray-400 uppercase tracking-wide mb-3 font-medium">FMV Results</div>
+                
+                <!-- Away Team Result -->
+                <div class="flex items-center mb-3">
+                  <div class="team-badge w-11 h-11 rounded-xl flex items-center justify-center text-xs font-bold text-white mr-3" style="background: linear-gradient(135deg, ${awayTeamData.primary} 0%, ${awayTeamData.primary}dd 100%)">${manualCalc.awayTeam}</div>
+                  <div class="flex-1">
+                    <div class="font-semibold text-sm text-gray-100">${awayTeamData.name}</div>
+                    <div class="text-xs text-gray-500">Pre: ${100 - manualCalc.pregameHome}%</div>
+                  </div>
+                  <div class="text-2xl font-bold w-10 text-center text-gray-100 mono">${manualCalc.awayGoals}</div>
+                  <div class="stat-box text-center ml-2 w-[72px] h-14 flex flex-col justify-center">
+                    <div class="text-[10px] text-gray-500 mb-0.5 uppercase tracking-wide">FMV</div>
+                    <div class="text-sm font-bold fmv-value">${Math.round(manualFmvAway * 100)}%</div>
+                  </div>
+                  <div class="stat-box text-center ml-1.5 w-14 h-14 flex flex-col justify-center" style="background: rgba(16, 185, 129, 0.1);">
+                    <div class="text-[10px] text-gray-500 mb-0.5 uppercase tracking-wide">+Goal</div>
+                    <div class="text-sm font-bold text-emerald-400">${Math.round(nextGoalAway * 100)}%</div>
+                  </div>
+                </div>
+                
+                <div class="border-t border-white/10 my-3"></div>
+                
+                <!-- Home Team Result -->
+                <div class="flex items-center">
+                  <div class="team-badge w-11 h-11 rounded-xl flex items-center justify-center text-xs font-bold text-white mr-3" style="background: linear-gradient(135deg, ${homeTeamData.primary} 0%, ${homeTeamData.primary}dd 100%)">${manualCalc.homeTeam}</div>
+                  <div class="flex-1">
+                    <div class="font-semibold text-sm text-gray-100">${homeTeamData.name}</div>
+                    <div class="text-xs text-gray-500">Pre: ${manualCalc.pregameHome}%</div>
+                  </div>
+                  <div class="text-2xl font-bold w-10 text-center text-gray-100 mono">${manualCalc.homeGoals}</div>
+                  <div class="stat-box text-center ml-2 w-[72px] h-14 flex flex-col justify-center">
+                    <div class="text-[10px] text-gray-500 mb-0.5 uppercase tracking-wide">FMV</div>
+                    <div class="text-sm font-bold fmv-value">${Math.round(manualFmvHome * 100)}%</div>
+                  </div>
+                  <div class="stat-box text-center ml-1.5 w-14 h-14 flex flex-col justify-center" style="background: rgba(16, 185, 129, 0.1);">
+                    <div class="text-[10px] text-gray-500 mb-0.5 uppercase tracking-wide">+Goal</div>
+                    <div class="text-sm font-bold text-emerald-400">${Math.round(nextGoalHome * 100)}%</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+      // Live Games View
       if (games.length === 0) {
         html += `<div class="bg-gray-800 rounded-xl p-8 text-center text-gray-500">No games today</div>`;
       } else {
@@ -3117,6 +3285,7 @@
           `;
         });
       }
+      } // end of viewMode else (live games)
 
       html += `
         </main>
@@ -3124,6 +3293,7 @@
           <div class="max-w-lg mx-auto text-center text-xs text-gray-500">
             Data from NHL API & Kalshi • Win probability via Bernier model
           </div>
+          ${viewMode === 'live' ? `
           <div class="max-w-lg mx-auto mt-4 p-3 bg-black/30 rounded-lg">
             <div class="text-xs text-gray-400 mb-2">NHL Games State (${games.length}):</div>
             <div class="text-xs text-cyan-400 font-mono break-all mb-3">${games.length > 0 ? games.map(g => `${g.awayAbbrev}@${g.homeAbbrev}:${g.state}:P${g.period}:${g.awayScore}-${g.homeScore}`).join(', ') : 'No games loaded'}</div>
@@ -3136,6 +3306,7 @@
             <div class="text-xs text-gray-400">Games looking for:</div>
             <div class="text-xs text-blue-400 font-mono">${games.map(g => g.awayAbbrev + '-' + g.homeAbbrev).join(', ')}</div>
           </div>
+          ` : ''}
         </footer>
       `;
 
