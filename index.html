@@ -2120,13 +2120,9 @@
           return; // Success, exit
       }
       
-      // All failed, use demo
-      console.error('All API attempts failed, using demo data');
-      isLive = false;
-      if (games.length === 0) {
-        games = getDemoGames();
-        gameHistories = { 'demo1': generateDemoHistory(35), 'demo2': generateDemoHistory(82) };
-      }
+      // All API attempts failed - still render but show no games
+      console.error('All API attempts failed');
+      isLive = true; // Keep as live mode even if no games
       lastUpdate = new Date();
       render();
     }
