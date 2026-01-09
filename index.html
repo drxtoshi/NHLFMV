@@ -173,7 +173,7 @@
       0: { 3600: 1.00, 3000: 0.88, 2400: 0.72, 1800: 0.52, 1200: 0.28, 600: 0.10, 300: 0.03, 0: 0.00 },
       1: { 3600: 0.75, 3000: 0.62, 2400: 0.48, 1800: 0.32, 1200: 0.16, 600: 0.06, 300: 0.02, 0: 0.00 },
       2: { 3600: 0.50, 3000: 0.40, 2400: 0.30, 1800: 0.18, 1200: 0.08, 600: 0.03, 300: 0.01, 0: 0.00 },
-      3: { 3600: 0.32, 3000: 0.25, 2400: 0.18, 1800: 0.10, 600: 0.02, 300: 0.005, 0: 0.00 },
+      3: { 3600: 0.32, 3000: 0.25, 2400: 0.18, 1800: 0.10, 1200: 0.05, 600: 0.02, 300: 0.005, 0: 0.00 },
       4: { 3600: 0.20, 3000: 0.15, 2400: 0.10, 1800: 0.06, 1200: 0.03, 600: 0.01, 300: 0.003, 0: 0.00 },
       5: { 3600: 0.12, 3000: 0.09, 2400: 0.06, 1800: 0.03, 1200: 0.015, 600: 0.005, 300: 0.002, 0: 0.00 }
     };
@@ -248,10 +248,13 @@
     function calcSeconds(period, clock) {
       const parts = (clock || '20:00').split(':').map(Number);
       const t = (parts[0] || 0) * 60 + (parts[1] || 0);
-      if (period === 1) return t + 2400;
-      if (period === 2) return t + 1200;
-      if (period >= 3) return t;
-      return t;
+      let secs;
+      if (period === 1) secs = t + 2400;
+      else if (period === 2) secs = t + 1200;
+      else if (period >= 3) secs = t;
+      else secs = t;
+      // Never return 0 - use 1 second minimum to avoid NaN in calculations
+      return Math.max(1, secs);
     }
 
     function probToOdds(p) {
@@ -3039,8 +3042,6 @@
           const fmv = calcGameFMV(g);
           const isLiveGame = g.state === 'LIVE';
           const isFinal = g.state === 'FINAL';
-          const expanded = expandedGames[g.id];
-          const history = gameHistories[g.id] || [];
           const isFlashing = goalFlashGames[g.id] && (Date.now() - goalFlashGames[g.id] < 10000);
 
           const periodText = g.period === 1 ? '1st' : g.period === 2 ? '2nd' : g.period === 3 ? '3rd' : g.period > 3 ? 'OT' : '';
@@ -3055,9 +3056,6 @@
                     ${isLiveGame ? `<span class="live-badge px-2.5 py-1 text-white text-xs rounded-full pulse font-semibold">● LIVE</span><span class="text-xs font-medium cursor-pointer hover:text-amber-400 ${g.manualOverride ? 'text-amber-400' : 'text-gray-400'}" onclick="promptManualTime('${g.id}', ${g.period}, '${g.clock}')" title="Click to manually set time">${periodText} • ${g.clock}${g.manualOverride ? ' ✏️' : ''}</span>` : ''}
                     ${isFinal ? `<span class="px-2.5 py-1 bg-gray-700/80 text-gray-300 text-xs rounded-full font-medium">FINAL</span>` : ''}
                     ${g.state === 'FUT' ? `<span class="text-xs text-gray-400 font-medium">🕐 ${g.startTime || 'Scheduled'}</span>` : ''}
-                  </div>
-                  <div class="flex items-center gap-2">
-                    ${(isLiveGame || isFinal || history.length > 1) ? `<button onclick="toggleExpand('${g.id}')" class="btn-pill w-8 h-8 rounded-full flex items-center justify-center text-gray-400">${expanded ? '▲' : '▼'}</button>` : ''}
                   </div>
                 </div>
 
@@ -3102,34 +3100,23 @@
                     <div class="h-4 mono text-[10px] ${fmv.evHome && +fmv.evHome > 0 && g.state !== 'FUT' ? 'ev-value' : 'invisible'}">${fmv.evHome && +fmv.evHome > 0 && g.state !== 'FUT' ? `+${fmv.evHome}% EV` : '-'}</div>
                   </div>
                 </div>
-              </div>
 
-              ${expanded ? `
-                <div class="border-t border-white/10 p-4" style="background: linear-gradient(180deg, rgba(50, 50, 50, 0.3) 0%, rgba(35, 35, 35, 0.3) 100%);">
-                  <div class="text-xs text-gray-400 mb-3 flex items-center gap-1.5 font-medium">📈 Win Probability <span class="text-gray-600 ml-2">Tap to pin</span></div>
-                  <canvas id="chart-${g.id}" width="300" height="200" class="w-full rounded-xl cursor-crosshair" style="background: rgba(20, 20, 20, 0.5); touch-action: none; min-height: 200px;"></canvas>
-                  <div class="flex justify-between text-xs mt-3">
-                    <div class="flex items-center gap-1.5"><div class="w-4 h-1.5 rounded-full" style="background:${home.primary}"></div><span class="text-gray-400">${home.name}</span></div>
-                    <div class="flex items-center gap-1.5"><div class="w-4 h-1.5 rounded-full" style="background:${away.primary}"></div><span class="text-gray-400">${away.name}</span></div>
-                  </div>
-                  
-                  ${isLiveGame ? `
-                    <div class="mt-4">
-                      <div class="text-xs text-gray-400 mb-3 font-medium">If Next Goal...</div>
-                      <div class="grid grid-cols-2 gap-3">
-                        <div class="stat-box">
-                          <div class="text-xs text-gray-500 mb-1.5">If ${home.name} scores:</div>
-                          <div class="text-sm font-medium">${home.name}: <span class="fmv-value">${fmtOdds(calcWinProb(fmv.pregameHome, (g.homeScore + 1) - g.awayScore, calcSeconds(g.period, g.clock)))}</span></div>
-                        </div>
-                        <div class="stat-box">
-                          <div class="text-xs text-gray-500 mb-1.5">If ${away.name} scores:</div>
-                          <div class="text-sm font-medium">${away.name}: <span class="fmv-value">${fmtOdds(1 - calcWinProb(fmv.pregameHome, g.homeScore - (g.awayScore + 1), calcSeconds(g.period, g.clock)))}</span></div>
-                        </div>
-                      </div>
+                ${isLiveGame ? `
+                <div class="border-t border-white/10 mt-3 pt-3">
+                  <div class="text-xs text-gray-500 mb-2 font-medium">If Next Goal...</div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="stat-box p-2">
+                      <div class="text-xs text-gray-500">${home.name}:</div>
+                      <div class="text-sm font-bold fmv-value">${fmtOdds(calcWinProb(fmv.pregameHome || 0.5, (g.homeScore + 1) - g.awayScore, Math.max(1, calcSeconds(g.period, g.clock))))}</div>
                     </div>
-                  ` : ''}
+                    <div class="stat-box p-2">
+                      <div class="text-xs text-gray-500">${away.name}:</div>
+                      <div class="text-sm font-bold fmv-value">${fmtOdds(1 - calcWinProb(fmv.pregameHome || 0.5, g.homeScore - (g.awayScore + 1), Math.max(1, calcSeconds(g.period, g.clock))))}</div>
+                    </div>
+                  </div>
                 </div>
-              ` : ''}
+                ` : ''}
+              </div>
             </div>
           `;
         });
@@ -3157,49 +3144,9 @@
       `;
 
       app.innerHTML = html;
-
-      // Draw charts after render and setup interactions
-      games.forEach(g => {
-        if (expandedGames[g.id]) {
-          const canvas = document.getElementById(`chart-${g.id}`);
-          if (canvas) {
-            const home = TEAMS[g.homeAbbrev] || { primary: '#10b981' };
-            const away = TEAMS[g.awayAbbrev] || { primary: '#f59e0b' };
-            canvas.width = canvas.offsetWidth * 2;
-            canvas.height = 400;
-            
-            const history = gameHistories[g.id] || [];
-            const lockedIdx = chartLockedPositions[g.id];
-            
-            // Draw the chart
-            drawChart(canvas, history, home.primary, away.primary, g.id);
-            
-            // Setup interactions
-            setupChartInteraction(canvas, g.id);
-            
-            // If there was a locked position, restore it
-            if (lockedIdx !== undefined && lockedIdx >= 0 && lockedIdx < history.length) {
-              canvas.isLocked = true;
-              canvas.lockedIndex = lockedIdx;
-              // Use setTimeout to ensure canvas is ready
-              setTimeout(() => {
-                drawChartHover(canvas, lockedIdx);
-              }, 10);
-            }
-          }
-        } else {
-          // Clear locked position when chart is collapsed
-          delete chartLockedPositions[g.id];
-        }
-      });
     }
 
     // Actions
-    function toggleExpand(id) {
-      expandedGames[id] = !expandedGames[id];
-      render();
-    }
-
     function toggleOdds() {
       oddsFormat = oddsFormat === 'american' ? 'probability' : 'american';
       render();
