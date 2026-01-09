@@ -1,0 +1,2544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>NHL FMV Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+            display: ['Outfit', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            mint: {
+              400: '#5EEAA3',
+              500: '#3DE494',
+              600: '#2DD885',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { -webkit-tap-highlight-color: transparent; }
+    body { 
+      overscroll-behavior: none; 
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1f1f1f 100%);
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+    .pulse { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .goal-flash { animation: goalFlash 1.5s ease-in-out 7; }
+    @keyframes goalFlash { 
+      0%, 100% { box-shadow: inset 0 0 30px rgba(220, 38, 38, 0), 0 4px 20px rgba(0, 0, 0, 0.3); } 
+      50% { box-shadow: inset 0 0 30px rgba(220, 38, 38, 0.4), 0 4px 25px rgba(220, 38, 38, 0.3); } 
+    }
+    .game-card {
+      background: linear-gradient(145deg, rgba(45, 45, 45, 0.9) 0%, rgba(26, 26, 26, 0.95) 100%);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: all 0.3s ease;
+    }
+    .game-card:hover {
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      transform: translateY(-2px);
+    }
+    .game-card.goal-active {
+      border-color: rgba(220, 38, 38, 0.6);
+    }
+    .team-badge {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+    .stat-box {
+      background: linear-gradient(145deg, rgba(75, 75, 75, 0.6) 0%, rgba(55, 55, 55, 0.6) 100%);
+      border-radius: 12px;
+      padding: 8px 12px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .header-bar {
+      background: linear-gradient(180deg, rgba(45, 45, 45, 0.98) 0%, rgba(26, 26, 26, 0.95) 100%);
+      backdrop-filter: blur(20px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+    .btn-pill {
+      background: linear-gradient(145deg, rgba(60, 60, 60, 0.8) 0%, rgba(40, 40, 40, 0.9) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      transition: all 0.2s ease;
+    }
+    .btn-pill:hover {
+      background: linear-gradient(145deg, rgba(80, 80, 80, 0.8) 0%, rgba(60, 60, 60, 0.9) 100%);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    .live-badge {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);
+    }
+    .fmv-value {
+      font-family: 'JetBrains Mono', monospace;
+      color: #FFFFFF;
+    }
+    .ev-value {
+      color: #5EEAA3;
+      text-shadow: 0 0 20px rgba(94, 234, 163, 0.3);
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .title-text {
+      font-family: 'Outfit', system-ui, sans-serif;
+      background: linear-gradient(135deg, #e0e0e0 0%, #a8d8b9 50%, #e0e0e0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+      letter-spacing: -0.02em;
+    }
+    .hockey-logo {
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+  <div id="app"></div>
+
+  <script>
+    // Team data
+    const TEAMS = {
+      'ANA': { name: 'Anaheim Ducks', primary: '#F47A38' },
+      'BOS': { name: 'Boston Bruins', primary: '#FFB81C' },
+      'BUF': { name: 'Buffalo Sabres', primary: '#002654' },
+      'CGY': { name: 'Calgary Flames', primary: '#D2001C' },
+      'CAR': { name: 'Carolina Hurricanes', primary: '#CC0000' },
+      'CHI': { name: 'Chicago Blackhawks', primary: '#CF0A2C' },
+      'COL': { name: 'Colorado Avalanche', primary: '#6F263D' },
+      'CBJ': { name: 'Columbus Blue Jackets', primary: '#002654' },
+      'DAL': { name: 'Dallas Stars', primary: '#006847' },
+      'DET': { name: 'Detroit Red Wings', primary: '#CE1126' },
+      'EDM': { name: 'Edmonton Oilers', primary: '#041E42' },
+      'FLA': { name: 'Florida Panthers', primary: '#041E42' },
+      'LAK': { name: 'Los Angeles Kings', primary: '#111111' },
+      'MIN': { name: 'Minnesota Wild', primary: '#154734' },
+      'MTL': { name: 'Montréal Canadiens', primary: '#AF1E2D' },
+      'NSH': { name: 'Nashville Predators', primary: '#FFB81C' },
+      'NJD': { name: 'New Jersey Devils', primary: '#CE1126' },
+      'NYI': { name: 'New York Islanders', primary: '#00539B' },
+      'NYR': { name: 'New York Rangers', primary: '#0038A8' },
+      'OTT': { name: 'Ottawa Senators', primary: '#000000' },
+      'PHI': { name: 'Philadelphia Flyers', primary: '#F74902' },
+      'PIT': { name: 'Pittsburgh Penguins', primary: '#000000' },
+      'SJS': { name: 'San Jose Sharks', primary: '#006D75' },
+      'SEA': { name: 'Seattle Kraken', primary: '#001628' },
+      'STL': { name: 'St. Louis Blues', primary: '#002F87' },
+      'TBL': { name: 'Tampa Bay Lightning', primary: '#002868' },
+      'TOR': { name: 'Toronto Maple Leafs', primary: '#00205B' },
+      'UTA': { name: 'Utah Hockey Club', primary: '#6CACE4' },
+      'VAN': { name: 'Vancouver Canucks', primary: '#00205B' },
+      'VGK': { name: 'Vegas Golden Knights', primary: '#B4975A' },
+      'WSH': { name: 'Washington Capitals', primary: '#041E42' },
+      'WPG': { name: 'Winnipeg Jets', primary: '#041E42' }
+    };
+
+    // Bernier model
+    const BASE_WIN_PROB = {
+      0: { 3600: 0.50, 2400: 0.50, 1200: 0.50, 0: 0.50 },
+      1: { 3600: 0.27, 2400: 0.23, 1200: 0.17, 0: 0.00 },
+      2: { 3600: 0.10, 2400: 0.07, 1200: 0.04, 0: 0.00 },
+      3: { 3600: 0.03, 2400: 0.02, 1200: 0.01, 0: 0.00 },
+      4: { 3600: 0.01, 2400: 0.005, 1200: 0.002, 0: 0.00 },
+      5: { 3600: 0.003, 2400: 0.001, 1200: 0.0005, 0: 0.00 }
+    };
+
+    function interpolate(table, seconds) {
+      const times = [3600, 2400, 1200, 0];
+      for (let i = 0; i < times.length - 1; i++) {
+        if (seconds <= times[i] && seconds >= times[i + 1]) {
+          const ratio = (seconds - times[i + 1]) / (times[i] - times[i + 1]);
+          return table[times[i + 1]] + ratio * (table[times[i]] - table[times[i + 1]]);
+        }
+      }
+      return seconds >= 3600 ? table[3600] : table[0];
+    }
+
+    function calcWinProb(pregameProb, deficit, seconds) {
+      const d = Math.min(Math.abs(deficit), 5);
+      const baseProb = interpolate(BASE_WIN_PROB[d], seconds);
+      return Math.max(0, Math.min(1, baseProb + 0.50 * (pregameProb - 0.50)));
+    }
+
+    function calcSeconds(period, clock) {
+      const parts = (clock || '20:00').split(':').map(Number);
+      const t = (parts[0] || 0) * 60 + (parts[1] || 0);
+      if (period === 1) return t + 2400;
+      if (period === 2) return t + 1200;
+      return t;
+    }
+
+    function probToOdds(p) {
+      if (p >= 0.99) return -9999;
+      if (p <= 0.01) return 9999;
+      return p >= 0.5 ? Math.round(-100 * p / (1 - p)) : Math.round(100 * (1 - p) / p);
+    }
+
+    function formatOdds(odds) { return odds > 0 ? '+' + odds : '' + odds; }
+    function formatProb(p) { return (p * 100).toFixed(1) + '%'; }
+
+    // State
+    let games = [];
+    let gameHistories = {};
+    let expandedGames = {};
+    let lastUpdate = null;
+    let isLive = false;
+    let oddsFormat = 'american';
+    let refreshRate = 3;
+    let showSettings = false;
+    let showAlerts = false;
+    let showDevig = false;
+    let showSportsbookOdds = localStorage.getItem('showSportsbookOdds') === 'true';
+    let alertSettings = { 
+      enabled: true, 
+      gameStart: true,
+      periodEnd: true,
+      goals: true, 
+      evAlert: true,
+      minEV: 3,
+      alertDuration: 30
+    };
+    let alerts = [];
+    
+    // Devig settings
+    let devigSettings = JSON.parse(localStorage.getItem('devigSettings') || 'null') || {
+      method: 'power',  // 'power', 'multiplicative', 'additive', 'shin'
+      books: ['draftkings', 'fanduel', 'betmgm', 'caesars', 'pointsbet']
+    };
+    
+    // Best Line settings (separate from devig)
+    let bestLineSettings = JSON.parse(localStorage.getItem('bestLineSettings') || 'null') || {
+      books: ['draftkings', 'fanduel', 'betmgm', 'caesars', 'pointsbetus'],
+      enabled: true
+    };
+    let showBestLineSettings = false;
+    const availableBooks = [
+      { key: 'draftkings', name: 'DraftKings', abbrev: 'DK' },
+      { key: 'fanduel', name: 'FanDuel', abbrev: 'FD' },
+      { key: 'betmgm', name: 'BetMGM', abbrev: 'MGM' },
+      { key: 'caesars', name: 'Caesars', abbrev: 'CZR' },
+      { key: 'pointsbetus', name: 'PointsBet', abbrev: 'PB' },
+      { key: 'williamhill_us', name: 'William Hill', abbrev: 'WH' },
+      { key: 'unibet_us', name: 'Unibet', abbrev: 'UNI' },
+      { key: 'bovada', name: 'Bovada', abbrev: 'BOV' },
+      { key: 'betonlineag', name: 'BetOnline', abbrev: 'BOL' },
+      { key: 'mybookieag', name: 'MyBookie', abbrev: 'MB' }
+    ];
+    const devigMethods = [
+      { key: 'power', name: 'Power Method', desc: 'Best for balanced markets' },
+      { key: 'multiplicative', name: 'Multiplicative', desc: 'Simple proportional' },
+      { key: 'additive', name: 'Additive', desc: 'Split vig evenly' },
+      { key: 'shin', name: 'Shin Method', desc: 'Accounts for favorite-longshot bias' }
+    ];
+    
+    // Scheduled fetch times (PST): 8am, 10am, 12pm, 2pm, 3:45pm
+    const scheduledFetchTimes = [
+      { hour: 8, minute: 0 },
+      { hour: 10, minute: 0 },
+      { hour: 12, minute: 0 },
+      { hour: 14, minute: 0 },
+      { hour: 15, minute: 45 }
+    ];
+    
+    // Track locked chart positions across renders
+    let chartLockedPositions = {}; // { gameId: index }
+
+    // Track game states for alerts
+    let previousGameStates = {}; // { gameId: { state, period, homeScore, awayScore } }
+
+    // Add alert helper
+    function addAlert(type, message, gameId, key = null) {
+      const alert = {
+        id: Date.now() + Math.random(),
+        type,
+        message,
+        gameId,
+        key: key || `${type}-${gameId}-${Date.now()}`,
+        timestamp: Date.now()
+      };
+      alerts.unshift(alert); // Add to front
+      if (alerts.length > 10) alerts = alerts.slice(0, 10); // Keep max 10
+    }
+
+    // Remove alert manually
+    function removeAlert(id) {
+      alerts = alerts.filter(a => a.id !== id);
+      render();
+    }
+
+    // Kalshi market data cache
+    let kalshiMarkets = {};
+    
+    // Polymarket data cache
+    let polymarketData = {};
+    
+    // The Odds API data cache
+    let oddsApiData = {};
+    let oddsApiRawData = {}; // Store raw bookmaker data for devigging
+    let oddsApiLastFetch = null;
+    let oddsApiKey = localStorage.getItem('oddsApiKey') || '';
+    let deviggedOdds = {}; // Devigged consensus odds
+    
+    // Locked pregame prices (locked when game goes live)
+    let lockedPregamePrices = {};
+    
+    // Track scores for goal detection
+    let previousScores = {};
+    let goalFlashGames = {}; // { gameId: timestamp when flash started }
+
+    // Fetch Polymarket NHL game odds
+    async function fetchPolymarketOdds() {
+      const polyUrl = 'https://gamma-api.polymarket.com/events?series_id=10346&active=true&closed=false&limit=100';
+      const proxyUrls = [
+        polyUrl,  // Try direct first
+        'https://corsproxy.io/?' + encodeURIComponent(polyUrl),
+        'https://api.allorigins.win/raw?url=' + encodeURIComponent(polyUrl),
+        'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(polyUrl)
+      ];
+      
+      console.log('Attempting Polymarket fetch...');
+      
+      for (const url of proxyUrls) {
+        try {
+          console.log('Trying Polymarket:', url.substring(0, 50));
+          const res = await fetch(url);
+          if (!res.ok) {
+            console.log('Polymarket not ok:', res.status);
+            continue;
+          }
+          const events = await res.json();
+          
+          console.log('Polymarket events received:', events.length);
+          
+          // Clear old data
+          polymarketData = {};
+          
+          events.forEach(event => {
+            // Log raw event for debugging
+            console.log('Polymarket event:', event.title, event.markets?.length, 'markets');
+            
+            // Parse the event title to extract teams
+            // Title format could be: "NHL: Team A vs Team B" or "Team A vs Team B" or "Team A - Team B"
+            const title = event.title || '';
+            let match = title.match(/(?:NHL:\s*)?(.+?)\s+vs\.?\s+(.+)/i);
+            
+            // If vs format didn't match, try dash format
+            if (!match) {
+              match = title.match(/(?:NHL:\s*)?(.+?)\s*[-–]\s*(.+)/i);
+            }
+            
+            if (match && event.markets && event.markets.length > 0) {
+              const team1Name = match[1].trim();
+              const team2Name = match[2].trim();
+              const team1Abbrev = normalizeTeamName(team1Name);
+              const team2Abbrev = normalizeTeamName(team2Name);
+              
+              console.log(`Polymarket: "${team1Name}" -> "${team1Abbrev}", "${team2Name}" -> "${team2Abbrev}"`);
+              
+              // Skip if normalization failed (returned same name)
+              if (team1Abbrev === team1Name || team2Abbrev === team2Name) {
+                console.log(`Polymarket normalization failed for: ${team1Name} or ${team2Name}`);
+              }
+              
+              // Get the market prices
+              const market = event.markets[0];
+              const outcomes = JSON.parse(market.outcomes || '[]');
+              const prices = JSON.parse(market.outcomePrices || '[]');
+              
+              console.log('Polymarket outcomes:', outcomes, 'prices:', prices);
+              
+              if (outcomes.length >= 2 && prices.length >= 2) {
+                // Find which outcome corresponds to which team
+                let team1Prob = null, team2Prob = null;
+                
+                outcomes.forEach((outcome, idx) => {
+                  const outcomeLower = outcome.toLowerCase();
+                  const team1Lower = team1Name.toLowerCase();
+                  const team2Lower = team2Name.toLowerCase();
+                  
+                  if (outcomeLower.includes(team1Lower) || team1Lower.includes(outcomeLower)) {
+                    team1Prob = parseFloat(prices[idx]);
+                  } else if (outcomeLower.includes(team2Lower) || team2Lower.includes(outcomeLower)) {
+                    team2Prob = parseFloat(prices[idx]);
+                  }
+                });
+                
+                // If we couldn't match by name, assume order matches title order
+                if (team1Prob === null && team2Prob === null) {
+                  team1Prob = parseFloat(prices[0]);
+                  team2Prob = parseFloat(prices[1]);
+                }
+                
+                if (team1Prob !== null && team2Prob !== null) {
+                  // Store with away-home key format (team1 is typically away in "away vs home" format)
+                  const key = `${team1Abbrev}-${team2Abbrev}`;
+                  polymarketData[key] = {
+                    team1: team1Abbrev,
+                    team2: team2Abbrev,
+                    team1Prob,
+                    team2Prob,
+                    title: event.title,
+                    slug: event.slug
+                  };
+                  console.log(`Polymarket stored: ${key} -> ${team1Abbrev}=${(team1Prob*100).toFixed(0)}%, ${team2Abbrev}=${(team2Prob*100).toFixed(0)}%`);
+                }
+              }
+            } else {
+              console.log('Polymarket no match for title:', title);
+            }
+          });
+          
+          console.log('Polymarket games loaded:', Object.keys(polymarketData).length);
+          return true;
+        } catch (e) {
+          console.log('Polymarket fetch failed:', url, e.message);
+          continue;
+        }
+      }
+      console.log('All Polymarket API attempts failed');
+      return false;
+    }
+    
+    // Get Polymarket price for a game
+    function getPolymarketPrice(homeAbbrev, awayAbbrev) {
+      // Try away-home format (standard)
+      const key1 = `${awayAbbrev}-${homeAbbrev}`;
+      if (polymarketData[key1]) {
+        return {
+          awayProb: polymarketData[key1].team1Prob,
+          homeProb: polymarketData[key1].team2Prob
+        };
+      }
+      
+      // Try home-away format (reversed)
+      const key2 = `${homeAbbrev}-${awayAbbrev}`;
+      if (polymarketData[key2]) {
+        return {
+          awayProb: polymarketData[key2].team2Prob,
+          homeProb: polymarketData[key2].team1Prob
+        };
+      }
+      
+      // Try with team aliases
+      const homeVariants = [homeAbbrev, getKalshiAbbrev(homeAbbrev)];
+      const awayVariants = [awayAbbrev, getKalshiAbbrev(awayAbbrev)];
+      
+      for (const away of awayVariants) {
+        for (const home of homeVariants) {
+          const k1 = `${away}-${home}`;
+          if (polymarketData[k1]) {
+            return {
+              awayProb: polymarketData[k1].team1Prob,
+              homeProb: polymarketData[k1].team2Prob
+            };
+          }
+          const k2 = `${home}-${away}`;
+          if (polymarketData[k2]) {
+            return {
+              awayProb: polymarketData[k2].team2Prob,
+              homeProb: polymarketData[k2].team1Prob
+            };
+          }
+        }
+      }
+      
+      return null;
+    }
+
+    // Fetch sportsbook odds from The Odds API (limited calls - manual or few times per day)
+    async function fetchSportsbookOdds(manual = false) {
+      if (!oddsApiKey) {
+        console.log('No Odds API key set');
+        return;
+      }
+      
+      // Check if we should fetch (scheduled times or manual)
+      if (!manual && !shouldFetchNow()) {
+        console.log('Not a scheduled fetch time');
+        return;
+      }
+      
+      const apiUrl = `https://api.the-odds-api.com/v4/sports/icehockey_nhl/odds/?apiKey=${oddsApiKey}&regions=us&markets=h2h&oddsFormat=american`;
+      
+      try {
+        const res = await fetch(apiUrl);
+        if (!res.ok) {
+          console.error('Odds API error:', res.status);
+          return;
+        }
+        
+        const data = await res.json();
+        
+        // Log all team names from API for debugging
+        console.log('Odds API teams:', data.map(g => `${g.away_team} @ ${g.home_team}`));
+        
+        // Store raw data and parse odds by team matchup
+        oddsApiData = {};
+        oddsApiRawData = {};
+        
+        data.forEach(game => {
+          const homeTeam = game.home_team;
+          const awayTeam = game.away_team;
+          const homeAbbrev = normalizeTeamName(homeTeam);
+          const awayAbbrev = normalizeTeamName(awayTeam);
+          const key = `${awayAbbrev}-${homeAbbrev}`;
+          
+          console.log(`Odds API: ${awayTeam} (${awayAbbrev}) @ ${homeTeam} (${homeAbbrev}) -> key: ${key}`);
+          
+          // Store raw bookmaker data
+          const bookData = {};
+          game.bookmakers?.forEach(book => {
+            const h2h = book.markets?.find(m => m.key === 'h2h');
+            if (h2h) {
+              const homeOutcome = h2h.outcomes?.find(o => o.name === homeTeam);
+              const awayOutcome = h2h.outcomes?.find(o => o.name === awayTeam);
+              if (homeOutcome && awayOutcome) {
+                bookData[book.key] = {
+                  homeOdds: homeOutcome.price,
+                  awayOdds: awayOutcome.price,
+                  homeProb: oddsToProb(homeOutcome.price),
+                  awayProb: oddsToProb(awayOutcome.price)
+                };
+              }
+            }
+          });
+          
+          if (Object.keys(bookData).length > 0) {
+            oddsApiRawData[key] = {
+              homeTeam,
+              awayTeam,
+              books: bookData
+            };
+            
+            // Calculate simple average for display
+            const homeOdds = Object.values(bookData).map(b => b.homeOdds);
+            const awayOdds = Object.values(bookData).map(b => b.awayOdds);
+            const avgHomeOdds = Math.round(homeOdds.reduce((a, b) => a + b, 0) / homeOdds.length);
+            const avgAwayOdds = Math.round(awayOdds.reduce((a, b) => a + b, 0) / awayOdds.length);
+            
+            oddsApiData[key] = {
+              homeTeam,
+              awayTeam,
+              homeOdds: avgHomeOdds,
+              awayOdds: avgAwayOdds,
+              homeProb: oddsToProb(avgHomeOdds),
+              awayProb: oddsToProb(avgAwayOdds),
+              bookmakers: Object.keys(bookData)
+            };
+          }
+        });
+        
+        // Calculate devigged odds
+        calculateDeviggedOdds();
+        
+        oddsApiLastFetch = new Date();
+        localStorage.setItem('oddsApiLastFetch', oddsApiLastFetch.toISOString());
+        console.log('Odds API fetched:', Object.keys(oddsApiData).length, 'games');
+        render();
+      } catch (e) {
+        console.error('Odds API fetch error:', e);
+      }
+    }
+    
+    // Check if current time matches a scheduled fetch time (PST)
+    function shouldFetchNow() {
+      const now = new Date();
+      // Convert to PST
+      const pst = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+      const hour = pst.getHours();
+      const minute = pst.getMinutes();
+      
+      // Check if we're within 5 minutes of a scheduled time
+      for (const time of scheduledFetchTimes) {
+        const diff = Math.abs((hour * 60 + minute) - (time.hour * 60 + time.minute));
+        if (diff <= 5) {
+          // Check if we already fetched in the last 30 minutes
+          if (oddsApiLastFetch) {
+            const lastFetch = new Date(oddsApiLastFetch);
+            if (now - lastFetch < 30 * 60 * 1000) return false;
+          }
+          return true;
+        }
+      }
+      return false;
+    }
+    
+    // Get next scheduled fetch time
+    function getNextFetchTime() {
+      const now = new Date();
+      const pst = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+      const currentMinutes = pst.getHours() * 60 + pst.getMinutes();
+      
+      for (const time of scheduledFetchTimes) {
+        const timeMinutes = time.hour * 60 + time.minute;
+        if (timeMinutes > currentMinutes) {
+          const h = time.hour > 12 ? time.hour - 12 : time.hour;
+          const ampm = time.hour >= 12 ? 'PM' : 'AM';
+          const m = time.minute.toString().padStart(2, '0');
+          return `${h}:${m} ${ampm} PST`;
+        }
+      }
+      return '8:00 AM PST (tomorrow)';
+    }
+    
+    // Devigging methods
+    function devigPower(homeProb, awayProb) {
+      // Power method - find k where homeProb^k + awayProb^k = 1
+      const total = homeProb + awayProb;
+      if (total <= 1) return { home: homeProb, away: awayProb };
+      
+      // Binary search for k
+      let lo = 0, hi = 1;
+      for (let i = 0; i < 50; i++) {
+        const k = (lo + hi) / 2;
+        const sum = Math.pow(homeProb, k) + Math.pow(awayProb, k);
+        if (sum > 1) lo = k;
+        else hi = k;
+      }
+      const k = (lo + hi) / 2;
+      const fairHome = Math.pow(homeProb, k);
+      const fairAway = Math.pow(awayProb, k);
+      const fairTotal = fairHome + fairAway;
+      return { home: fairHome / fairTotal, away: fairAway / fairTotal };
+    }
+    
+    function devigMultiplicative(homeProb, awayProb) {
+      const total = homeProb + awayProb;
+      return { home: homeProb / total, away: awayProb / total };
+    }
+    
+    function devigAdditive(homeProb, awayProb) {
+      const total = homeProb + awayProb;
+      const vig = (total - 1) / 2;
+      return { home: homeProb - vig, away: awayProb - vig };
+    }
+    
+    function devigShin(homeProb, awayProb) {
+      // Shin method - accounts for favorite-longshot bias
+      const total = homeProb + awayProb;
+      if (total <= 1) return { home: homeProb, away: awayProb };
+      
+      // Binary search for z (vig parameter)
+      let lo = 0, hi = 0.5;
+      for (let i = 0; i < 50; i++) {
+        const z = (lo + hi) / 2;
+        const p1 = (Math.sqrt(z*z + 4*(1-z)*homeProb*homeProb) - z) / (2*(1-z));
+        const p2 = (Math.sqrt(z*z + 4*(1-z)*awayProb*awayProb) - z) / (2*(1-z));
+        if (p1 + p2 > 1) lo = z;
+        else hi = z;
+      }
+      const z = (lo + hi) / 2;
+      const fairHome = (Math.sqrt(z*z + 4*(1-z)*homeProb*homeProb) - z) / (2*(1-z));
+      const fairAway = (Math.sqrt(z*z + 4*(1-z)*awayProb*awayProb) - z) / (2*(1-z));
+      const fairTotal = fairHome + fairAway;
+      return { home: fairHome / fairTotal, away: fairAway / fairTotal };
+    }
+    
+    function devig(homeProb, awayProb, method) {
+      switch (method) {
+        case 'power': return devigPower(homeProb, awayProb);
+        case 'multiplicative': return devigMultiplicative(homeProb, awayProb);
+        case 'additive': return devigAdditive(homeProb, awayProb);
+        case 'shin': return devigShin(homeProb, awayProb);
+        default: return devigPower(homeProb, awayProb);
+      }
+    }
+    
+    // Calculate devigged consensus odds for all games
+    function calculateDeviggedOdds() {
+      deviggedOdds = {};
+      
+      for (const [key, gameData] of Object.entries(oddsApiRawData)) {
+        const selectedBooks = devigSettings.books;
+        const deviggedProbs = [];
+        
+        for (const [bookKey, bookOdds] of Object.entries(gameData.books)) {
+          if (selectedBooks.includes(bookKey)) {
+            const fair = devig(bookOdds.homeProb, bookOdds.awayProb, devigSettings.method);
+            deviggedProbs.push(fair);
+          }
+        }
+        
+        if (deviggedProbs.length > 0) {
+          // Average the devigged probabilities
+          const avgHome = deviggedProbs.reduce((a, b) => a + b.home, 0) / deviggedProbs.length;
+          const avgAway = deviggedProbs.reduce((a, b) => a + b.away, 0) / deviggedProbs.length;
+          
+          deviggedOdds[key] = {
+            homeProb: avgHome,
+            awayProb: avgAway,
+            booksUsed: deviggedProbs.length
+          };
+        }
+      }
+      
+      console.log('Devigged odds calculated:', Object.keys(deviggedOdds).length, 'games');
+    }
+    
+    // Get devigged odds for a game
+    function getDeviggedOdds(homeAbbrev, awayAbbrev) {
+      const key = `${awayAbbrev}-${homeAbbrev}`;
+      const result = deviggedOdds[key] || null;
+      if (!result && Object.keys(deviggedOdds).length > 0) {
+        console.log(`No devig for ${key}, available keys:`, Object.keys(deviggedOdds));
+      }
+      return result;
+    }
+    
+    // Get best odds from selected sportsbooks (highest implied probability = best line for that team)
+    function getBestOdds(homeAbbrev, awayAbbrev) {
+      const key = `${awayAbbrev}-${homeAbbrev}`;
+      const gameData = oddsApiRawData[key];
+      if (!gameData) return null;
+      
+      let bestHome = { prob: 0, odds: null, book: null, abbrev: null };
+      let bestAway = { prob: 0, odds: null, book: null, abbrev: null };
+      
+      for (const [bookKey, bookOdds] of Object.entries(gameData.books)) {
+        if (!devigSettings.books.includes(bookKey)) continue;
+        
+        const bookInfo = availableBooks.find(b => b.key === bookKey);
+        const abbrev = bookInfo?.abbrev || bookKey.substring(0, 3).toUpperCase();
+        
+        // Best odds = highest raw implied probability (best available line, not devigged)
+        if (bookOdds.homeProb > bestHome.prob) {
+          bestHome = { prob: bookOdds.homeProb, odds: bookOdds.homeOdds, book: bookKey, abbrev };
+        }
+        if (bookOdds.awayProb > bestAway.prob) {
+          bestAway = { prob: bookOdds.awayProb, odds: bookOdds.awayOdds, book: bookKey, abbrev };
+        }
+      }
+      
+      if (bestHome.book && bestAway.book) {
+        return {
+          home: bestHome,
+          away: bestAway
+        };
+      }
+      return null;
+    }
+    
+    // Save devig settings
+    function saveDevigSettings() {
+      localStorage.setItem('devigSettings', JSON.stringify(devigSettings));
+      calculateDeviggedOdds();
+      render();
+    }
+    
+    // Toggle book selection
+    function toggleBook(bookKey) {
+      const idx = devigSettings.books.indexOf(bookKey);
+      if (idx >= 0) {
+        devigSettings.books.splice(idx, 1);
+      } else {
+        devigSettings.books.push(bookKey);
+      }
+      saveDevigSettings();
+    }
+    
+    // Toggle sportsbook odds display
+    function toggleSportsbookDisplay() {
+      showSportsbookOdds = !showSportsbookOdds;
+      localStorage.setItem('showSportsbookOdds', showSportsbookOdds);
+      render();
+    }
+    
+    // Detect arbitrage opportunities across all books
+    // An arb exists when you can bet both sides and guarantee profit
+    // This happens when: (1/oddsHome) + (1/oddsAway) < 1
+    // Or in probability terms: probHome + probAway < 1
+    function detectArbitrage(homeAbbrev, awayAbbrev, kalshiHome, kalshiAway, polyHome, polyAway) {
+      // Collect all available odds from different sources
+      const homeOdds = []; // { prob, book, odds }
+      const awayOdds = [];
+      
+      // Add Kalshi
+      if (kalshiHome) homeOdds.push({ prob: kalshiHome, book: 'Kalshi', odds: probToOdds(kalshiHome) });
+      if (kalshiAway) awayOdds.push({ prob: kalshiAway, book: 'Kalshi', odds: probToOdds(kalshiAway) });
+      
+      // Add Polymarket
+      if (polyHome) homeOdds.push({ prob: polyHome, book: 'PM', odds: probToOdds(polyHome) });
+      if (polyAway) awayOdds.push({ prob: polyAway, book: 'PM', odds: probToOdds(polyAway) });
+      
+      // Add sportsbooks from raw data
+      const key = `${awayAbbrev}-${homeAbbrev}`;
+      const gameData = oddsApiRawData[key];
+      if (gameData) {
+        for (const [bookKey, bookOdds] of Object.entries(gameData.books)) {
+          const bookInfo = availableBooks.find(b => b.key === bookKey);
+          const abbrev = bookInfo?.abbrev || bookKey.substring(0, 2).toUpperCase();
+          
+          homeOdds.push({ prob: bookOdds.homeProb, book: abbrev, odds: bookOdds.homeOdds });
+          awayOdds.push({ prob: bookOdds.awayProb, book: abbrev, odds: bookOdds.awayOdds });
+        }
+      }
+      
+      // Check all combinations for arbitrage
+      let bestArb = null;
+      
+      for (const home of homeOdds) {
+        for (const away of awayOdds) {
+          // Skip same book
+          if (home.book === away.book) continue;
+          
+          // Calculate implied probability sum
+          // For American odds: implied prob = risk / payout
+          // Arb exists when combined implied prob < 100%
+          const homeImplied = home.prob;
+          const awayImplied = away.prob;
+          const totalImplied = homeImplied + awayImplied;
+          
+          if (totalImplied < 1) {
+            const arbPercent = ((1 - totalImplied) * 100).toFixed(2);
+            
+            if (!bestArb || parseFloat(arbPercent) > parseFloat(bestArb.percent)) {
+              bestArb = {
+                percent: arbPercent,
+                homeBook: home.book,
+                awayBook: away.book,
+                homeOdds: home.odds,
+                awayOdds: away.odds,
+                homeProb: home.prob,
+                awayProb: away.prob
+              };
+            }
+          }
+        }
+      }
+      
+      return bestArb;
+    }
+    
+    // Toggle best line settings panel
+    function toggleBestLineSettings() {
+      showBestLineSettings = !showBestLineSettings;
+      showSettings = false;
+      showAlerts = false;
+      showDevig = false;
+      render();
+    }
+    
+    // Save best line settings
+    function saveBestLineSettings() {
+      localStorage.setItem('bestLineSettings', JSON.stringify(bestLineSettings));
+      render();
+    }
+    
+    // Toggle book selection for best line
+    function toggleBestLineBook(bookKey) {
+      const idx = bestLineSettings.books.indexOf(bookKey);
+      if (idx >= 0) {
+        bestLineSettings.books.splice(idx, 1);
+      } else {
+        bestLineSettings.books.push(bookKey);
+      }
+      saveBestLineSettings();
+    }
+    
+    // Get best line odds from selected sportsbooks (uses bestLineSettings.books)
+    function getBestLineOdds(homeAbbrev, awayAbbrev) {
+      const key = `${awayAbbrev}-${homeAbbrev}`;
+      const gameData = oddsApiRawData[key];
+      if (!gameData || !bestLineSettings.enabled) return null;
+      
+      let bestHome = { prob: 0, odds: null, book: null, abbrev: null };
+      let bestAway = { prob: 0, odds: null, book: null, abbrev: null };
+      
+      for (const [bookKey, bookOdds] of Object.entries(gameData.books)) {
+        if (!bestLineSettings.books.includes(bookKey)) continue;
+        
+        const bookInfo = availableBooks.find(b => b.key === bookKey);
+        const abbrev = bookInfo?.abbrev || bookKey.substring(0, 3).toUpperCase();
+        
+        // Best odds = most favorable line (least negative or most positive American odds)
+        // For favorites (negative odds): higher number is better (-110 > -150)
+        // For underdogs (positive odds): higher number is better (+150 > +110)
+        if (bookOdds.homeOdds > (bestHome.odds || -99999)) {
+          bestHome = { prob: bookOdds.homeProb, odds: bookOdds.homeOdds, book: bookKey, abbrev };
+        }
+        if (bookOdds.awayOdds > (bestAway.odds || -99999)) {
+          bestAway = { prob: bookOdds.awayProb, odds: bookOdds.awayOdds, book: bookKey, abbrev };
+        }
+      }
+      
+      if (bestHome.book && bestAway.book) {
+        return {
+          home: bestHome,
+          away: bestAway
+        };
+      }
+      return null;
+    }
+    
+    // Convert American odds to probability
+    function oddsToProb(odds) {
+      if (odds > 0) {
+        return 100 / (odds + 100);
+      } else {
+        return Math.abs(odds) / (Math.abs(odds) + 100);
+      }
+    }
+    
+    // Normalize team name for matching
+    function normalizeTeamName(name) {
+      const teamMap = {
+        // Full names
+        'Anaheim Ducks': 'ANA',
+        'Boston Bruins': 'BOS',
+        'Buffalo Sabres': 'BUF',
+        'Calgary Flames': 'CGY',
+        'Carolina Hurricanes': 'CAR',
+        'Chicago Blackhawks': 'CHI',
+        'Colorado Avalanche': 'COL',
+        'Columbus Blue Jackets': 'CBJ',
+        'Dallas Stars': 'DAL',
+        'Detroit Red Wings': 'DET',
+        'Edmonton Oilers': 'EDM',
+        'Florida Panthers': 'FLA',
+        'Los Angeles Kings': 'LAK',
+        'Minnesota Wild': 'MIN',
+        'Montréal Canadiens': 'MTL',
+        'Montreal Canadiens': 'MTL',
+        'Nashville Predators': 'NSH',
+        'New Jersey Devils': 'NJD',
+        'New York Islanders': 'NYI',
+        'New York Rangers': 'NYR',
+        'Ottawa Senators': 'OTT',
+        'Philadelphia Flyers': 'PHI',
+        'Pittsburgh Penguins': 'PIT',
+        'San Jose Sharks': 'SJS',
+        'Seattle Kraken': 'SEA',
+        'St. Louis Blues': 'STL',
+        'St Louis Blues': 'STL',
+        'Tampa Bay Lightning': 'TBL',
+        'Toronto Maple Leafs': 'TOR',
+        'Utah Hockey Club': 'UTA',
+        'Utah HC': 'UTA',
+        'Utah': 'UTA',
+        'Utah Mammoth': 'UTA',
+        'Vancouver Canucks': 'VAN',
+        'Vegas Golden Knights': 'VGK',
+        'Washington Capitals': 'WSH',
+        'Winnipeg Jets': 'WPG',
+        'Arizona Coyotes': 'UTA',
+        // Short names (for Polymarket)
+        'Ducks': 'ANA',
+        'Bruins': 'BOS',
+        'Sabres': 'BUF',
+        'Flames': 'CGY',
+        'Hurricanes': 'CAR',
+        'Blackhawks': 'CHI',
+        'Avalanche': 'COL',
+        'Blue Jackets': 'CBJ',
+        'Stars': 'DAL',
+        'Red Wings': 'DET',
+        'Oilers': 'EDM',
+        'Panthers': 'FLA',
+        'Kings': 'LAK',
+        'Wild': 'MIN',
+        'Canadiens': 'MTL',
+        'Predators': 'NSH',
+        'Devils': 'NJD',
+        'Islanders': 'NYI',
+        'Rangers': 'NYR',
+        'Senators': 'OTT',
+        'Flyers': 'PHI',
+        'Penguins': 'PIT',
+        'Sharks': 'SJS',
+        'Kraken': 'SEA',
+        'Blues': 'STL',
+        'Lightning': 'TBL',
+        'Maple Leafs': 'TOR',
+        'Canucks': 'VAN',
+        'Golden Knights': 'VGK',
+        'Capitals': 'WSH',
+        'Jets': 'WPG',
+        'UTA': 'UTA'
+      };
+      // Also try lowercase matching
+      const lowerName = name.toLowerCase().trim();
+      for (const [key, val] of Object.entries(teamMap)) {
+        if (key.toLowerCase() === lowerName) {
+          return val;
+        }
+      }
+      return teamMap[name] || name;
+    }
+    
+    // Get sportsbook odds for a game
+    function getSportsbookOdds(homeAbbrev, awayAbbrev) {
+      const key = `${awayAbbrev}-${homeAbbrev}`;
+      return oddsApiData[key] || null;
+    }
+    
+    // Save API key
+    function saveOddsApiKey(key) {
+      oddsApiKey = key;
+      localStorage.setItem('oddsApiKey', key);
+      render();
+    }
+
+    // Fetch Kalshi NHL markets
+    async function fetchKalshiMarkets() {
+      const kalshiUrl = 'https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=KXNHLGAME&status=open&limit=200';
+      const proxyUrls = [
+        'https://corsproxy.io/?' + encodeURIComponent(kalshiUrl),
+        'https://api.allorigins.win/raw?url=' + encodeURIComponent(kalshiUrl)
+      ];
+
+      for (const url of proxyUrls) {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) continue;
+          const data = await res.json();
+          const markets = data.markets || [];
+          console.log('Kalshi raw markets:', markets.length);
+          
+          // Clear old markets to get fresh data
+          kalshiMarkets = {};
+          
+          // Group markets by game (each game has 2 markets - one per team)
+          const gameMarkets = {};
+          
+          // Log all tickers for debugging
+          console.log('Kalshi raw tickers:', markets.slice(0, 10).map(m => m.ticker));
+          
+          markets.forEach(m => {
+            // Parse ticker like: KXNHLGAME-26JAN07SJLA-SJ or KXNHLGAME-26JAN07DALWSH-DAL
+            // Format: KXNHLGAME-{date}{away}{home}-{winner}
+            const ticker = m.ticker?.toUpperCase() || '';
+            const match = ticker.match(/KXNHLGAME-(\d+[A-Z]+\d+)([A-Z]{2,3})([A-Z]{2,3})-([A-Z]{2,3})$/);
+            
+            if (!match) {
+              // Try alternative parsing if standard doesn't work
+              console.log('No match for ticker:', m.ticker);
+              return;
+            }
+            
+            const [, dateCode, team1, team2, winner] = match;
+            console.log(`Parsed: ${m.ticker} -> team1=${team1}, team2=${team2}, winner=${winner}`);
+            
+            // Store using the teams as they appear in the ticker
+            const gameKey = `${team1}-${team2}`;
+            
+            if (!gameMarkets[gameKey]) {
+              gameMarkets[gameKey] = { team1, team2 };
+            }
+            
+            // Use last_price if available, otherwise calculate mid from bid/ask
+            // Kalshi prices are in cents (0-100)
+            let price;
+            if (m.last_price !== undefined && m.last_price > 0) {
+              // Use last traded price
+              price = m.last_price / 100;
+            } else if (m.yes_bid && m.yes_ask) {
+              // Calculate mid from bid/ask
+              price = (m.yes_bid + m.yes_ask) / 2 / 100;
+            } else if (m.yes_ask) {
+              // Only ask available
+              price = m.yes_ask / 100;
+            } else if (m.yes_bid) {
+              // Only bid available
+              price = m.yes_bid / 100;
+            } else {
+              price = 0.5; // Default fallback
+            }
+            
+            console.log(`Kalshi ticker ${m.ticker}: ${winner} = ${(price*100).toFixed(0)}%`);
+            
+            if (winner === team1) {
+              gameMarkets[gameKey].team1Prob = price;
+            } else if (winner === team2) {
+              gameMarkets[gameKey].team2Prob = price;
+            }
+          });
+          
+          // Only store games where we have both team probabilities
+          Object.entries(gameMarkets).forEach(([key, v]) => {
+            if (v.team1Prob !== undefined && v.team2Prob !== undefined) {
+              kalshiMarkets[key] = {
+                team1Prob: v.team1Prob,
+                team2Prob: v.team2Prob,
+                team1Abbrev: v.team1,
+                team2Abbrev: v.team2
+              };
+              console.log('Kalshi game:', key, v.team1 + '=' + (v.team1Prob*100).toFixed(0) + '%', v.team2 + '=' + (v.team2Prob*100).toFixed(0) + '%');
+            }
+          });
+          
+          console.log('Kalshi games loaded:', Object.keys(kalshiMarkets).length);
+          return true;
+        } catch (e) {
+          console.log('Kalshi fetch failed:', url, e.message);
+          continue;
+        }
+      }
+      console.log('All Kalshi API attempts failed');
+      return false;
+    }
+
+    // Map NHL abbreviations to Kalshi abbreviations (and vice versa)
+    const teamAliases = {
+      // NHL -> Kalshi
+      'LAK': 'LA',
+      'SJS': 'SJ',
+      'TBL': 'TB',
+      'NJD': 'NJ',
+      'VGK': 'VGS',  // Vegas might be VGS on Kalshi
+      'UTA': 'UTAH', // Utah Hockey Club
+      'OTT': 'OTT',  // Ottawa (same, but adding for completeness)
+      // Add reverse mappings
+      'LA': 'LAK',
+      'SJ': 'SJS', 
+      'TB': 'TBL',
+      'NJ': 'NJD',
+      'VGS': 'VGK',
+      'UTAH': 'UTA',
+      // Try alternate Utah codes
+      'UTH': 'UTA'
+    };
+    
+    function getKalshiAbbrev(nhlAbbrev) {
+      return teamAliases[nhlAbbrev] || nhlAbbrev;
+    }
+    
+    function getNhlAbbrev(kalshiAbbrev) {
+      return teamAliases[kalshiAbbrev] || kalshiAbbrev;
+    }
+
+    // Get Kalshi price for a game (returns { homeProb, awayProb } or null)
+    function getKalshiPrice(homeAbbrev, awayAbbrev) {
+      // Get possible abbreviations for each team
+      const homeVariants = [homeAbbrev, getKalshiAbbrev(homeAbbrev)];
+      const awayVariants = [awayAbbrev, getKalshiAbbrev(awayAbbrev)];
+      
+      // Log available keys for debugging
+      console.log(`Looking for ${awayAbbrev}@${homeAbbrev}, variants: away=[${awayVariants}], home=[${homeVariants}], available keys:`, Object.keys(kalshiMarkets));
+      
+      // Try all combinations
+      for (const away of awayVariants) {
+        for (const home of homeVariants) {
+          const key1 = `${away}-${home}`;
+          if (kalshiMarkets[key1]) {
+            console.log(`Found match: ${key1}`);
+            return { 
+              awayProb: kalshiMarkets[key1].team1Prob, 
+              homeProb: kalshiMarkets[key1].team2Prob 
+            };
+          }
+          
+          const key2 = `${home}-${away}`;
+          if (kalshiMarkets[key2]) {
+            console.log(`Found match (reversed): ${key2}`);
+            return { 
+              awayProb: kalshiMarkets[key2].team2Prob, 
+              homeProb: kalshiMarkets[key2].team1Prob 
+            };
+          }
+        }
+      }
+      
+      console.log(`No Kalshi match found for ${awayAbbrev}@${homeAbbrev}`);
+      return null;
+    }
+
+    // Demo data
+    function getDemoGames() {
+      // Trigger a demo goal flash on first load
+      if (!goalFlashGames['demo1']) {
+        goalFlashGames['demo1'] = Date.now();
+      }
+      
+      // Add demo devigged odds
+      deviggedOdds = {
+        'TOR-BOS': { homeProb: 0.42, awayProb: 0.58, booksUsed: 5 },
+        'FLA-TBL': { homeProb: 0.52, awayProb: 0.48, booksUsed: 5 },
+        'VGK-COL': { homeProb: 0.54, awayProb: 0.46, booksUsed: 5 }
+      };
+      
+      // Add demo Polymarket odds - set up arb on VGK-COL game
+      // Kalshi has COL home at 55%, VGK away at 45%
+      // Polymarket has VGK at 48% (better than Kalshi's 45%)
+      // So bet VGK on PM (48%) + COL on Kalshi (55%) = 103% payout for 100% risk = 3% arb
+      polymarketData = {
+        'TOR-BOS': { team1: 'TOR', team2: 'BOS', team1Prob: 0.60, team2Prob: 0.40 },
+        'FLA-TBL': { team1: 'FLA', team2: 'TBL', team1Prob: 0.47, team2Prob: 0.53 },
+        'VGK-COL': { team1: 'VGK', team2: 'COL', team1Prob: 0.48, team2Prob: 0.50 }  // Creates arb with Kalshi
+      };
+      
+      return [
+        { id: 'demo1', homeAbbrev: 'BOS', awayAbbrev: 'TOR', homeScore: 2, awayScore: 3, period: 2, clock: '14:32', state: 'LIVE', kalshiHome: 0.38, kalshiAway: 0.62 },
+        { id: 'demo2', homeAbbrev: 'TBL', awayAbbrev: 'FLA', homeScore: 3, awayScore: 1, period: 3, clock: '8:22', state: 'LIVE', kalshiHome: 0.78, kalshiAway: 0.22 },
+        { id: 'demo3', homeAbbrev: 'COL', awayAbbrev: 'VGK', homeScore: 0, awayScore: 0, period: 0, clock: '20:00', state: 'FUT', startTime: '9:00 PM', kalshiHome: 0.50, kalshiAway: 0.45 }  // Note: doesn't add to 100%, creates arb
+      ];
+    }
+
+    function generateDemoHistory(homeEnd) {
+      const h = [];
+      for (let i = 0; i <= 20; i++) {
+        const p = i / 20;
+        const v = Math.sin(p * Math.PI * 3) * 10;
+        const home = Math.round(50 + (homeEnd - 50) * p + v);
+        h.push({ home: Math.max(5, Math.min(95, home)), away: Math.max(5, Math.min(95, 100 - home)) });
+      }
+      return h;
+    }
+
+    // Fetch play-by-play data and reconstruct win probability history
+    async function fetchPlayByPlay(gameId, homeAbbrev, awayAbbrev) {
+      // Skip if we already have history for this game
+      if (gameHistories[gameId] && gameHistories[gameId].length > 2) return;
+      
+      const apiUrl = `https://api-web.nhle.com/v1/gamecenter/${gameId}/play-by-play`;
+      const proxyUrls = [
+        apiUrl,
+        'https://corsproxy.io/?' + encodeURIComponent(apiUrl),
+        'https://api.allorigins.win/raw?url=' + encodeURIComponent(apiUrl)
+      ];
+
+      for (const url of proxyUrls) {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) continue;
+          const data = await res.json();
+          
+          if (data?.plays) {
+            const history = reconstructHistoryFromPlays(data, homeAbbrev, awayAbbrev);
+            if (history.length > 0) {
+              gameHistories[gameId] = history;
+              render();
+            }
+          }
+          return;
+        } catch (e) {
+          console.log('Play-by-play fetch failed:', url, e);
+          continue;
+        }
+      }
+    }
+
+    // Reconstruct win probability history from play-by-play data
+    function reconstructHistoryFromPlays(data, homeAbbrev, awayAbbrev) {
+      const history = [];
+      const gameKey = `${homeAbbrev}-${awayAbbrev}`;
+      
+      // Get pregame odds (use locked or default to 50/50)
+      let pregameHome = lockedPregamePrices[gameKey]?.home || 0.50;
+      let pregameAway = lockedPregamePrices[gameKey]?.away || 0.50;
+      
+      // Start with pregame probability
+      history.push({ home: Math.round(pregameHome * 100), away: Math.round(pregameAway * 100), timeStr: '1st - 20:00' });
+      
+      let homeScore = 0;
+      let awayScore = 0;
+      let lastPeriod = 1;
+      
+      // Process each play looking for goals
+      const plays = data.plays || [];
+      
+      for (const play of plays) {
+        const eventType = play.typeDescKey || play.typeCode;
+        
+        // Check for goals
+        if (eventType === 'goal' || play.typeCode === 505) {
+          const teamAbbrev = play.details?.eventOwnerTeamId === data.homeTeam?.id ? homeAbbrev : awayAbbrev;
+          
+          if (teamAbbrev === homeAbbrev) {
+            homeScore++;
+          } else {
+            awayScore++;
+          }
+          
+          // Calculate time remaining at this point
+          const period = play.periodDescriptor?.number || play.period || 1;
+          const timeInPeriod = play.timeInPeriod || '00:00';
+          const [mins, secs] = timeInPeriod.split(':').map(Number);
+          const elapsedInPeriod = mins * 60 + secs;
+          const remainingInPeriod = 20 * 60 - elapsedInPeriod;
+          const remainingMins = Math.floor(remainingInPeriod / 60);
+          const remainingSecs = remainingInPeriod % 60;
+          const periodsRemaining = Math.max(0, 3 - period);
+          const totalSecsRemaining = remainingInPeriod + (periodsRemaining * 20 * 60);
+          
+          const periodName = period === 1 ? '1st' : period === 2 ? '2nd' : period === 3 ? '3rd' : 'OT';
+          const timeStr = `${periodName} - ${remainingMins}:${String(remainingSecs).padStart(2, '0')}`;
+          
+          // Calculate FMV at this point
+          const diff = homeScore - awayScore;
+          let fmvHome, fmvAway;
+          
+          if (diff > 0) {
+            fmvAway = calcWinProb(pregameAway, diff, totalSecsRemaining);
+            fmvHome = 1 - fmvAway;
+          } else if (diff < 0) {
+            fmvHome = calcWinProb(pregameHome, -diff, totalSecsRemaining);
+            fmvAway = 1 - fmvHome;
+          } else {
+            fmvHome = pregameHome;
+            fmvAway = pregameAway;
+          }
+          
+          history.push({ home: Math.round(fmvHome * 100), away: Math.round(fmvAway * 100), timeStr, score: `${awayScore}-${homeScore}`, isGoal: true, goalTeam: teamAbbrev === homeAbbrev ? 'home' : 'away' });
+        }
+        
+        // Also add data point at period changes for smoother chart
+        const period = play.periodDescriptor?.number || play.period;
+        if (period && period !== lastPeriod && period <= 3) {
+          lastPeriod = period;
+          const periodsRemaining = Math.max(0, 3 - period);
+          const totalSecsRemaining = 20 * 60 + (periodsRemaining * 20 * 60);
+          const diff = homeScore - awayScore;
+          let fmvHome, fmvAway;
+          
+          const periodName = period === 1 ? '1st' : period === 2 ? '2nd' : period === 3 ? '3rd' : 'OT';
+          const timeStr = `${periodName} - 20:00`;
+          
+          if (diff > 0) {
+            fmvAway = calcWinProb(pregameAway, diff, totalSecsRemaining);
+            fmvHome = 1 - fmvAway;
+          } else if (diff < 0) {
+            fmvHome = calcWinProb(pregameHome, -diff, totalSecsRemaining);
+            fmvAway = 1 - fmvHome;
+          } else {
+            fmvHome = pregameHome;
+            fmvAway = pregameAway;
+          }
+          
+          // Only add if different from last point
+          const last = history[history.length - 1];
+          if (!last || Math.abs(last.home - Math.round(fmvHome * 100)) >= 1) {
+            history.push({ home: Math.round(fmvHome * 100), away: Math.round(fmvAway * 100), timeStr, score: `${awayScore}-${homeScore}` });
+          }
+        }
+      }
+      
+      // Add final result
+      const finalHome = homeScore > awayScore ? 100 : (homeScore < awayScore ? 0 : 50);
+      history.push({ home: finalHome, away: 100 - finalHome, timeStr: 'Final', score: `${awayScore}-${homeScore}` });
+      
+      return history;
+    }
+
+    // Parse NHL API /score/now
+    function parseNHLData(data) {
+      if (!data?.games) return [];
+      return data.games.map(g => {
+        const gs = g.gameState;
+        let state = 'FUT';
+        if (gs === 'LIVE' || gs === 'CRIT') state = 'LIVE';
+        else if (gs === 'FINAL' || gs === 'OFF') state = 'FINAL';
+        
+        console.log(`NHL Game: ${g.awayTeam?.abbrev} @ ${g.homeTeam?.abbrev}, gameState=${gs}, parsed=${state}, period=${g.period}, score=${g.awayTeam?.score}-${g.homeTeam?.score}`);
+        
+        const startTimeRaw = g.startTimeUTC ? new Date(g.startTimeUTC).getTime() : 0;
+        
+        return {
+          id: g.id,
+          homeAbbrev: g.homeTeam?.abbrev,
+          awayAbbrev: g.awayTeam?.abbrev,
+          homeScore: g.homeTeam?.score ?? 0,
+          awayScore: g.awayTeam?.score ?? 0,
+          period: g.period || 0,
+          clock: g.clock?.timeRemaining || '20:00',
+          state,
+          startTime: g.startTimeUTC ? new Date(g.startTimeUTC).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '',
+          startTimeRaw
+        };
+      });
+    }
+    
+    // Parse NHL API /schedule/{date} - only returns games for the specific date
+    function parseScheduleData(data, targetDate) {
+      const games = [];
+      // Schedule data has gameWeek array with dates, each date has games
+      const gameWeek = data?.gameWeek || [];
+      
+      // Only get games from today's date
+      const todayStr = targetDate || new Date().toISOString().split('T')[0];
+      
+      gameWeek.forEach(day => {
+        // Only include games from the target date
+        if (day.date !== todayStr) return;
+        
+        (day.games || []).forEach(g => {
+          const gs = g.gameState;
+          let state = 'FUT';
+          if (gs === 'LIVE' || gs === 'CRIT') state = 'LIVE';
+          else if (gs === 'FINAL' || gs === 'OFF') state = 'FINAL';
+          else if (gs === 'PRE' || gs === 'FUT') state = 'FUT';
+          
+          const startTimeRaw = g.startTimeUTC ? new Date(g.startTimeUTC).getTime() : 0;
+          
+          games.push({
+            id: g.id,
+            homeAbbrev: g.homeTeam?.abbrev,
+            awayAbbrev: g.awayTeam?.abbrev,
+            homeScore: g.homeTeam?.score ?? 0,
+            awayScore: g.awayTeam?.score ?? 0,
+            period: g.period || 0,
+            clock: g.clock?.timeRemaining || '20:00',
+            state,
+            startTime: g.startTimeUTC ? new Date(g.startTimeUTC).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '',
+            startTimeRaw
+          });
+        });
+      });
+      return games;
+    }
+
+    // Calculate FMV for a game
+    function calcGameFMV(g) {
+      const gameKey = `${g.homeAbbrev}-${g.awayAbbrev}`;
+      
+      // Get current Kalshi prices
+      let kalshiHome = g.kalshiHome || null;
+      let kalshiAway = g.kalshiAway || null;
+      
+      const liveKalshi = getKalshiPrice(g.homeAbbrev, g.awayAbbrev);
+      if (liveKalshi) {
+        kalshiHome = liveKalshi.homeProb;
+        kalshiAway = liveKalshi.awayProb;
+      }
+      
+      // Handle pregame price locking
+      let pregameHome, pregameAway;
+      
+      if (g.state === 'FUT') {
+        // Game hasn't started - use current Kalshi price as pregame
+        pregameHome = kalshiHome || 0.50;
+        pregameAway = kalshiAway || 0.50;
+        
+        // Store as potential lock price (will be locked when game goes live)
+        lockedPregamePrices[gameKey] = { home: pregameHome, away: pregameAway };
+      } else {
+        // Game is LIVE or FINAL - use locked pregame price
+        if (lockedPregamePrices[gameKey]) {
+          pregameHome = lockedPregamePrices[gameKey].home;
+          pregameAway = lockedPregamePrices[gameKey].away;
+        } else {
+          // No locked price (app started after game went live) - use 50/50 or Kalshi
+          pregameHome = kalshiHome || 0.50;
+          pregameAway = kalshiAway || 0.50;
+          // Lock it now so it doesn't change
+          lockedPregamePrices[gameKey] = { home: pregameHome, away: pregameAway };
+        }
+      }
+      
+      // Calculate FMV based on pregame and current game state
+      let fmvHome = pregameHome, fmvAway = pregameAway;
+
+      if (g.state === 'LIVE' && g.period > 0) {
+        const secs = calcSeconds(g.period, g.clock);
+        const diff = g.homeScore - g.awayScore;
+        if (diff > 0) {
+          fmvAway = calcWinProb(pregameAway, diff, secs);
+          fmvHome = 1 - fmvAway;
+        } else if (diff < 0) {
+          fmvHome = calcWinProb(pregameHome, -diff, secs);
+          fmvAway = 1 - fmvHome;
+        }
+      } else if (g.state === 'FINAL') {
+        fmvHome = g.homeScore > g.awayScore ? 1 : 0;
+        fmvAway = 1 - fmvHome;
+      }
+
+      // Calculate EV vs current Kalshi price
+      const evHome = kalshiHome ? ((fmvHome - kalshiHome) * 100).toFixed(1) : null;
+      const evAway = kalshiAway ? ((fmvAway - kalshiAway) * 100).toFixed(1) : null;
+
+      // Get sportsbook odds (for display only)
+      const sportsbook = getSportsbookOdds(g.homeAbbrev, g.awayAbbrev);
+      const sbHome = sportsbook?.homeProb || null;
+      const sbAway = sportsbook?.awayProb || null;
+      const sbHomeOdds = sportsbook?.homeOdds || null;
+      const sbAwayOdds = sportsbook?.awayOdds || null;
+      
+      // Get devigged consensus odds
+      const devigged = getDeviggedOdds(g.homeAbbrev, g.awayAbbrev);
+      const devigHome = devigged?.homeProb || null;
+      const devigAway = devigged?.awayProb || null;
+      const devigBooksUsed = devigged?.booksUsed || 0;
+      
+      // Get best odds from selected books (for devig)
+      const bestOdds = getBestOdds(g.homeAbbrev, g.awayAbbrev);
+      
+      // Get best line odds from selected books (for Best display)
+      const bestLineOdds = getBestLineOdds(g.homeAbbrev, g.awayAbbrev);
+      
+      // Get Polymarket odds (display only)
+      const polymarket = getPolymarketPrice(g.homeAbbrev, g.awayAbbrev);
+      const polyHome = polymarket?.homeProb || null;
+      const polyAway = polymarket?.awayProb || null;
+      
+      // Detect arbitrage opportunities across all books
+      const arb = detectArbitrage(g.homeAbbrev, g.awayAbbrev, kalshiHome, kalshiAway, polyHome, polyAway);
+
+      return { 
+        pregameHome, 
+        pregameAway, 
+        fmvHome, 
+        fmvAway, 
+        kalshiHome, 
+        kalshiAway, 
+        evHome, 
+        evAway,
+        sbHome,
+        sbAway,
+        sbHomeOdds,
+        sbAwayOdds,
+        devigHome,
+        devigAway,
+        devigBooksUsed,
+        bestOdds,
+        bestLineOdds,
+        polyHome,
+        polyAway,
+        arb,
+        isLocked: g.state !== 'FUT'
+      };
+    }
+
+    // Fetch games
+    async function fetchGames() {
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date().toISOString().split('T')[0];
+      
+      const scoreUrl = 'https://api-web.nhle.com/v1/score/now';
+      const scheduleUrl = `https://api-web.nhle.com/v1/schedule/${today}`;
+      
+      const proxyUrls = (url) => [
+        url, // Try direct first
+        'https://corsproxy.io/?' + encodeURIComponent(url),
+        'https://api.allorigins.win/raw?url=' + encodeURIComponent(url)
+      ];
+
+      let allGames = [];
+      let seenGameIds = new Set();
+      
+      // Fetch from /score/now first (has live game data)
+      for (const url of proxyUrls(scoreUrl)) {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) continue;
+          const data = await res.json();
+          const scoreGames = parseNHLData(data);
+          scoreGames.forEach(g => {
+            if (!seenGameIds.has(g.id)) {
+              seenGameIds.add(g.id);
+              allGames.push(g);
+            }
+          });
+          console.log('Score/now fetched:', scoreGames.length, 'games');
+          break; // Success
+        } catch (e) {
+          console.log('Score fetch failed for:', url, e);
+          continue;
+        }
+      }
+      
+      // Also fetch from /schedule/{today} for any games not in /score/now
+      for (const url of proxyUrls(scheduleUrl)) {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) continue;
+          const data = await res.json();
+          const scheduleGames = parseScheduleData(data, today);
+          let addedCount = 0;
+          scheduleGames.forEach(g => {
+            if (!seenGameIds.has(g.id)) {
+              seenGameIds.add(g.id);
+              allGames.push(g);
+              addedCount++;
+            }
+          });
+          console.log('Schedule fetched:', scheduleGames.length, 'games,', addedCount, 'new');
+          break; // Success
+        } catch (e) {
+          console.log('Schedule fetch failed for:', url, e);
+          continue;
+        }
+      }
+      
+      if (allGames.length > 0) {
+        games = allGames;
+        isLive = true;
+        
+        // Sort by start time (FUT games first by time, then LIVE, then FINAL)
+        games.sort((a, b) => {
+          const stateOrder = { 'FUT': 0, 'LIVE': 1, 'FINAL': 2 };
+          if (stateOrder[a.state] !== stateOrder[b.state]) {
+            return stateOrder[a.state] - stateOrder[b.state];
+          }
+          return (a.startTimeRaw || 0) - (b.startTimeRaw || 0);
+        });
+          
+        // Detect events and generate alerts
+        games.forEach(g => {
+            const prev = previousGameStates[g.id];
+            const prevScore = previousScores[g.id];
+            const currentTotal = g.homeScore + g.awayScore;
+            const home = TEAMS[g.homeAbbrev] || { name: g.homeAbbrev };
+            const away = TEAMS[g.awayAbbrev] || { name: g.awayAbbrev };
+            const fmv = calcGameFMV(g);
+            
+            if (alertSettings.enabled && prev) {
+              // Game Start Alert
+              if (alertSettings.gameStart && prev.state === 'FUT' && g.state === 'LIVE') {
+                addAlert('start', `🏒 Game Started: ${away.name} @ ${home.name}`, g.id);
+              }
+              
+              // Period End Alert
+              if (alertSettings.periodEnd && prev.period !== g.period && g.period > 1) {
+                const periodName = prev.period === 1 ? '1st' : prev.period === 2 ? '2nd' : prev.period === 3 ? '3rd' : 'OT';
+                addAlert('period', `⏱️ End of ${periodName}: ${away.name} ${g.awayScore} - ${home.name} ${g.homeScore}`, g.id);
+              }
+              
+              // Goal Alert
+              if (alertSettings.goals && prevScore !== undefined && currentTotal > prevScore) {
+                goalFlashGames[g.id] = Date.now();
+                const scorer = g.homeScore > prev.homeScore ? home.name : away.name;
+                addAlert('goal', `🚨 GOAL! ${scorer} scores - ${away.name} ${g.awayScore}, ${home.name} ${g.homeScore}`, g.id);
+              }
+              
+              // EV Alert
+              if (alertSettings.evAlert && g.state === 'LIVE') {
+                if (fmv.evHome && +fmv.evHome >= alertSettings.minEV) {
+                  const alertKey = `ev-${g.id}-home-${Math.floor(+fmv.evHome)}`;
+                  if (!alerts.find(a => a.key === alertKey)) {
+                    addAlert('ev', `💰 +EV: ${home.name} FMV ${(fmv.fmvHome*100).toFixed(0)}% vs Kalshi ${(fmv.kalshiHome*100).toFixed(0)}% (+${fmv.evHome}%)`, g.id, alertKey);
+                  }
+                }
+                if (fmv.evAway && +fmv.evAway >= alertSettings.minEV) {
+                  const alertKey = `ev-${g.id}-away-${Math.floor(+fmv.evAway)}`;
+                  if (!alerts.find(a => a.key === alertKey)) {
+                    addAlert('ev', `💰 +EV: ${away.name} FMV ${(fmv.fmvAway*100).toFixed(0)}% vs Kalshi ${(fmv.kalshiAway*100).toFixed(0)}% (+${fmv.evAway}%)`, g.id, alertKey);
+                  }
+                }
+              }
+            }
+            
+            // Update previous states
+            previousScores[g.id] = currentTotal;
+            previousGameStates[g.id] = { 
+              state: g.state, 
+              period: g.period, 
+              homeScore: g.homeScore, 
+              awayScore: g.awayScore 
+            };
+            
+            if (g.state === 'LIVE') {
+              const h = gameHistories[g.id] || [];
+              const np = { home: Math.round(fmv.fmvHome * 100), away: Math.round(fmv.fmvAway * 100) };
+              const last = h[h.length - 1];
+              // Always add first point, then only add if changed by 1%
+              if (h.length === 0 || !last || Math.abs(last.home - np.home) >= 1) {
+                gameHistories[g.id] = [...h.slice(-30), np];
+              }
+              
+              // If we just joined a live game, fetch play-by-play to reconstruct history
+              if (h.length <= 1) {
+                fetchPlayByPlay(g.id, g.homeAbbrev, g.awayAbbrev);
+              }
+            }
+            
+            // Fetch play-by-play for finished games to reconstruct history
+            if (g.state === 'FINAL' && (!gameHistories[g.id] || gameHistories[g.id].length <= 2)) {
+              fetchPlayByPlay(g.id, g.homeAbbrev, g.awayAbbrev);
+            }
+          });
+          
+          // Clean up expired alerts and goal flashes
+          const now = Date.now();
+          alerts = alerts.filter(a => now - a.timestamp < alertSettings.alertDuration * 1000);
+          Object.keys(goalFlashGames).forEach(id => {
+            if (now - goalFlashGames[id] > 10000) {
+              delete goalFlashGames[id];
+            }
+          });
+          
+          lastUpdate = new Date();
+          render();
+          return; // Success, exit
+      }
+      
+      // All failed, use demo
+      console.error('All API attempts failed, using demo data');
+      isLive = false;
+      if (games.length === 0) {
+        games = getDemoGames();
+        gameHistories = { 'demo1': generateDemoHistory(35), 'demo2': generateDemoHistory(82) };
+      }
+      lastUpdate = new Date();
+      render();
+    }
+
+    // Draw interactive chart
+    function drawChart(canvas, history, homeColor, awayColor, gameId) {
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      const padding = { top: 20, bottom: 35, left: 10, right: 10 };
+      const chartW = w - padding.left - padding.right;
+      const chartH = h - padding.top - padding.bottom;
+      
+      ctx.clearRect(0, 0, w, h);
+      
+      if (history.length < 2) return;
+      
+      // Background
+      ctx.fillStyle = 'rgba(20, 20, 20, 0.8)';
+      ctx.fillRect(0, 0, w, h);
+      
+      // 50% line
+      ctx.strokeStyle = 'rgba(107, 114, 128, 0.5)';
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(padding.left, padding.top + chartH / 2);
+      ctx.lineTo(w - padding.right, padding.top + chartH / 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      // Period dividers (at 1/3 and 2/3)
+      ctx.strokeStyle = 'rgba(107, 114, 128, 0.3)';
+      ctx.setLineDash([2, 2]);
+      [1/3, 2/3].forEach(p => {
+        const x = padding.left + chartW * p;
+        ctx.beginPath();
+        ctx.moveTo(x, padding.top);
+        ctx.lineTo(x, padding.top + chartH);
+        ctx.stroke();
+      });
+      ctx.setLineDash([]);
+      
+      // X-axis labels (periods)
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '20px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ['1st', '2nd', '3rd'].forEach((label, i) => {
+        const x = padding.left + chartW * (i + 0.5) / 3;
+        ctx.fillText(label, x, h - 8);
+      });
+      
+      // Y-axis labels
+      ctx.font = '18px JetBrains Mono, monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('100%', padding.left, padding.top + 5);
+      ctx.fillText('0%', padding.left, padding.top + chartH - 2);
+      
+      // Draw areas and lines
+      const step = chartW / (history.length - 1);
+      
+      const drawLine = (data, color, fillAlpha) => {
+        // Fill
+        ctx.fillStyle = color + Math.round(fillAlpha * 255).toString(16).padStart(2, '0');
+        ctx.beginPath();
+        ctx.moveTo(padding.left, padding.top + chartH);
+        history.forEach((p, i) => {
+          const x = padding.left + i * step;
+          const y = padding.top + chartH - (data === 'home' ? p.home : p.away) / 100 * chartH;
+          ctx.lineTo(x, y);
+        });
+        ctx.lineTo(padding.left + chartW, padding.top + chartH);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Line
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        history.forEach((p, i) => {
+          const x = padding.left + i * step;
+          const y = padding.top + chartH - (data === 'home' ? p.home : p.away) / 100 * chartH;
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      };
+      
+      drawLine('away', awayColor, 0.25);
+      drawLine('home', homeColor, 0.25);
+      
+      // Draw goal markers (puck icons) at bottom with team colors
+      history.forEach((p, i) => {
+        if (p.isGoal) {
+          const x = padding.left + i * step;
+          const y = padding.top + chartH + 12;
+          const puckColor = p.goalTeam === 'home' ? homeColor : awayColor;
+          
+          // Draw puck (team colored circle)
+          ctx.fillStyle = puckColor;
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(x, y, 8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+      });
+      
+      // Store chart info for interaction
+      canvas.chartInfo = { history, homeColor, awayColor, padding, chartW, chartH, step };
+    }
+    
+    // Draw hover tooltip on chart
+    function drawChartHover(canvas, index) {
+      const info = canvas.chartInfo;
+      if (!info || index < 0 || index >= info.history.length) return;
+      
+      const ctx = canvas.getContext('2d');
+      const { history, homeColor, awayColor, padding, chartW, chartH, step } = info;
+      const w = canvas.width, h = canvas.height;
+      
+      // Redraw chart first
+      ctx.clearRect(0, 0, w, h);
+      
+      // Background
+      ctx.fillStyle = 'rgba(20, 20, 20, 0.8)';
+      ctx.fillRect(0, 0, w, h);
+      
+      // 50% line
+      ctx.strokeStyle = 'rgba(107, 114, 128, 0.5)';
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(padding.left, padding.top + chartH / 2);
+      ctx.lineTo(w - padding.right, padding.top + chartH / 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      // Period dividers
+      ctx.strokeStyle = 'rgba(107, 114, 128, 0.3)';
+      ctx.setLineDash([2, 2]);
+      [1/3, 2/3].forEach(p => {
+        const x = padding.left + chartW * p;
+        ctx.beginPath();
+        ctx.moveTo(x, padding.top);
+        ctx.lineTo(x, padding.top + chartH);
+        ctx.stroke();
+      });
+      ctx.setLineDash([]);
+      
+      // X-axis labels
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '20px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ['1st', '2nd', '3rd'].forEach((label, i) => {
+        const x = padding.left + chartW * (i + 0.5) / 3;
+        ctx.fillText(label, x, h - 8);
+      });
+      
+      // Y-axis labels
+      ctx.font = '18px JetBrains Mono, monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('100%', padding.left, padding.top + 5);
+      ctx.fillText('0%', padding.left, padding.top + chartH - 2);
+      
+      // Draw lines
+      const drawLine = (data, color, fillAlpha) => {
+        ctx.fillStyle = color + Math.round(fillAlpha * 255).toString(16).padStart(2, '0');
+        ctx.beginPath();
+        ctx.moveTo(padding.left, padding.top + chartH);
+        history.forEach((p, i) => {
+          const x = padding.left + i * step;
+          const y = padding.top + chartH - (data === 'home' ? p.home : p.away) / 100 * chartH;
+          ctx.lineTo(x, y);
+        });
+        ctx.lineTo(padding.left + chartW, padding.top + chartH);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        history.forEach((p, i) => {
+          const x = padding.left + i * step;
+          const y = padding.top + chartH - (data === 'home' ? p.home : p.away) / 100 * chartH;
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      };
+      
+      drawLine('away', awayColor, 0.25);
+      drawLine('home', homeColor, 0.25);
+      
+      // Draw goal markers (puck icons) at bottom with team colors
+      history.forEach((p, i) => {
+        if (p.isGoal) {
+          const x = padding.left + i * step;
+          const y = padding.top + chartH + 12;
+          const puckColor = p.goalTeam === 'home' ? homeColor : awayColor;
+          
+          // Draw puck (team colored circle)
+          ctx.fillStyle = puckColor;
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(x, y, 8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+      });
+      
+      // Draw hover line
+      const hoverX = padding.left + index * step;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(hoverX, padding.top);
+      ctx.lineTo(hoverX, padding.top + chartH);
+      ctx.stroke();
+      
+      // Draw dots at hover position
+      const point = history[index];
+      const homeY = padding.top + chartH - point.home / 100 * chartH;
+      const awayY = padding.top + chartH - point.away / 100 * chartH;
+      
+      // Home dot
+      ctx.fillStyle = homeColor;
+      ctx.beginPath();
+      ctx.arc(hoverX, homeY, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      
+      // Away dot
+      ctx.fillStyle = awayColor;
+      ctx.beginPath();
+      ctx.arc(hoverX, awayY, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      
+      // Draw tooltip box
+      const timeProgress = index / (history.length - 1);
+      const totalMins = 60;
+      const elapsedMins = timeProgress * totalMins;
+      const period = elapsedMins < 20 ? 1 : elapsedMins < 40 ? 2 : 3;
+      const minsInPeriod = elapsedMins % 20;
+      const remainingInPeriod = 20 - minsInPeriod;
+      const periodName = period === 1 ? '1st' : period === 2 ? '2nd' : '3rd';
+      const timeStr = `${periodName} - ${Math.floor(remainingInPeriod)}:${String(Math.round((remainingInPeriod % 1) * 60)).padStart(2, '0')}`;
+      
+      // Use actual time if available in history
+      const displayTime = point.timeStr || timeStr;
+      
+      // Tooltip background - position in middle of chart (larger size)
+      const tooltipW = 200;
+      const tooltipH = 90;
+      let tooltipX = hoverX - tooltipW / 2;
+      tooltipX = Math.max(padding.left, Math.min(w - padding.right - tooltipW, tooltipX));
+      const tooltipY = padding.top + chartH / 2 - tooltipH / 2;
+      
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.92)';
+      ctx.beginPath();
+      ctx.roundRect(tooltipX, tooltipY, tooltipW, tooltipH, 10);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      
+      // Tooltip text (larger fonts)
+      ctx.font = 'bold 24px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(displayTime, tooltipX + tooltipW / 2, tooltipY + 28);
+      
+      // Show score if available
+      if (point.score) {
+        ctx.font = '20px JetBrains Mono, monospace';
+        ctx.fillStyle = '#9ca3af';
+        ctx.fillText(point.score, tooltipX + tooltipW / 2, tooltipY + 52);
+      }
+      
+      ctx.font = 'bold 22px JetBrains Mono, monospace';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(`${point.home}%`, tooltipX + tooltipW / 4, tooltipY + (point.score ? 78 : 60));
+      ctx.fillText(`${point.away}%`, tooltipX + tooltipW * 3/4, tooltipY + (point.score ? 78 : 60));
+    }
+    
+    // Setup chart interaction handlers
+    function setupChartInteraction(canvas, gameId) {
+      canvas.isLocked = false;
+      canvas.lockedIndex = -1;
+      
+      const getIndex = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const info = canvas.chartInfo;
+        if (!info) return -1;
+        
+        let clientX;
+        if (e.touches && e.touches.length > 0) {
+          clientX = e.touches[0].clientX;
+        } else if (e.changedTouches && e.changedTouches.length > 0) {
+          clientX = e.changedTouches[0].clientX;
+        } else {
+          clientX = e.clientX;
+        }
+        
+        const x = (clientX - rect.left) * scaleX - info.padding.left;
+        const index = Math.round(x / info.step);
+        return Math.max(0, Math.min(info.history.length - 1, index));
+      };
+      
+      const lockToIndex = (index) => {
+        canvas.isLocked = true;
+        canvas.lockedIndex = index;
+        chartLockedPositions[gameId] = index; // Save to global state
+        drawChartHover(canvas, index);
+      };
+      
+      const handleMove = (e) => {
+        if (canvas.isLocked) return; // Don't update if locked
+        e.preventDefault();
+        const index = getIndex(e);
+        if (index >= 0) {
+          drawChartHover(canvas, index);
+        }
+      };
+      
+      const handleClick = (e) => {
+        e.preventDefault();
+        const index = getIndex(e);
+        if (index >= 0) {
+          lockToIndex(index);
+        }
+      };
+      
+      // Desktop events
+      canvas.addEventListener('mousemove', handleMove);
+      canvas.addEventListener('click', handleClick);
+      canvas.addEventListener('mouseleave', () => {
+        if (!canvas.isLocked && canvas.chartInfo) {
+          const { history, homeColor, awayColor } = canvas.chartInfo;
+          drawChart(canvas, history, homeColor, awayColor, gameId);
+        }
+      });
+      
+      // Touch events - treat any touch as immediate lock
+      canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const index = getIndex(e);
+        if (index >= 0) {
+          lockToIndex(index);
+        }
+      }, { passive: false });
+      
+      canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        const index = getIndex(e);
+        if (index >= 0) {
+          lockToIndex(index);
+        }
+      }, { passive: false });
+      
+      canvas.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        // Keep it locked at last position
+        if (canvas.lockedIndex >= 0) {
+          drawChartHover(canvas, canvas.lockedIndex);
+        }
+      }, { passive: false });
+    }
+
+    // Render
+    function render() {
+      // Skip render if user is typing in an input field
+      const activeElement = document.activeElement;
+      if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'SELECT')) {
+        return;
+      }
+      
+      const app = document.getElementById('app');
+      
+      let html = `
+        <header class="header-bar border-b border-white/10 py-3 sticky top-0 z-10">
+          <div class="max-w-lg mx-auto px-3">
+            <div class="flex justify-between items-center">
+              <div class="flex items-center gap-2">
+                <svg class="hockey-logo w-7 h-7 flex-shrink-0" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <!-- Hockey Stick -->
+                  <path d="M12 52 L20 8 L26 8 L22 42 L48 42 L48 52 L12 52 Z" fill="url(#stickGradient)" stroke="#888" stroke-width="1.5"/>
+                  <!-- Puck -->
+                  <ellipse cx="44" cy="28" rx="12" ry="4" fill="#1a1a1a" stroke="#666" stroke-width="1.5"/>
+                  <ellipse cx="44" cy="26" rx="12" ry="4" fill="#2d2d2d" stroke="#888" stroke-width="1.5"/>
+                  <!-- Stick tape -->
+                  <rect x="18" y="8" width="10" height="6" rx="1" fill="#5EEAA3" opacity="0.7"/>
+                  <defs>
+                    <linearGradient id="stickGradient" x1="12" y1="52" x2="48" y2="8" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stop-color="#8B4513"/>
+                      <stop offset="50%" stop-color="#D2691E"/>
+                      <stop offset="100%" stop-color="#DEB887"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div>
+                  <h1 class="text-lg font-bold title-text whitespace-nowrap">NHL FMV Tracker</h1>
+                  <div class="text-xs text-gray-500">${lastUpdate ? 'Updated ' + lastUpdate.toLocaleTimeString() : 'Loading...'}</div>
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="px-2.5 py-1 ${isLive ? 'bg-gradient-to-r from-emerald-600 to-emerald-700' : 'bg-gradient-to-r from-amber-600 to-amber-700'} text-white text-xs rounded-full font-semibold shadow-lg">
+                  ${isLive ? '● LIVE' : '○ DEMO'}
+                </span>
+                <button onclick="toggleOdds()" class="btn-pill px-2.5 py-1.5 rounded-full text-xs font-semibold text-gray-300 mono">
+                  ${oddsFormat === 'american' ? 'US' : '%'}
+                </button>
+                <button onclick="toggleAlerts()" class="btn-pill w-8 h-8 rounded-full flex items-center justify-center text-sm" title="Alerts">
+                  ${alertSettings.enabled ? '🔔' : '🔕'}
+                </button>
+                <button onclick="toggleSettings()" class="btn-pill w-8 h-8 rounded-full flex items-center justify-center text-sm" title="Settings">⚙️</button>
+                <button onclick="fetchGames()" class="btn-pill w-8 h-8 rounded-full flex items-center justify-center text-gray-300 text-sm">↻</button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        ${showAlerts ? `
+        <div class="border-b border-white/10" style="background: linear-gradient(180deg, rgba(45, 45, 45, 0.95) 0%, rgba(26, 26, 26, 0.9) 100%);">
+          <div class="max-w-lg mx-auto px-3 py-4">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-sm font-semibold text-gray-200">Alert Settings</h3>
+              <button onclick="toggleAlerts()" class="text-gray-400 hover:text-gray-200 transition-colors">✕</button>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3 mb-4">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" ${alertSettings.enabled ? 'checked' : ''} onchange="alertSettings.enabled = this.checked; render()" class="rounded accent-emerald-500">
+                <span class="text-sm text-gray-300">Alerts On</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" ${alertSettings.gameStart ? 'checked' : ''} onchange="alertSettings.gameStart = this.checked; render()" class="rounded accent-emerald-500">
+                <span class="text-sm text-gray-300">Game Start</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" ${alertSettings.periodEnd ? 'checked' : ''} onchange="alertSettings.periodEnd = this.checked; render()" class="rounded accent-emerald-500">
+                <span class="text-sm text-gray-300">Period End</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" ${alertSettings.goals ? 'checked' : ''} onchange="alertSettings.goals = this.checked; render()" class="rounded accent-emerald-500">
+                <span class="text-sm text-gray-300">Goals</span>
+              </label>
+            </div>
+
+            <div class="border-t border-white/10 pt-4 mb-4">
+              <label class="flex items-center gap-2 cursor-pointer mb-3">
+                <input type="checkbox" ${alertSettings.evAlert ? 'checked' : ''} onchange="alertSettings.evAlert = this.checked; render()" class="rounded accent-emerald-500">
+                <span class="text-sm text-gray-300">+EV Alerts</span>
+              </label>
+              ${alertSettings.evAlert ? `
+              <div class="flex items-center gap-3 ml-6">
+                <span class="text-xs text-gray-400">Min EV:</span>
+                <select onchange="alertSettings.minEV = +this.value; render()" class="px-2 py-1 bg-neutral-700 border border-white/10 rounded text-sm text-white">
+                  <option value="1" ${alertSettings.minEV === 1 ? 'selected' : ''}>+1%</option>
+                  <option value="2" ${alertSettings.minEV === 2 ? 'selected' : ''}>+2%</option>
+                  <option value="3" ${alertSettings.minEV === 3 ? 'selected' : ''}>+3%</option>
+                  <option value="5" ${alertSettings.minEV === 5 ? 'selected' : ''}>+5%</option>
+                  <option value="10" ${alertSettings.minEV === 10 ? 'selected' : ''}>+10%</option>
+                </select>
+              </div>
+              ` : ''}
+            </div>
+
+            <div class="border-t border-white/10 pt-4">
+              <div class="flex items-center gap-3">
+                <span class="text-xs text-gray-400">Show alerts for:</span>
+                <select onchange="alertSettings.alertDuration = +this.value; render()" class="px-2 py-1 bg-neutral-700 border border-white/10 rounded text-sm text-white">
+                  <option value="10" ${alertSettings.alertDuration === 10 ? 'selected' : ''}>10 sec</option>
+                  <option value="30" ${alertSettings.alertDuration === 30 ? 'selected' : ''}>30 sec</option>
+                  <option value="60" ${alertSettings.alertDuration === 60 ? 'selected' : ''}>1 min</option>
+                  <option value="300" ${alertSettings.alertDuration === 300 ? 'selected' : ''}>5 min</option>
+                  <option value="600" ${alertSettings.alertDuration === 600 ? 'selected' : ''}>10 min</option>
+                  <option value="99999" ${alertSettings.alertDuration === 99999 ? 'selected' : ''}>Until dismissed</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
+        ${showSettings ? `
+        <div class="border-b border-white/10" style="background: linear-gradient(180deg, rgba(45, 45, 45, 0.95) 0%, rgba(26, 26, 26, 0.9) 100%);">
+          <div class="max-w-lg mx-auto px-3 py-3 max-h-[70vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="text-sm font-semibold text-gray-200">Settings</h3>
+              <button onclick="toggleSettings()" class="text-gray-400 hover:text-gray-200 transition-colors">✕</button>
+            </div>
+            
+            <!-- General Settings -->
+            <div class="mb-4">
+              <div class="text-xs text-gray-400 uppercase tracking-wide mb-2">General</div>
+              <div class="flex items-center gap-2 mb-3">
+                <span class="text-sm text-gray-300">Refresh:</span>
+                <div class="flex items-center">
+                  <button onclick="updateRefreshRate(Math.max(1, refreshRate - 1))" class="w-8 h-8 bg-neutral-700/80 border border-white/10 rounded-l-lg text-white hover:bg-neutral-600 transition-colors flex items-center justify-center text-lg font-bold">−</button>
+                  <div class="w-12 h-8 bg-neutral-700/80 border-t border-b border-white/10 flex items-center justify-center">
+                    <span class="text-white mono text-sm">${refreshRate}</span>
+                  </div>
+                  <button onclick="updateRefreshRate(Math.min(60, refreshRate + 1))" class="w-8 h-8 bg-neutral-700/80 border border-white/10 rounded-r-lg text-white hover:bg-neutral-600 transition-colors flex items-center justify-center text-lg font-bold">+</button>
+                </div>
+                <span class="text-gray-500 text-sm">sec</span>
+              </div>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" ${showSportsbookOdds ? 'checked' : ''} onchange="toggleSportsbookDisplay()" class="rounded accent-emerald-500">
+                <span class="text-sm text-gray-300">Show Sportsbook Odds</span>
+              </label>
+            </div>
+            
+            <!-- Best Line Settings -->
+            <div class="border-t border-white/10 pt-4 mb-4">
+              <div class="text-xs text-gray-400 uppercase tracking-wide mb-2">💰 Best Line</div>
+              <label class="flex items-center gap-2 cursor-pointer mb-3">
+                <input type="checkbox" ${bestLineSettings.enabled ? 'checked' : ''} onchange="bestLineSettings.enabled = this.checked; saveBestLineSettings()" class="rounded accent-amber-500">
+                <span class="text-sm text-gray-300">Show Best Line Odds</span>
+              </label>
+              <div class="text-xs text-gray-500 mb-2">Sportsbooks for Best Line:</div>
+              <div class="grid grid-cols-2 gap-1.5">
+                ${availableBooks.map(book => `
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" ${bestLineSettings.books.includes(book.key) ? 'checked' : ''} onchange="toggleBestLineBook('${book.key}')" class="rounded accent-amber-500 w-3.5 h-3.5">
+                    <span class="text-xs text-gray-300">${book.name}</span>
+                  </label>
+                `).join('')}
+              </div>
+            </div>
+            
+            <!-- Devig Settings -->
+            <div class="border-t border-white/10 pt-4 mb-4">
+              <div class="text-xs text-gray-400 uppercase tracking-wide mb-2">📊 Devig</div>
+              <div class="mb-3">
+                <div class="text-xs text-gray-500 mb-1">Method</div>
+                <select onchange="devigSettings.method = this.value; saveDevigSettings()" class="w-full px-3 py-2 bg-neutral-700 border border-white/10 rounded-lg text-sm text-white">
+                  ${devigMethods.map(m => `<option value="${m.key}" ${devigSettings.method === m.key ? 'selected' : ''}>${m.name}</option>`).join('')}
+                </select>
+                <div class="text-xs text-gray-600 mt-1">${devigMethods.find(m => m.key === devigSettings.method)?.desc || ''}</div>
+              </div>
+              <div class="text-xs text-gray-500 mb-2">Books for Devig:</div>
+              <div class="grid grid-cols-2 gap-1.5">
+                ${availableBooks.map(book => `
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" ${devigSettings.books.includes(book.key) ? 'checked' : ''} onchange="toggleBook('${book.key}')" class="rounded accent-emerald-500 w-3.5 h-3.5">
+                    <span class="text-xs text-gray-300">${book.name}</span>
+                  </label>
+                `).join('')}
+              </div>
+            </div>
+            
+            <!-- Odds API -->
+            <div class="border-t border-white/10 pt-4">
+              <div class="text-xs text-gray-400 uppercase tracking-wide mb-2">🔑 Odds API</div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs text-gray-500">the-odds-api.com</span>
+                <a href="https://the-odds-api.com" target="_blank" class="text-xs text-blue-400 hover:underline">Get free key →</a>
+              </div>
+              <div class="flex gap-2 mb-2" onclick="event.stopPropagation()">
+                <input type="text" id="oddsApiKeyInput" value="${oddsApiKey}" placeholder="Enter API key" 
+                  onclick="event.stopPropagation()" 
+                  onfocus="event.stopPropagation()"
+                  onmousedown="event.stopPropagation()"
+                  class="flex-1 px-3 py-2 bg-neutral-700/80 border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/50">
+                <button onclick="event.stopPropagation(); saveOddsApiKey(document.getElementById('oddsApiKeyInput').value)" 
+                  class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-lg transition-colors">Save</button>
+              </div>
+              ${oddsApiKey ? `
+              <div class="flex items-center justify-between mb-2">
+                <div class="text-xs text-gray-500">
+                  ${oddsApiLastFetch ? `Last: ${oddsApiLastFetch.toLocaleTimeString()}` : 'Not fetched'}
+                  ${Object.keys(oddsApiData).length > 0 ? ` • ${Object.keys(oddsApiData).length} games` : ''}
+                </div>
+                <button onclick="event.stopPropagation(); fetchSportsbookOdds(true)" 
+                  class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors">
+                  ↻ Fetch Now
+                </button>
+              </div>
+              <div class="text-xs text-gray-600">Auto-fetch: 8am, 10am, 12pm, 2pm, 3:45pm PST</div>
+              <div class="text-xs text-gray-500">Next: ${getNextFetchTime()}</div>
+              ` : `
+              <div class="text-xs text-gray-500">Free: 500 req/month • Auto-fetches 5x daily</div>
+              `}
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
+        ${alerts.length > 0 && alertSettings.enabled ? `
+        <div class="border-b border-white/10" style="background: linear-gradient(180deg, rgba(45, 45, 45, 0.9) 0%, rgba(26, 26, 26, 0.85) 100%);">
+          <div class="max-w-lg mx-auto px-3 py-2 space-y-2">
+            ${alerts.map(a => `
+              <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-medium ${
+                a.type === 'goal' ? 'bg-red-900/40 text-red-300 border border-red-800/30' : 
+                a.type === 'ev' ? 'bg-emerald-900/40 text-emerald-300 border border-emerald-800/30' :
+                a.type === 'start' ? 'bg-blue-900/40 text-blue-300 border border-blue-800/30' :
+                'bg-amber-900/40 text-amber-300 border border-amber-800/30'
+              }">
+                <span class="flex-1">${a.message}</span>
+                <button onclick="removeAlert(${a.id})" class="ml-2 opacity-60 hover:opacity-100 transition-opacity">✕</button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        ` : ''}
+        <main class="max-w-lg mx-auto p-3 space-y-3">
+      `;
+
+      if (games.length === 0) {
+        html += `<div class="bg-gray-800 rounded-xl p-8 text-center text-gray-500">No games today</div>`;
+      } else {
+        games.forEach(g => {
+          const home = TEAMS[g.homeAbbrev] || { name: g.homeAbbrev, primary: '#666' };
+          const away = TEAMS[g.awayAbbrev] || { name: g.awayAbbrev, primary: '#666' };
+          const fmv = calcGameFMV(g);
+          const isLiveGame = g.state === 'LIVE';
+          const isFinal = g.state === 'FINAL';
+          const expanded = expandedGames[g.id];
+          const history = gameHistories[g.id] || [];
+          const isFlashing = goalFlashGames[g.id] && (Date.now() - goalFlashGames[g.id] < 10000);
+
+          const periodText = g.period === 1 ? '1st' : g.period === 2 ? '2nd' : g.period === 3 ? '3rd' : g.period > 3 ? 'OT' : '';
+          
+          const fmtOdds = (p) => oddsFormat === 'american' ? formatOdds(probToOdds(p)) : formatProb(p);
+
+          html += `
+            <div class="game-card rounded-2xl ${isFlashing ? 'goal-active goal-flash' : ''} overflow-hidden">
+              <div class="p-4">
+                <div class="flex justify-between items-center mb-3">
+                  <div class="flex items-center gap-2">
+                    ${isLiveGame ? `<span class="live-badge px-2.5 py-1 text-white text-xs rounded-full pulse font-semibold">● LIVE</span><span class="text-xs text-gray-400 font-medium">${periodText} • ${g.clock}</span>` : ''}
+                    ${isFinal ? `<span class="px-2.5 py-1 bg-gray-700/80 text-gray-300 text-xs rounded-full font-medium">FINAL</span>` : ''}
+                    ${g.state === 'FUT' ? `<span class="text-xs text-gray-400 font-medium">🕐 ${g.startTime || 'Scheduled'}</span>` : ''}
+                    ${fmv.arb ? `<span class="px-2.5 py-1 bg-green-600/90 text-white text-xs rounded-full font-bold animate-pulse">💰 ARB +${fmv.arb.percent}%</span>` : ''}
+                  </div>
+                  <div class="flex items-center gap-2">
+                    ${fmv.arb ? `<span class="text-[10px] text-green-400 font-mono">${fmv.arb.homeBook} / ${fmv.arb.awayBook}</span>` : ''}
+                    ${(isLiveGame || isFinal || history.length > 1) ? `<button onclick="toggleExpand('${g.id}')" class="btn-pill w-8 h-8 rounded-full flex items-center justify-center text-gray-400">${expanded ? '▲' : '▼'}</button>` : ''}
+                  </div>
+                </div>
+
+                <!-- Away Team -->
+                <div class="flex items-center mb-3">
+                  <div class="team-badge w-11 h-11 rounded-xl flex items-center justify-center text-xs font-bold text-white mr-3" style="background: linear-gradient(135deg, ${away.primary} 0%, ${away.primary}dd 100%)">${g.awayAbbrev}</div>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-sm text-gray-100 tracking-tight">${away.name}</div>
+                    <div class="text-xs text-gray-500">
+                      <div class="truncate">
+                        ${fmv.bestLineOdds?.away ? `<span class="text-amber-400">Best:</span> <span class="mono text-amber-400">${fmv.bestLineOdds.away.odds > 0 ? '+' : ''}${fmv.bestLineOdds.away.odds}</span> <span class="text-gray-600">(${fmv.bestLineOdds.away.abbrev})</span>` : `Pre: <span class="mono">${fmtOdds(fmv.pregameAway)}</span>`}${fmv.isLocked ? ' 🔒' : ''}
+                        ${fmv.arb ? `<span class="ml-2 text-green-400 font-semibold">ARB: ${fmv.arb.awayBook} ${fmv.arb.awayOdds > 0 ? '+' : ''}${fmv.arb.awayOdds}</span>` : ''}
+                      </div>
+                      ${fmv.devigAway || fmv.polyAway || fmv.kalshiAway ? `<div>${fmv.devigAway ? `<span class="text-purple-400">DV: <span class="mono">${fmtOdds(fmv.devigAway)}</span></span>` : ''}${fmv.polyAway ? `<span class="${fmv.devigAway ? 'ml-2' : ''} text-pink-400">PM: <span class="mono">${fmtOdds(fmv.polyAway)}</span></span>` : ''}${fmv.kalshiAway ? `<span class="ml-2 text-blue-400">K: <span class="mono">${fmtOdds(fmv.kalshiAway)}</span></span>` : ''}</div>` : ''}
+                    </div>
+                  </div>
+                  <div class="text-2xl font-bold w-10 text-center text-gray-100 flex-shrink-0 mono">${g.state === 'FUT' ? '-' : g.awayScore}</div>
+                  <div class="stat-box text-right ml-2 w-20 h-16 flex flex-col justify-center flex-shrink-0">
+                    <div class="text-xs text-gray-500 mb-0.5 uppercase tracking-wide">${g.state === 'FUT' ? 'Kalshi' : 'FMV'}</div>
+                    <div class="text-base font-bold fmv-value">${g.state === 'FUT' ? (fmv.kalshiAway ? fmtOdds(fmv.kalshiAway) : '-') : fmtOdds(fmv.fmvAway)}</div>
+                    <div class="h-4 mono text-[10px] ${fmv.evAway && +fmv.evAway > 0 && g.state !== 'FUT' ? 'ev-value' : 'invisible'}">${fmv.evAway && +fmv.evAway > 0 && g.state !== 'FUT' ? `+${fmv.evAway}% EV` : '-'}</div>
+                  </div>
+                </div>
+
+                <div class="border-t border-white/10 my-3"></div>
+
+                <!-- Home Team -->
+                <div class="flex items-center">
+                  <div class="team-badge w-11 h-11 rounded-xl flex items-center justify-center text-xs font-bold text-white mr-3" style="background: linear-gradient(135deg, ${home.primary} 0%, ${home.primary}dd 100%)">${g.homeAbbrev}</div>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-sm text-gray-100 tracking-tight">${home.name}</div>
+                    <div class="text-xs text-gray-500">
+                      <div class="truncate">
+                        ${fmv.bestLineOdds?.home ? `<span class="text-amber-400">Best:</span> <span class="mono text-amber-400">${fmv.bestLineOdds.home.odds > 0 ? '+' : ''}${fmv.bestLineOdds.home.odds}</span> <span class="text-gray-600">(${fmv.bestLineOdds.home.abbrev})</span>` : `Pre: <span class="mono">${fmtOdds(fmv.pregameHome)}</span>`}${fmv.isLocked ? ' 🔒' : ''}
+                        ${fmv.arb ? `<span class="ml-2 text-green-400 font-semibold">ARB: ${fmv.arb.homeBook} ${fmv.arb.homeOdds > 0 ? '+' : ''}${fmv.arb.homeOdds}</span>` : ''}
+                      </div>
+                      ${fmv.devigHome || fmv.polyHome || fmv.kalshiHome ? `<div>${fmv.devigHome ? `<span class="text-purple-400">DV: <span class="mono">${fmtOdds(fmv.devigHome)}</span></span>` : ''}${fmv.polyHome ? `<span class="${fmv.devigHome ? 'ml-2' : ''} text-pink-400">PM: <span class="mono">${fmtOdds(fmv.polyHome)}</span></span>` : ''}${fmv.kalshiHome ? `<span class="ml-2 text-blue-400">K: <span class="mono">${fmtOdds(fmv.kalshiHome)}</span></span>` : ''}</div>` : ''}
+                    </div>
+                  </div>
+                  <div class="text-2xl font-bold w-10 text-center text-gray-100 flex-shrink-0 mono">${g.state === 'FUT' ? '-' : g.homeScore}</div>
+                  <div class="stat-box text-right ml-2 w-20 h-16 flex flex-col justify-center flex-shrink-0">
+                    <div class="text-xs text-gray-500 mb-0.5 uppercase tracking-wide">${g.state === 'FUT' ? 'Kalshi' : 'FMV'}</div>
+                    <div class="text-base font-bold fmv-value">${g.state === 'FUT' ? (fmv.kalshiHome ? fmtOdds(fmv.kalshiHome) : '-') : fmtOdds(fmv.fmvHome)}</div>
+                    <div class="h-4 mono text-[10px] ${fmv.evHome && +fmv.evHome > 0 && g.state !== 'FUT' ? 'ev-value' : 'invisible'}">${fmv.evHome && +fmv.evHome > 0 && g.state !== 'FUT' ? `+${fmv.evHome}% EV` : '-'}</div>
+                  </div>
+                </div>
+              </div>
+
+              ${expanded ? `
+                <div class="border-t border-white/10 p-4" style="background: linear-gradient(180deg, rgba(50, 50, 50, 0.3) 0%, rgba(35, 35, 35, 0.3) 100%);">
+                  <div class="text-xs text-gray-400 mb-3 flex items-center gap-1.5 font-medium">📈 Win Probability <span class="text-gray-600 ml-2">Tap to pin</span></div>
+                  <canvas id="chart-${g.id}" width="300" height="200" class="w-full rounded-xl cursor-crosshair" style="background: rgba(20, 20, 20, 0.5); touch-action: none; min-height: 200px;"></canvas>
+                  <div class="flex justify-between text-xs mt-3">
+                    <div class="flex items-center gap-1.5"><div class="w-4 h-1.5 rounded-full" style="background:${home.primary}"></div><span class="text-gray-400">${home.name}</span></div>
+                    <div class="flex items-center gap-1.5"><div class="w-4 h-1.5 rounded-full" style="background:${away.primary}"></div><span class="text-gray-400">${away.name}</span></div>
+                  </div>
+                  
+                  ${isLiveGame ? `
+                    <div class="mt-4">
+                      <div class="text-xs text-gray-400 mb-3 font-medium">If Next Goal...</div>
+                      <div class="grid grid-cols-2 gap-3">
+                        <div class="stat-box">
+                          <div class="text-xs text-gray-500 mb-1.5">If ${home.name} scores:</div>
+                          <div class="text-sm font-medium">${home.name}: <span class="fmv-value">${fmtOdds(1 - calcWinProb(fmv.pregameAway, (g.homeScore + 1) - g.awayScore, calcSeconds(g.period, g.clock)))}</span></div>
+                        </div>
+                        <div class="stat-box">
+                          <div class="text-xs text-gray-500 mb-1.5">If ${away.name} scores:</div>
+                          <div class="text-sm font-medium">${away.name}: <span class="fmv-value">${fmtOdds(1 - calcWinProb(fmv.pregameHome, (g.awayScore + 1) - g.homeScore, calcSeconds(g.period, g.clock)))}</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  ` : ''}
+                </div>
+              ` : ''}
+            </div>
+          `;
+        });
+      }
+
+      html += `
+        </main>
+        <footer class="border-t border-white/10 p-6 mt-8" style="background: linear-gradient(180deg, rgba(26, 26, 26, 0.5) 0%, rgba(20, 20, 20, 0.8) 100%);">
+          <div class="max-w-lg mx-auto text-center text-xs text-gray-500">
+            Data from NHL API & Kalshi • Win probability via Bernier model
+          </div>
+          <div class="max-w-lg mx-auto mt-4 p-3 bg-black/30 rounded-lg">
+            <div class="text-xs text-gray-400 mb-2">NHL Games State (${games.length}):</div>
+            <div class="text-xs text-cyan-400 font-mono break-all mb-3">${games.length > 0 ? games.map(g => `${g.awayAbbrev}@${g.homeAbbrev}:${g.state}:P${g.period}:${g.awayScore}-${g.homeScore}`).join(', ') : 'No games loaded'}</div>
+            ${Object.keys(oddsApiRawData).length > 0 ? `
+            <div class="text-xs text-gray-400">Odds API Keys (${Object.keys(oddsApiRawData).length}):</div>
+            <div class="text-xs text-green-400 font-mono break-all mb-3">${Object.keys(oddsApiRawData).join(', ')}</div>
+            ` : '<div class="text-xs text-yellow-400 mb-3">No Odds API data</div>'}
+            <div class="text-xs text-gray-400">Polymarket Keys (${Object.keys(polymarketData).length}):</div>
+            <div class="text-xs text-pink-400 font-mono break-all mb-3">${Object.keys(polymarketData).length > 0 ? Object.keys(polymarketData).join(', ') : 'None loaded'}</div>
+            <div class="text-xs text-gray-400">Games looking for:</div>
+            <div class="text-xs text-blue-400 font-mono">${games.map(g => g.awayAbbrev + '-' + g.homeAbbrev).join(', ')}</div>
+          </div>
+        </footer>
+      `;
+
+      app.innerHTML = html;
+
+      // Draw charts after render and setup interactions
+      games.forEach(g => {
+        if (expandedGames[g.id]) {
+          const canvas = document.getElementById(`chart-${g.id}`);
+          if (canvas) {
+            const home = TEAMS[g.homeAbbrev] || { primary: '#10b981' };
+            const away = TEAMS[g.awayAbbrev] || { primary: '#f59e0b' };
+            canvas.width = canvas.offsetWidth * 2;
+            canvas.height = 400;
+            
+            const history = gameHistories[g.id] || [];
+            const lockedIdx = chartLockedPositions[g.id];
+            
+            // Draw the chart
+            drawChart(canvas, history, home.primary, away.primary, g.id);
+            
+            // Setup interactions
+            setupChartInteraction(canvas, g.id);
+            
+            // If there was a locked position, restore it
+            if (lockedIdx !== undefined && lockedIdx >= 0 && lockedIdx < history.length) {
+              canvas.isLocked = true;
+              canvas.lockedIndex = lockedIdx;
+              // Use setTimeout to ensure canvas is ready
+              setTimeout(() => {
+                drawChartHover(canvas, lockedIdx);
+              }, 10);
+            }
+          }
+        } else {
+          // Clear locked position when chart is collapsed
+          delete chartLockedPositions[g.id];
+        }
+      });
+    }
+
+    // Actions
+    function toggleExpand(id) {
+      expandedGames[id] = !expandedGames[id];
+      render();
+    }
+
+    function toggleOdds() {
+      oddsFormat = oddsFormat === 'american' ? 'probability' : 'american';
+      render();
+    }
+
+    function toggleAlerts() {
+      showAlerts = !showAlerts;
+      showSettings = false;
+      showDevig = false;
+      render();
+    }
+
+    function toggleSettings() {
+      showSettings = !showSettings;
+      showAlerts = false;
+      showDevig = false;
+      render();
+    }
+
+    function toggleDevig() {
+      showDevig = !showDevig;
+      showSettings = false;
+      showAlerts = false;
+      render();
+    }
+
+    function updateRefreshRate(val) {
+      refreshRate = Math.max(1, val);
+      clearInterval(refreshInterval);
+      refreshInterval = setInterval(async () => {
+        await fetchKalshiMarkets();
+        await fetchPolymarketOdds();
+        await fetchGames();
+      }, refreshRate * 1000);
+      render();
+    }
+
+    let refreshInterval;
+    let oddsCheckInterval;
+
+    // Init
+    async function init() {
+      // Restore last fetch time
+      const savedLastFetch = localStorage.getItem('oddsApiLastFetch');
+      if (savedLastFetch) oddsApiLastFetch = new Date(savedLastFetch);
+      
+      await fetchKalshiMarkets(); // Load Kalshi prices first
+      await fetchPolymarketOdds(); // Load Polymarket prices
+      
+      // Try scheduled odds fetch if API key exists
+      if (oddsApiKey) {
+        fetchSportsbookOdds(false); // Will only fetch if at scheduled time
+      }
+      
+      await fetchGames();
+      refreshInterval = setInterval(async () => {
+        await fetchKalshiMarkets();
+        await fetchPolymarketOdds();
+        await fetchGames();
+      }, refreshRate * 1000);
+      
+      // Check for scheduled odds fetch every minute
+      oddsCheckInterval = setInterval(() => {
+        if (oddsApiKey) fetchSportsbookOdds(false);
+      }, 60000);
+    }
+    init();
+  </script>
+</body>
+</html>
