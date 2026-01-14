@@ -156,155 +156,116 @@ const fetchPolymarketBasketball = async () => {
 
 // Fetch CBB markets from Polymarket using series_id (like NHL tool)
 const fetchPolymarketCBB = async () => {
-  const debug = { totalMarkets: 0, vsMarkets: 0, basketballMatches: 0, sampleMarket: null, allTags: [], error: null, attempts: [] };
+  const debug = { totalMarkets: 0, vsMarkets: 0, basketballMatches: 0, sampleMarket: null, allTags: [], error: null, attempts: [], allFoundEvents: [] };
   
   try {
     console.log('Fetching Polymarket CBB...');
     
     const timestamp = Date.now();
     
-    // NHL tool uses series_id=10346 for NHL
-    // Common sports series IDs we'll try (based on pattern discovery)
+    // Try a wider range of series IDs to find all sports
+    // NHL is 10346, NBA/CBB are likely nearby
     const seriesIdsToTry = [
-      { id: '10346', name: 'NHL (reference)' },
-      { id: '10345', name: 'Maybe NBA' },
-      { id: '10347', name: 'Maybe CBB' },
-      { id: '10344', name: 'Maybe CBB-2' },
-      { id: '10348', name: 'Maybe Sports' },
+      '10340', '10341', '10342', '10343', '10344', '10345', 
+      '10347', '10348', '10349', '10350', '10351', '10352',
+      '10353', '10354', '10355', '10360', '10365', '10370',
+      '10375', '10380', '10385', '10390', '10395', '10400'
     ];
     
     let allEvents = [];
-    let successfulSeriesId = null;
     
-    // First, try each series_id to find basketball
-    for (const series of seriesIdsToTry) {
-      const seriesUrl = `https://gamma-api.polymarket.com/events?series_id=${series.id}&active=true&closed=false&limit=100&_t=${timestamp}`;
+    // Try each series_id via corsproxy (the only one that works)
+    for (const seriesId of seriesIdsToTry) {
+      const seriesUrl = `https://gamma-api.polymarket.com/events?series_id=${seriesId}&active=true&closed=false&limit=100&_t=${timestamp}`;
+      const url = 'https://corsproxy.io/?' + encodeURIComponent(seriesUrl);
       
-      const proxyUrls = [
-        seriesUrl,  // Try direct first
-        'https://corsproxy.io/?' + encodeURIComponent(seriesUrl),
-        'https://api.allorigins.win/raw?url=' + encodeURIComponent(seriesUrl),
-      ];
-      
-      for (const url of proxyUrls) {
-        try {
-          const shortUrl = `series_id=${series.id} via ${url.includes('corsproxy') ? 'corsproxy' : url.includes('allorigins') ? 'allorigins' : 'direct'}`;
-          debug.attempts.push(shortUrl);
-          console.log('Trying:', shortUrl);
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        
+        if (!res.ok) {
+          continue; // Skip failed requests silently
+        }
+        
+        const events = await res.json();
+        
+        if (Array.isArray(events) && events.length > 0) {
+          const firstTitle = events[0]?.title || 'no title';
+          debug.attempts.push(`${seriesId}: ${events.length} - "${firstTitle.substring(0, 40)}..."`);
           
-          const res = await fetch(url, {
-            cache: 'no-store',
-            headers: { 
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache'
-            }
+          // Store all found events for debugging
+          events.forEach(e => {
+            debug.allFoundEvents.push({ seriesId, title: e.title });
           });
           
-          if (!res.ok) {
-            debug.attempts[debug.attempts.length - 1] += ` (${res.status})`;
-            continue;
-          }
-          
-          const events = await res.json();
-          console.log(`Series ${series.id} (${series.name}):`, events?.length || 0, 'events');
-          
-          if (Array.isArray(events) && events.length > 0) {
-            debug.attempts[debug.attempts.length - 1] += ` ✓ (${events.length} events)`;
-            
-            // Check first event title to see what sport this is
-            const firstTitle = (events[0]?.title || '').toLowerCase();
-            console.log(`First title: ${firstTitle}`);
-            
-            // Skip NHL events (we found them but want basketball)
-            if (firstTitle.includes('nhl:') || series.id === '10346') {
-              debug.attempts[debug.attempts.length - 1] += ' [NHL - skipping]';
-              continue;
-            }
-            
-            // If events have vs pattern, use them
-            const vsEvents = events.filter(e => {
-              const t = (e.title || '').toLowerCase();
-              return t.includes(' vs ') || t.includes(' vs. ');
-            });
-            
-            if (vsEvents.length > 0) {
-              allEvents = vsEvents;
-              successfulSeriesId = series.id;
-              debug.sampleMarket = events[0];
-              debug.totalMarkets = events.length;
-              break;
-            }
-          } else {
-            debug.attempts[debug.attempts.length - 1] += ' (empty)';
-          }
-        } catch (e) {
-          debug.attempts[debug.attempts.length - 1] += ` (${e.message})`;
-        }
-      }
-      
-      if (allEvents.length > 0) break;
-    }
-    
-    // If series approach didn't work, try general events endpoint
-    if (allEvents.length === 0) {
-      const baseUrl = `https://gamma-api.polymarket.com/events?active=true&closed=false&limit=100&_t=${timestamp}`;
-      
-      const proxyUrls = [
-        baseUrl,
-        'https://corsproxy.io/?' + encodeURIComponent(baseUrl),
-        'https://api.allorigins.win/raw?url=' + encodeURIComponent(baseUrl),
-        'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(baseUrl)
-      ];
-      
-      for (const url of proxyUrls) {
-        try {
-          const shortUrl = `general via ${url.includes('corsproxy') ? 'corsproxy' : url.includes('allorigins') ? 'allorigins' : url.includes('codetabs') ? 'codetabs' : 'direct'}`;
-          debug.attempts.push(shortUrl);
-          console.log('Trying:', shortUrl);
-          
-          const res = await fetch(url, {
-            cache: 'no-store',
-            headers: { 
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache'
-            }
+          // Collect ALL events with "vs" pattern (not just first match)
+          const vsEvents = events.filter(e => {
+            const t = (e.title || '').toLowerCase();
+            return t.includes(' vs ') || t.includes(' vs. ');
           });
           
-          if (!res.ok) {
-            debug.attempts[debug.attempts.length - 1] += ` (${res.status})`;
-            continue;
+          if (vsEvents.length > 0) {
+            allEvents = allEvents.concat(vsEvents);
           }
-          
-          const events = await res.json();
-          console.log('General events:', events?.length || 0);
-          
-          if (Array.isArray(events) && events.length > 0) {
-            allEvents = events.filter(e => {
-              const t = (e.title || '').toLowerCase();
-              return t.includes(' vs ') || t.includes(' vs. ');
-            });
-            debug.totalMarkets = events.length;
-            debug.sampleMarket = events[0];
-            debug.attempts[debug.attempts.length - 1] += ` ✓ (${events.length} events, ${allEvents.length} vs)`;
-            break;
-          }
-        } catch (e) {
-          debug.attempts[debug.attempts.length - 1] += ` (${e.message})`;
         }
+      } catch (e) {
+        // Silently skip errors
       }
     }
+    
+    // Also try general events endpoint
+    try {
+      const generalUrl = `https://gamma-api.polymarket.com/events?active=true&closed=false&limit=200&_t=${timestamp}`;
+      const url = 'https://corsproxy.io/?' + encodeURIComponent(generalUrl);
+      
+      const res = await fetch(url, { cache: 'no-store' });
+      if (res.ok) {
+        const events = await res.json();
+        debug.attempts.push(`general: ${events?.length || 0} events`);
+        
+        if (Array.isArray(events) && events.length > 0) {
+          debug.totalMarkets = events.length;
+          debug.sampleMarket = events[0];
+          
+          const vsEvents = events.filter(e => {
+            const t = (e.title || '').toLowerCase();
+            return (t.includes(' vs ') || t.includes(' vs. '));
+          });
+          
+          // Add any new events not already found
+          vsEvents.forEach(e => {
+            if (!allEvents.find(x => x.id === e.id)) {
+              allEvents.push(e);
+            }
+          });
+        }
+      }
+    } catch (e) {
+      debug.attempts.push(`general: ${e.message}`);
+    }
+    
+    // Remove duplicates
+    const uniqueEvents = [];
+    const seenIds = new Set();
+    allEvents.forEach(e => {
+      if (!seenIds.has(e.id)) {
+        seenIds.add(e.id);
+        uniqueEvents.push(e);
+      }
+    });
+    allEvents = uniqueEvents;
     
     debug.vsMarkets = allEvents.length;
+    console.log('Total unique vs events found:', allEvents.length);
     
     if (allEvents.length === 0) {
-      debug.error = 'All fetch attempts failed. Check browser console.';
+      debug.error = 'No events with "vs" pattern found in any series';
       return { games: [], debug };
     }
     
     // Process events into games
     const processed = [];
     
-    for (const event of allEvents.slice(0, 50)) {
+    for (const event of allEvents) {
       const title = event.title || '';
       const match = title.match(/(.+?)\s+vs\.?\s+(.+)/i);
       
@@ -336,7 +297,6 @@ const fetchPolymarketCBB = async () => {
     }
     
     debug.basketballMatches = processed.length;
-    debug.seriesId = successfulSeriesId;
     console.log('Processed games:', processed.length);
     
     return { games: processed.sort((a, b) => new Date(a.startTime) - new Date(b.startTime)), debug };
