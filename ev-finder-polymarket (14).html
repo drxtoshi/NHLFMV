@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>+EV Finder | CBB + Polymarket</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg:#0a0a0f; --bg2:#12121a; --bg3:#1a1a25; --green:#00ff88; --red:#ff4757; --yellow:#ffd43b; --blue:#4dabf7; --purple:#9775fa; --text:#fff; --text2:#a0a0b0; --border:#2a2a3a; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Space Grotesk',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    .mono { font-family:'JetBrains Mono',monospace; }
+    .card { background:var(--bg2); border:1px solid var(--border); border-radius:12px; transition:all .2s; }
+    .card:hover { border-color:rgba(0,255,136,.3); transform:translateY(-2px); }
+    .tag { display:inline-flex; align-items:center; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:500; }
+    .tag-sharp { background:rgba(77,171,247,.15); color:var(--blue); border:1px solid rgba(77,171,247,.3); }
+    .tag-soft { background:rgba(255,212,59,.15); color:var(--yellow); border:1px solid rgba(255,212,59,.3); }
+    .tag-poly { background:rgba(151,117,250,.15); color:var(--purple); border:1px solid rgba(151,117,250,.3); }
+    .tag-live { background:rgba(255,71,87,.2); color:var(--red); border:1px solid rgba(255,71,87,.4); animation:pulse 1.5s infinite; }
+    .tag-upcoming { background:rgba(0,255,136,.1); color:var(--green); border:1px solid rgba(0,255,136,.3); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+    .btn { cursor:pointer; transition:all .2s; background:var(--bg3); border:1px solid var(--border); color:var(--text); padding:8px 16px; border-radius:8px; }
+    .btn:hover { border-color:var(--green); }
+    .btn-primary { background:linear-gradient(135deg,var(--green),#00cc6a); color:#000; font-weight:600; border:none; }
+    .btn-danger { background:var(--red); color:#fff; border:none; }
+    input,select { background:var(--bg3); border:1px solid var(--border); color:var(--text); padding:8px 12px; border-radius:8px; outline:none; }
+    input:focus { border-color:var(--green); }
+    .tab { padding:8px 16px; border-radius:8px; font-weight:500; cursor:pointer; }
+    .tab.active { background:var(--green); color:#000; }
+    .tab:not(.active) { background:var(--bg3); color:var(--text2); }
+    .depth-table { font-size:11px; width:100%; }
+    .depth-table th { text-align:left; color:var(--text2); padding:4px 6px; }
+    .depth-table td { padding:4px 6px; }
+    .live-dot { width:8px; height:8px; background:var(--red); border-radius:50%; display:inline-block; margin-right:6px; animation:pulse 1s infinite; }
+    .error-box { background:rgba(255,71,87,.1); border:1px solid var(--red); border-radius:8px; padding:16px; margin-bottom:16px; }
+    .success-box { background:rgba(0,255,136,.1); border:1px solid var(--green); border-radius:8px; padding:16px; margin-bottom:16px; }
+    .api-input { font-family:'JetBrains Mono',monospace; font-size:12px; }
+    .collapsible-header { cursor:pointer; user-select:none; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useMemo } = React;
+
+const SHARP = ['pinnacle','betonline','bovada'];
+const TARGET = ['draftkings','fanduel','betmgm','caesars','espnbet','betrivers','fanatics','hardrockbet','polymarket'];
+const BOOKS = {
+  pinnacle:{n:'Pinnacle',t:'sharp',l:'📌'}, betonline:{n:'BetOnline',t:'sharp',l:'💻'}, bovada:{n:'Bovada',t:'sharp',l:'🎰'},
+  draftkings:{n:'DraftKings',t:'soft',l:'👑'}, fanduel:{n:'FanDuel',t:'soft',l:'🦅'}, betmgm:{n:'BetMGM',t:'soft',l:'🦁'}, caesars:{n:'Caesars',t:'soft',l:'🏛️'},
+  espnbet:{n:'ESPN BET',t:'soft',l:'📺'}, betrivers:{n:'BetRivers',t:'soft',l:'🌊'}, fanatics:{n:'Fanatics',t:'soft',l:'⭐'}, hardrockbet:{n:'Hard Rock',t:'soft',l:'🎸'},
+  polymarket:{n:'Polymarket',t:'soft',l:'🔮',ex:true}
+};
+const DEVIG = {
+  mult:{n:'Multiplicative',d:'Conservative',f:p=>{const t=p.reduce((a,b)=>a+b,0);return p.map(x=>x/t);}},
+  add:{n:'Additive',d:'Equal vig',f:p=>{const t=p.reduce((a,b)=>a+b,0),v=(t-1)/p.length;return p.map(x=>Math.max(.01,x-v));}},
+  power:{n:'Power',d:'Iterative',f:p=>{let k=1;for(let i=0;i<50;i++){const s=p.reduce((a,x)=>a+Math.pow(x,k),0);if(Math.abs(s-1)<.0001)break;k=k*Math.log(1)/Math.log(s)||k*.99;}return p.map(x=>Math.pow(x,k));}},
+  shin:{n:'Shin',d:'Insider model',f:p=>{const t=p.reduce((a,b)=>a+b,0),z=(t-1)/(p.length-1);return p.map(x=>{const d=z*z+4*(1-z)*x*x/t;return(Math.sqrt(d)-z)/(2*(1-z));});}}
+};
+
+// API endpoints
+const GAMMA_API = 'https://gamma-api.polymarket.com';
+const CLOB_API = 'https://clob.polymarket.com';
+const SGO_API = 'https://api.sportsgameodds.com/v2';
+
+// CORS proxy for browser requests (use when running locally)
+const CORS_PROXY = 'https://corsproxy.io/?';
+const USE_PROXY = true; // Set to false if running on a server
+
+const proxyUrl = (url) => USE_PROXY ? CORS_PROXY + encodeURIComponent(url) : url;
+
+const a2p=a=>a>0?100/(a+100):Math.abs(a)/(Math.abs(a)+100);
+const p2a=p=>{if(p<=0)return 9999;if(p>=1)return -9999;return p>=.5?Math.round(-100*p/(1-p)):Math.round(100*(1-p)/p);};
+const fmtA=o=>o>0?`+${o}`:`${o}`;
+const fmtU=a=>a>=1e6?`$${(a/1e6).toFixed(1)}M`:a>=1e3?`$${(a/1e3).toFixed(1)}K`:`$${a.toFixed(0)}`;
+const fmtC=p=>`${(p*100).toFixed(1)}¢`;
+const calcEV=(bp,fp)=>((fp*(1/bp-1))-(1-fp))*100;
+const calcK=(bp,fp,f=.25)=>{const b=1/bp-1;return Math.max(0,((b*fp-(1-fp))/b)*f*100);};
+
+const isToday = (date) => {
+  const today = new Date();
+  const d = new Date(date);
+  return d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+};
+
+const isLive = (startTime) => {
+  const now = new Date();
+  const start = new Date(startTime);
+  const threeHoursLater = new Date(start.getTime() + 3 * 60 * 60 * 1000);
+  return now >= start && now <= threeHoursLater;
+};
+
+const formatGameTime = (startTime) => {
+  const start = new Date(startTime);
+  const now = new Date();
+  if (isLive(startTime)) {
+    const minsElapsed = Math.floor((now - start) / 60000);
+    if (minsElapsed < 20) return { status: 'live', text: '1H', detail: `${minsElapsed}m in` };
+    if (minsElapsed < 40) return { status: 'live', text: '2H', detail: `${minsElapsed}m in` };
+    return { status: 'live', text: 'LIVE', detail: `${minsElapsed}m in` };
+  }
+  if (start > now) {
+    const hours = start.getHours();
+    const mins = start.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const h12 = hours % 12 || 12;
+    const timeStr = `${h12}:${mins.toString().padStart(2,'0')} ${ampm}`;
+    const month = start.toLocaleString('en-US', { month: 'short' });
+    const day = start.getDate();
+    return { status: 'upcoming', text: timeStr, detail: `${month} ${day}` };
+  }
+  return { status: 'final', text: 'FINAL', detail: '' };
+};
+
+// ============================================
+// API FUNCTIONS
+// ============================================
+
+// Fetch from SportsGameOdds API
+const fetchSportsGameOdds = async (apiKey, league = 'NCAAB') => {
+  // SGO uses leagueID parameter
+  const url = `${SGO_API}/events?leagueID=${league}&oddsAvailable=true`;
+  console.log('SGO fetching:', url);
+  const response = await fetch(url, {
+    headers: { 
+      'x-api-key': apiKey,
+      'Accept': 'application/json'
+    }
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    console.error('SGO response error:', response.status, text);
+    throw new Error(`SportsGameOdds API error: ${response.status}`);
+  }
+  const data = await response.json();
+  console.log('SGO response:', data);
+  return data;
+};
+
+// Fetch Polymarket basketball markets
+const fetchPolymarketBasketball = async () => {
+  const response = await fetch(proxyUrl(`${GAMMA_API}/markets?active=true&closed=false&limit=100`));
+  if (!response.ok) throw new Error(`Polymarket API error: ${response.status}`);
+  const markets = await response.json();
+  return markets.filter(m => {
+    const q = (m.question || '').toLowerCase();
+    const tags = (m.tags || []).map(t => (t.label || t || '').toLowerCase());
+    return tags.some(t => t.includes('basketball') || t.includes('nba') || t.includes('ncaa') || t.includes('cbb')) ||
+           q.includes(' vs ') || q.includes(' to win');
+  });
+};
+
+// Fetch CBB markets from Polymarket using series_id (like NHL tool)
+const fetchPolymarketCBB = async () => {
+  const debug = { totalMarkets: 0, vsMarkets: 0, basketballMatches: 0, sampleMarket: null, allTags: [], error: null, attempts: [] };
+  
+  try {
+    console.log('Fetching Polymarket CBB...');
+    
+    const timestamp = Date.now();
+    
+    // NHL tool uses series_id=10346 for NHL
+    // Common sports series IDs we'll try (based on pattern discovery)
+    const seriesIdsToTry = [
+      { id: '10346', name: 'NHL (reference)' },
+      { id: '10345', name: 'Maybe NBA' },
+      { id: '10347', name: 'Maybe CBB' },
+      { id: '10344', name: 'Maybe CBB-2' },
+      { id: '10348', name: 'Maybe Sports' },
+    ];
+    
+    let allEvents = [];
+    let successfulSeriesId = null;
+    
+    // First, try each series_id to find basketball
+    for (const series of seriesIdsToTry) {
+      const seriesUrl = `https://gamma-api.polymarket.com/events?series_id=${series.id}&active=true&closed=false&limit=100&_t=${timestamp}`;
+      
+      const proxyUrls = [
+        seriesUrl,  // Try direct first
+        'https://corsproxy.io/?' + encodeURIComponent(seriesUrl),
+        'https://api.allorigins.win/raw?url=' + encodeURIComponent(seriesUrl),
+      ];
+      
+      for (const url of proxyUrls) {
+        try {
+          const shortUrl = `series_id=${series.id} via ${url.includes('corsproxy') ? 'corsproxy' : url.includes('allorigins') ? 'allorigins' : 'direct'}`;
+          debug.attempts.push(shortUrl);
+          console.log('Trying:', shortUrl);
+          
+          const res = await fetch(url, {
+            cache: 'no-store',
+            headers: { 
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            }
+          });
+          
+          if (!res.ok) {
+            debug.attempts[debug.attempts.length - 1] += ` (${res.status})`;
+            continue;
+          }
+          
+          const events = await res.json();
+          console.log(`Series ${series.id} (${series.name}):`, events?.length || 0, 'events');
+          
+          if (Array.isArray(events) && events.length > 0) {
+            debug.attempts[debug.attempts.length - 1] += ` ✓ (${events.length} events)`;
+            
+            // Check first event title to see what sport this is
+            const firstTitle = (events[0]?.title || '').toLowerCase();
+            console.log(`First title: ${firstTitle}`);
+            
+            // Skip NHL events (we found them but want basketball)
+            if (firstTitle.includes('nhl:') || series.id === '10346') {
+              debug.attempts[debug.attempts.length - 1] += ' [NHL - skipping]';
+              continue;
+            }
+            
+            // If events have vs pattern, use them
+            const vsEvents = events.filter(e => {
+              const t = (e.title || '').toLowerCase();
+              return t.includes(' vs ') || t.includes(' vs. ');
+            });
+            
+            if (vsEvents.length > 0) {
+              allEvents = vsEvents;
+              successfulSeriesId = series.id;
+              debug.sampleMarket = events[0];
+              debug.totalMarkets = events.length;
+              break;
+            }
+          } else {
+            debug.attempts[debug.attempts.length - 1] += ' (empty)';
+          }
+        } catch (e) {
+          debug.attempts[debug.attempts.length - 1] += ` (${e.message})`;
+        }
+      }
+      
+      if (allEvents.length > 0) break;
+    }
+    
+    // If series approach didn't work, try general events endpoint
+    if (allEvents.length === 0) {
+      const baseUrl = `https://gamma-api.polymarket.com/events?active=true&closed=false&limit=100&_t=${timestamp}`;
+      
+      const proxyUrls = [
+        baseUrl,
+        'https://corsproxy.io/?' + encodeURIComponent(baseUrl),
+        'https://api.allorigins.win/raw?url=' + encodeURIComponent(baseUrl),
+        'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(baseUrl)
+      ];
+      
+      for (const url of proxyUrls) {
+        try {
+          const shortUrl = `general via ${url.includes('corsproxy') ? 'corsproxy' : url.includes('allorigins') ? 'allorigins' : url.includes('codetabs') ? 'codetabs' : 'direct'}`;
+          debug.attempts.push(shortUrl);
+          console.log('Trying:', shortUrl);
+          
+          const res = await fetch(url, {
+            cache: 'no-store',
+            headers: { 
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            }
+          });
+          
+          if (!res.ok) {
+            debug.attempts[debug.attempts.length - 1] += ` (${res.status})`;
+            continue;
+          }
+          
+          const events = await res.json();
+          console.log('General events:', events?.length || 0);
+          
+          if (Array.isArray(events) && events.length > 0) {
+            allEvents = events.filter(e => {
+              const t = (e.title || '').toLowerCase();
+              return t.includes(' vs ') || t.includes(' vs. ');
+            });
+            debug.totalMarkets = events.length;
+            debug.sampleMarket = events[0];
+            debug.attempts[debug.attempts.length - 1] += ` ✓ (${events.length} events, ${allEvents.length} vs)`;
+            break;
+          }
+        } catch (e) {
+          debug.attempts[debug.attempts.length - 1] += ` (${e.message})`;
+        }
+      }
+    }
+    
+    debug.vsMarkets = allEvents.length;
+    
+    if (allEvents.length === 0) {
+      debug.error = 'All fetch attempts failed. Check browser console.';
+      return { games: [], debug };
+    }
+    
+    // Process events into games
+    const processed = [];
+    
+    for (const event of allEvents.slice(0, 50)) {
+      const title = event.title || '';
+      const match = title.match(/(.+?)\s+vs\.?\s+(.+)/i);
+      
+      if (match && event.markets && event.markets.length > 0) {
+        const team1 = match[1].trim();
+        const team2 = match[2].trim();
+        const market = event.markets[0];
+        
+        let prices = [0.5, 0.5];
+        try {
+          prices = JSON.parse(market.outcomePrices || '[0.5, 0.5]').map(Number);
+        } catch (e) {}
+        
+        processed.push({
+          id: event.id || market.id || Math.random().toString(),
+          question: title,
+          team1,
+          team2,
+          team1Price: prices[0],
+          team2Price: prices[1],
+          team1Ask: { price: prices[0], size: 0, total: 0 },
+          team2Ask: { price: prices[1], size: 0, total: 0 },
+          volume: parseFloat(market.volume) || parseFloat(event.volume) || 0,
+          startTime: event.startDate || event.endDate || market.startDate || new Date().toISOString(),
+          slug: event.slug,
+          url: `https://polymarket.com/event/${event.slug || event.id}`,
+        });
+      }
+    }
+    
+    debug.basketballMatches = processed.length;
+    debug.seriesId = successfulSeriesId;
+    console.log('Processed games:', processed.length);
+    
+    return { games: processed.sort((a, b) => new Date(a.startTime) - new Date(b.startTime)), debug };
+  } catch (err) {
+    console.error('Polymarket CBB fetch error:', err);
+    debug.error = err.message;
+    return { games: [], debug };
+  }
+};
+
+// Fetch orderbook for a Polymarket token
+const fetchOrderbook = async (tokenId) => {
+  try {
+    const response = await fetch(`${CLOB_API}/book?token_id=${tokenId}`);
+    if (!response.ok) return null;
+    return await response.json();
+  } catch { return null; }
+};
+
+// Process SportsGameOdds API response
+const processSGOData = (response) => {
+  console.log('Processing SGO data:', response);
+  // SGO returns { data: [...] } or just an array
+  const events = response.data || response.items || response.events || (Array.isArray(response) ? response : []);
+  console.log('SGO events to process:', events.length);
+  
+  return events.map(event => {
+    // SGO event structure
+    const homeTeam = event.homeTeam?.names?.medium || event.homeTeam?.names?.short || event.homeTeam?.name || event.teams?.home?.name || event.home_team || 'Home';
+    const awayTeam = event.awayTeam?.names?.medium || event.awayTeam?.names?.short || event.awayTeam?.name || event.teams?.away?.name || event.away_team || 'Away';
+    
+    const gameData = {
+      id: event.eventID || event.id || event.event_id,
+      home: homeTeam,
+      away: awayTeam,
+      time: event.startTime || event.starts || event.start_time || event.commence_time || new Date().toISOString(),
+      odds: { ml: { m: 'ml', ln: null, bk: {} } },
+      poly: null,
+      source: 'sportsgameodds'
+    };
+    
+    // SGO odds structure - they use oddIDs like "points-home-game-ml-home"
+    const odds = event.odds || {};
+    
+    // Map SGO bookmaker IDs to our keys
+    const sgoBookMap = {
+      'pinnacle': 'pinnacle',
+      'betonline': 'betonline', 
+      'bovada': 'bovada',
+      'draftkings': 'draftkings',
+      'fanduel': 'fanduel',
+      'betmgm': 'betmgm',
+      'caesars': 'caesars',
+      'williamhill': 'caesars',
+      'espnbet': 'espnbet',
+      'betrivers': 'betrivers',
+      'fanatics': 'fanatics',
+      'hardrock': 'hardrockbet',
+    };
+    
+    // Look for moneyline odds in various formats
+    Object.entries(odds).forEach(([oddKey, oddValue]) => {
+      // SGO format: odds are nested by bookmaker
+      if (typeof oddValue === 'object' && oddValue !== null) {
+        Object.entries(oddValue).forEach(([bookId, bookData]) => {
+          const bookLower = bookId.toLowerCase();
+          const mappedBook = Object.entries(sgoBookMap).find(([k]) => bookLower.includes(k))?.[1];
+          
+          if (mappedBook && bookData) {
+            // Check if this is ML odds
+            if (oddKey.includes('ml') || oddKey.includes('moneyline') || oddKey.includes('h2h')) {
+              const price = bookData.price || bookData.american || bookData.odds || bookData;
+              if (typeof price === 'number') {
+                if (oddKey.includes('home')) {
+                  gameData.odds.ml.bk[mappedBook] = gameData.odds.ml.bk[mappedBook] || { av: true };
+                  gameData.odds.ml.bk[mappedBook].h = price;
+                } else if (oddKey.includes('away')) {
+                  gameData.odds.ml.bk[mappedBook] = gameData.odds.ml.bk[mappedBook] || { av: true };
+                  gameData.odds.ml.bk[mappedBook].a = price;
+                }
+              }
+            }
+          }
+        });
+      }
+    });
+    
+    // Also check for direct bookmakers array format
+    if (event.bookmakers) {
+      event.bookmakers.forEach(bm => {
+        const bookLower = (bm.key || bm.id || bm.name || '').toLowerCase();
+        const mappedBook = Object.entries(sgoBookMap).find(([k]) => bookLower.includes(k))?.[1];
+        
+        if (mappedBook) {
+          const h2h = bm.markets?.find(m => m.key === 'h2h' || m.key === 'moneyline');
+          if (h2h && h2h.outcomes) {
+            const homeOdds = h2h.outcomes.find(o => o.name === homeTeam || o.label === 'home');
+            const awayOdds = h2h.outcomes.find(o => o.name === awayTeam || o.label === 'away');
+            if (homeOdds && awayOdds) {
+              gameData.odds.ml.bk[mappedBook] = {
+                h: homeOdds.price || homeOdds.american,
+                a: awayOdds.price || awayOdds.american,
+                av: true
+              };
+            }
+          }
+        }
+      });
+    }
+    
+    console.log('SGO processed game:', gameData.home, 'vs', gameData.away, 'books:', Object.keys(gameData.odds.ml.bk));
+    return gameData;
+  }).filter(g => Object.keys(g.odds.ml.bk).length > 0 || true); // Keep all for now to debug
+};
+
+// Match Polymarket markets to Odds API events
+const matchPolymarketToOdds = (polyMarkets, oddsEvents) => {
+  const matched = [];
+  
+  polyMarkets.forEach(pm => {
+    const q = (pm.question || '').toLowerCase();
+    const outcomes = JSON.parse(pm.outcomes || '[]');
+    const prices = JSON.parse(pm.outcomePrices || '[]').map(Number);
+    const tokens = pm.clobTokenIds ? JSON.parse(pm.clobTokenIds) : [];
+    
+    // Try to find matching odds event
+    let matchedEvent = null;
+    for (const event of oddsEvents) {
+      const homeLower = event.home.toLowerCase();
+      const awayLower = event.away.toLowerCase();
+      // Check if question contains both team names
+      if (q.includes(homeLower.split(' ').pop()) && q.includes(awayLower.split(' ').pop())) {
+        matchedEvent = event;
+        break;
+      }
+    }
+    
+    if (matchedEvent) {
+      // Add Polymarket data to matched event
+      matchedEvent.poly = {
+        h: { mid: prices[0] || 0.5, ask: prices[0] || 0.5, askSz: 0, askU: 0, tokenId: tokens[0], vol: parseFloat(pm.volume) || 0, bk: null },
+        a: { mid: prices[1] || 0.5, ask: prices[1] || 0.5, askSz: 0, askU: 0, tokenId: tokens[1], vol: parseFloat(pm.volume) || 0, bk: null }
+      };
+      matchedEvent.marketUrl = `https://polymarket.com/event/${pm.slug}`;
+    }
+  });
+  
+  return oddsEvents;
+};
+
+// Generate mock data as fallback
+const genMockData = () => {
+  const teams=[['Duke','UNC'],['Kansas','Kentucky'],['Gonzaga','UCLA'],['Arizona','Oregon'],['Villanova','UConn'],['Michigan St','Ohio St'],['Auburn','Tennessee'],['Houston','Memphis'],['Purdue','Indiana'],['Texas','Baylor']];
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+  
+  return teams.map(([h,a],i)=>{
+    const st = new Date(todayStart);
+    if (i < 3) st.setHours(now.getHours(), now.getMinutes() - 30 - Math.floor(Math.random() * 60), 0);
+    else {
+      const baseHour = Math.max(now.getHours() + 1, 12);
+      st.setHours(baseHour + Math.floor(i / 2), Math.floor(Math.random() * 60), 0);
+    }
+    if (st > todayEnd) st.setHours(22, Math.floor(Math.random() * 60), 0);
+    if (st < todayStart) st.setTime(now.getTime() - Math.floor(Math.random() * 60) * 60000);
+    
+    const bp=.3+Math.random()*.4;
+    const ev={id:`g${i}`,home:h,away:a,time:st.toISOString(),odds:{},poly:null,source:'mock'};
+    
+    if(Math.random()>.3){
+      const ph=bp+(Math.random()*.04-.02);
+      const mkBk=(mid)=>{
+        const bids=[],asks=[];
+        for(let j=0;j<5;j++){
+          const bidP=Math.max(.01,mid-.005-j*.01-Math.random()*.005);
+          const bidS=Math.round(1000+Math.random()*8000);
+          bids.push({p:bidP,s:bidS,u:bidP*bidS});
+          const askP=Math.min(.99,mid+.005+j*.01+Math.random()*.005);
+          const askS=Math.round(1000+Math.random()*8000);
+          asks.push({p:askP,s:askS,u:askP*askS});
+        }
+        bids.sort((x,y)=>y.p-x.p);asks.sort((x,y)=>x.p-y.p);
+        return {bids,asks};
+      };
+      const hBk=mkBk(ph),aBk=mkBk(1-ph);
+      ev.poly={
+        h:{mid:ph,ask:hBk.asks[0].p,askSz:hBk.asks[0].s,askU:hBk.asks[0].u,bk:hBk,vol:Math.round(1e4+Math.random()*1e5)},
+        a:{mid:1-ph,ask:aBk.asks[0].p,askSz:aBk.asks[0].s,askU:aBk.asks[0].u,bk:aBk,vol:Math.round(1e4+Math.random()*1e5)}
+      };
+    }
+    ['ml','sp','tot'].forEach(m=>{
+      const ln=m==='sp'?Math.round((bp-.5)*20*2)/2:m==='tot'?130+Math.round(Math.random()*30*2)/2:null;
+      ev.odds[m]={m,ln,bk:{}};
+      Object.keys(BOOKS).filter(b=>b!=='polymarket').forEach(b=>{
+        const sh=BOOKS[b].t==='sharp';
+        const vr=sh?.01:Math.random()*.05-.015;
+        const vig=sh?1.02+Math.random()*.01:1.04+Math.random()*.03;
+        let hO,aO;
+        if(m==='ml'){hO=p2a(Math.min(.95,Math.max(.05,bp+vr))*vig);aO=p2a(Math.min(.95,Math.max(.05,1-bp-vr))*vig);}
+        else{const base=-110,v=Math.floor(Math.random()*15)-7;hO=base+(sh?5:v);aO=base+(sh?5:-v);}
+        ev.odds[m].bk[b]={h:hO,a:aO,av:Math.random()>.1};
+      });
+    });
+    return ev;
+  }).filter(ev => isToday(ev.time));
+};
+
+// ============================================
+// COMPONENTS
+// ============================================
+
+const APIConfigPanel = ({ sgoApiKey, setSgoApiKey, apiStatus, onTestSgoAPI, onClearAPI }) => {
+  const [isExpanded, setIsExpanded] = useState(!sgoApiKey);
+  const [inputSgoKey, setInputSgoKey] = useState(sgoApiKey);
+  
+  return (
+    <div className="card p-4 mb-6">
+      <div className="collapsible-header flex items-center justify-between" onClick={() => setIsExpanded(!isExpanded)}>
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          🔑 API Configuration
+          {sgoApiKey && <span className="tag tag-sharp text-xs">Connected</span>}
+        </h2>
+        <span className="text-[#a0a0b0]">{isExpanded ? '▲' : '▼'}</span>
+      </div>
+      
+      {isExpanded && (
+        <div className="mt-4 space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* SportsGameOdds API */}
+            <div className="p-4 bg-[#1a1a25] rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">🎮</span>
+                <h3 className="font-semibold">SportsGameOdds</h3>
+              </div>
+              <a href="https://sportsgameodds.com" target="_blank" rel="noopener" className="text-xs text-[#4dabf7] hover:underline block mb-2">Get API Key →</a>
+              <p className="text-xs text-[#a0a0b0] mb-3">80+ books, props, alt lines. Pay per event.</p>
+              <div className="flex gap-2">
+                <input 
+                  type="password" 
+                  placeholder="API key..." 
+                  value={inputSgoKey}
+                  onChange={(e) => setInputSgoKey(e.target.value)}
+                  className="flex-1 api-input text-xs"
+                />
+                <button 
+                  onClick={() => { setSgoApiKey(inputSgoKey); onTestSgoAPI(inputSgoKey); }}
+                  className="btn btn-primary text-xs px-3"
+                >
+                  Save
+                </button>
+              </div>
+              {apiStatus.sgoApi && (
+                <div className={`mt-2 text-xs ${apiStatus.sgoApi.success ? 'text-[#00ff88]' : 'text-[#ff4757]'}`}>
+                  {apiStatus.sgoApi.message}
+                </div>
+              )}
+            </div>
+            
+            {/* Polymarket - no key needed */}
+            <div className="p-4 bg-[#1a1a25] rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">🔮</span>
+                <h3 className="font-semibold">Polymarket</h3>
+                <span className="tag tag-poly text-xs">Free</span>
+              </div>
+              <p className="text-xs text-[#a0a0b0] mb-3">No key required. Orderbook data auto-fetched.</p>
+              <div className="flex items-center gap-2 text-sm text-[#00ff88]">
+                <span className="w-2 h-2 bg-[#00ff88] rounded-full"></span>
+                Ready to use
+              </div>
+            </div>
+          </div>
+          
+          {sgoApiKey && (
+            <div className="flex justify-end">
+              <button onClick={onClearAPI} className="btn btn-danger text-sm">Clear API Key</button>
+            </div>
+          )}
+          
+          <div className="text-xs text-[#a0a0b0] bg-[#0a0a0f] p-3 rounded-lg">
+            <strong>How it works:</strong> Sharp book odds (Pinnacle, BetOnline) are devigged to calculate fair value. 
+            This fair value is compared against soft book odds AND Polymarket ask prices to find +EV.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const DepthTable=({bk,sel})=>{
+  if(!bk?.asks)return null;
+  let cum=0;
+  const rows=bk.asks.slice(0,5).map(a=>{cum+=a.u;return{...a,cum};});
+  return(
+    <div className="mt-3 p-3 bg-[#0a0a0f] rounded-lg">
+      <div className="text-xs text-[#a0a0b0] mb-2">📊 Ask Depth - Buy {sel} YES</div>
+      <table className="depth-table">
+        <thead><tr><th>Price</th><th>American</th><th>Shares</th><th>$Cost</th><th>Cumul$</th></tr></thead>
+        <tbody>{rows.map((r,i)=>(
+          <tr key={i} style={{color:i===0?'#00ff88':'#a0a0b0'}}>
+            <td className="mono">{fmtC(r.p)}</td>
+            <td className="mono font-semibold">{fmtA(p2a(r.p))}</td>
+            <td className="mono">{r.s.toLocaleString()}</td>
+            <td className="mono">{fmtU(r.u)}</td>
+            <td className="mono" style={{color:'#ffd43b'}}>{fmtU(r.cum)}</td>
+          </tr>
+        ))}</tbody>
+      </table>
+    </div>
+  );
+};
+
+const GameTimeDisplay = ({ time }) => {
+  const gt = formatGameTime(time);
+  if (gt.status === 'live') {
+    return (<div className="flex items-center gap-2"><span className="tag tag-live"><span className="live-dot"></span>{gt.text}</span><span className="text-xs text-[#a0a0b0]">{gt.detail}</span></div>);
+  }
+  if (gt.status === 'upcoming') {
+    return (<div className="flex items-center gap-2"><span className="tag tag-upcoming">{gt.text}</span><span className="text-xs text-[#a0a0b0]">{gt.detail}</span></div>);
+  }
+  return <span className="text-xs text-[#a0a0b0]">FINAL</span>;
+};
+
+const EVCard=({b,onAlert})=>{
+  const [showBk,setShowBk]=useState(false);
+  const isPoly=b.book==='polymarket';
+  const evCol=b.ev>=5?'#00ff88':b.ev>=2?'#4dabf7':'#ffd43b';
+  const gameTime = formatGameTime(b.time);
+  
+  return(
+    <div className="card p-4 relative">
+      {isPoly&&<div className="absolute -top-2 -right-2 px-2 py-0.5 bg-[#9775fa] text-white text-xs rounded font-bold">POLY</div>}
+      <div className="mb-3 pb-2 border-b border-[#2a2a3a]">
+        <GameTimeDisplay time={b.time} />
+      </div>
+      <div className="flex justify-between mb-3">
+        <div>
+          <div className="flex gap-2 mb-1">
+            <span className={`tag ${isPoly?'tag-poly':'tag-soft'}`}>{BOOKS[b.book]?.l || '📚'} {BOOKS[b.book]?.n || b.book}</span>
+            <span className="text-xs text-[#a0a0b0]">{b.mkt}</span>
+          </div>
+          <h3 className="font-semibold">{b.sel}</h3>
+          <p className="text-sm text-[#a0a0b0]">{b.home} vs {b.away}</p>
+        </div>
+        <div className="px-3 py-2 rounded-lg" style={{background:`${evCol}15`,border:`1px solid ${evCol}50`}}>
+          <div className="text-2xl font-bold mono" style={{color:evCol}}>+{b.ev.toFixed(2)}%</div>
+          <div className="text-xs text-[#a0a0b0]">EV</div>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-4 py-3 border-t border-[#2a2a3a]">
+        <div><div className="text-xs text-[#a0a0b0] mb-1">{isPoly?'Best Ask':'Book'}</div><div className="mono font-semibold text-lg">{fmtA(b.bookOdds)}</div>{isPoly&&b.pd&&<div className="text-xs text-[#9775fa]">{fmtC(b.pd.ask)}</div>}</div>
+        <div><div className="text-xs text-[#a0a0b0] mb-1">Fair</div><div className="mono font-semibold text-lg text-[#4dabf7]">{fmtA(b.fair)}</div></div>
+        <div><div className="text-xs text-[#a0a0b0] mb-1">Kelly</div><div className="mono font-semibold text-lg text-[#ffd43b]">{b.kelly.toFixed(1)}%</div></div>
+      </div>
+      {isPoly&&b.pd&&(
+        <div className="pt-3 border-t border-[#2a2a3a]">
+          <div className="grid grid-cols-2 gap-4 mb-2">
+            <div><div className="text-xs text-[#a0a0b0]">Best Ask Liquidity</div><div className="mono text-[#00ff88] font-semibold">{fmtU(b.pd.askU)}</div><div className="text-xs text-[#a0a0b0]">{b.pd.askSz.toLocaleString()} @ {fmtC(b.pd.ask)} = {fmtA(p2a(b.pd.ask))}</div></div>
+            <div><div className="text-xs text-[#a0a0b0]">24h Vol</div><div className="mono text-[#9775fa] font-semibold">{fmtU(b.pd.vol)}</div></div>
+          </div>
+          <button onClick={()=>setShowBk(!showBk)} className="w-full text-xs text-[#9775fa] py-2 bg-[#1a1a25] rounded-lg">{showBk?'▲ Hide':'▼ Show'} Full Depth (w/ American)</button>
+          {showBk&&<DepthTable bk={b.pd.bk} sel={b.sel}/>}
+        </div>
+      )}
+      <div className="flex justify-between pt-3 border-t border-[#2a2a3a] mt-3">
+        <div className="text-xs text-[#a0a0b0]">
+          {gameTime.status === 'live' ? <span className="text-[#ff4757]">⚡ Live betting</span> : <span>Pre-game</span>}
+        </div>
+        <button onClick={()=>onAlert(b)} className="btn text-xs">🔔 Alert</button>
+      </div>
+    </div>
+  );
+};
+
+const PolymarketGameRow = ({ game, oddsFormat }) => {
+  const gt = formatGameTime(game.startTime);
+  
+  const formatOdds = (price) => {
+    if (oddsFormat === 'american') return fmtA(p2a(price));
+    return `${(price * 100).toFixed(1)}%`;
+  };
+  
+  return (
+    <div className="grid grid-cols-12 gap-4 items-center p-4 border-b border-[#2a2a3a] hover:bg-[#1a1a25]/50 transition-all">
+      {/* Time */}
+      <div className="col-span-2">
+        {gt.status === 'live' ? (
+          <span className="tag tag-live"><span className="live-dot"></span>{gt.text}</span>
+        ) : gt.status === 'upcoming' ? (
+          <span className="tag tag-upcoming">{gt.text}</span>
+        ) : (
+          <span className="text-[#a0a0b0] text-sm">{gt.text}</span>
+        )}
+      </div>
+      
+      {/* Teams */}
+      <div className="col-span-3">
+        <div className="font-semibold text-white">{game.team1}</div>
+        <div className="text-[#a0a0b0]">{game.team2}</div>
+      </div>
+      
+      {/* Team 1 Odds */}
+      <div className="col-span-2 text-center">
+        <div className={`mono text-lg font-bold ${game.team1Ask.price > 0.5 ? 'text-[#00ff88]' : 'text-white'}`}>
+          {formatOdds(game.team1Ask.price)}
+        </div>
+        <div className="text-xs text-[#a0a0b0]">{fmtC(game.team1Ask.price)}</div>
+        <div className="text-xs text-[#9775fa] mt-1">{fmtU(game.team1Ask.total)} liq</div>
+      </div>
+      
+      {/* Team 2 Odds */}
+      <div className="col-span-2 text-center">
+        <div className={`mono text-lg font-bold ${game.team2Ask.price > 0.5 ? 'text-[#00ff88]' : 'text-white'}`}>
+          {formatOdds(game.team2Ask.price)}
+        </div>
+        <div className="text-xs text-[#a0a0b0]">{fmtC(game.team2Ask.price)}</div>
+        <div className="text-xs text-[#9775fa] mt-1">{fmtU(game.team2Ask.total)} liq</div>
+      </div>
+      
+      {/* Volume */}
+      <div className="col-span-2 text-center">
+        <div className="text-sm text-[#9775fa] font-semibold">{fmtU(game.volume)}</div>
+        <div className="text-xs text-[#a0a0b0]">volume</div>
+      </div>
+      
+      {/* Trade Link */}
+      <div className="col-span-1 text-right">
+        <a href={game.url} target="_blank" rel="noopener noreferrer" className="btn text-xs px-3 py-1">Trade</a>
+      </div>
+    </div>
+  );
+};
+
+const PolymarketGamesTab = ({ games, loading, oddsFormat, setOddsFormat, debugInfo }) => {
+  const [showDebug, setShowDebug] = useState(false);
+  const liveGames = games.filter(g => formatGameTime(g.startTime).status === 'live');
+  const upcomingGames = games.filter(g => formatGameTime(g.startTime).status === 'upcoming');
+  const totalVol = games.reduce((sum, g) => sum + g.volume, 0);
+  const totalLiq = games.reduce((sum, g) => sum + (g.team1Ask?.total || 0) + (g.team2Ask?.total || 0), 0);
+  
+  return (
+    <div>
+      {/* Stats Row */}
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="card p-4">
+          <div className="text-sm text-[#a0a0b0]">Total Games</div>
+          <div className="text-2xl font-bold mono text-[#9775fa]">{games.length}</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-sm text-[#a0a0b0]">Live Now</div>
+          <div className="text-2xl font-bold mono text-[#ff4757]">{liveGames.length}</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-sm text-[#a0a0b0]">Total Volume</div>
+          <div className="text-2xl font-bold mono text-[#9775fa]">{fmtU(totalVol)}</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-sm text-[#a0a0b0]">Total Liquidity</div>
+          <div className="text-2xl font-bold mono text-[#00ff88]">{fmtU(totalLiq)}</div>
+        </div>
+      </div>
+      
+      {/* Odds Format Toggle */}
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold">🏀 Basketball Markets on Polymarket</h3>
+        <div className="flex gap-2 bg-[#1a1a25] rounded-lg p-1">
+          <button 
+            onClick={() => setOddsFormat('american')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${oddsFormat === 'american' ? 'bg-[#9775fa] text-white' : 'text-[#a0a0b0]'}`}
+          >
+            American
+          </button>
+          <button 
+            onClick={() => setOddsFormat('percent')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${oddsFormat === 'percent' ? 'bg-[#9775fa] text-white' : 'text-[#a0a0b0]'}`}
+          >
+            Percent
+          </button>
+        </div>
+      </div>
+      
+      {/* Games Table */}
+      <div className="card">
+        {/* Header */}
+        <div className="grid grid-cols-12 gap-4 p-4 border-b border-[#2a2a3a] text-sm text-[#a0a0b0] font-semibold bg-[#1a1a25] rounded-t-lg">
+          <div className="col-span-2">Time</div>
+          <div className="col-span-3">Matchup</div>
+          <div className="col-span-2 text-center">Team 1</div>
+          <div className="col-span-2 text-center">Team 2</div>
+          <div className="col-span-2 text-center">Volume</div>
+          <div className="col-span-1"></div>
+        </div>
+        
+        {loading ? (
+          <div className="p-12 text-center">
+            <div className="w-8 h-8 border-4 border-[#9775fa] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-[#a0a0b0]">Loading Polymarket data...</p>
+          </div>
+        ) : games.length === 0 ? (
+          <div className="p-12 text-center">
+            <div className="text-4xl mb-4">🏀</div>
+            <p className="text-xl mb-2">No basketball games found</p>
+            <p className="text-[#a0a0b0]">Polymarket may not have any CBB/NBA markets listed right now</p>
+            <a href="https://polymarket.com/sports" target="_blank" rel="noopener" className="text-[#9775fa] hover:underline mt-4 inline-block">Check Polymarket Sports →</a>
+          </div>
+        ) : (
+          games.map(game => (
+            <PolymarketGameRow key={game.id} game={game} oddsFormat={oddsFormat} />
+          ))
+        )}
+      </div>
+      
+      {/* Debug Panel */}
+      <div className="mt-6">
+        <button 
+          onClick={() => setShowDebug(!showDebug)}
+          className="btn text-xs mb-2"
+        >
+          {showDebug ? '▼ Hide' : '▶ Show'} Debug Info
+        </button>
+        
+        {showDebug && (
+          <div className="card p-4 bg-[#0a0a0f] text-xs mono overflow-auto max-h-96">
+            <div className="mb-4">
+              <div className="text-[#00ff88] font-bold mb-2">API Response Summary:</div>
+              <div className="text-[#a0a0b0]">
+                <div>Total markets fetched: <span className="text-white">{debugInfo?.totalMarkets || 0}</span></div>
+                <div>Markets with 'vs': <span className="text-white">{debugInfo?.vsMarkets || 0}</span></div>
+                <div>Basketball matches: <span className="text-white">{debugInfo?.basketballMatches || 0}</span></div>
+                <div>Final processed: <span className="text-white">{games.length}</span></div>
+              </div>
+            </div>
+            
+            {debugInfo?.attempts?.length > 0 && (
+              <div className="mb-4">
+                <div className="text-[#4dabf7] font-bold mb-2">Fetch Attempts:</div>
+                {debugInfo.attempts.map((attempt, i) => (
+                  <div key={i} className={`text-xs mb-1 ${attempt.includes('✓') ? 'text-[#00ff88]' : 'text-[#ff4757]'}`}>
+                    {i + 1}. {attempt}
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {debugInfo?.sampleMarket && (
+              <div className="mb-4">
+                <div className="text-[#ffd43b] font-bold mb-2">Sample Market Structure:</div>
+                <pre className="text-[#a0a0b0] whitespace-pre-wrap break-all max-h-48 overflow-auto">
+                  {JSON.stringify(debugInfo.sampleMarket, null, 2)}
+                </pre>
+              </div>
+            )}
+            
+            {debugInfo?.error && (
+              <div className="mb-4">
+                <div className="text-[#ff4757] font-bold mb-2">Error:</div>
+                <div className="text-[#ff4757]">{debugInfo.error}</div>
+              </div>
+            )}
+            
+            {debugInfo?.allTags?.length > 0 && (
+              <div className="mb-4">
+                <div className="text-[#4dabf7] font-bold mb-2">Tags Found:</div>
+                <div className="text-[#a0a0b0] flex flex-wrap gap-1">
+                  {debugInfo.allTags.map((tag, i) => (
+                    <span key={i} className="bg-[#1a1a25] px-2 py-1 rounded">{tag}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// MAIN APP
+// ============================================
+
+const App=()=>{
+  // Load API key from localStorage
+  const [sgoApiKey, setSgoApiKey] = useState(() => localStorage.getItem('sgoApiKey') || '');
+  const [apiStatus, setApiStatus] = useState({});
+  
+  const [data,setData]=useState([]);
+  const [loading,setLoading]=useState(false);
+  const [error,setError]=useState(null);
+  const [dataSource,setDataSource]=useState('mock');
+  const [auto,setAuto]=useState(false);
+  const [tab,setTab]=useState('polymarket'); // Start on polymarket tab
+  const [sharp,setSharp]=useState(['pinnacle']);
+  const [target,setTarget]=useState(['draftkings','fanduel','betmgm','polymarket']);
+  const [devig,setDevig]=useState('mult');
+  const [minEV,setMinEV]=useState(1);
+  const [minLiq,setMinLiq]=useState(0);
+  const [sort,setSort]=useState('ev');
+  const [oddsFormat, setOddsFormat] = useState('american'); // 'american' or 'percent'
+  const [polyGames, setPolyGames] = useState([]);
+  const [polyDebug, setPolyDebug] = useState({});
+  const [alerts,setAlerts]=useState([]);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Save API key to localStorage
+  useEffect(() => {
+    if (sgoApiKey) localStorage.setItem('sgoApiKey', sgoApiKey);
+  }, [sgoApiKey]);
+
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const testSgoAPI = async (key) => {
+    if (!key) return;
+    try {
+      setApiStatus(s => ({ ...s, sgoApi: { success: false, message: 'Testing...' } }));
+      const response = await fetch(`${SGO_API}/sports?apiKey=${key}`, {
+        headers: { 'x-api-key': key }
+      });
+      if (response.ok) {
+        setApiStatus(s => ({ ...s, sgoApi: { success: true, message: '✓ Connected!' } }));
+      } else {
+        throw new Error(`HTTP ${response.status}`);
+      }
+    } catch (err) {
+      setApiStatus(s => ({ ...s, sgoApi: { success: false, message: `✗ Error: ${err.message}` } }));
+    }
+  };
+
+  const clearAPI = () => {
+    setSgoApiKey('');
+    localStorage.removeItem('sgoApiKey');
+    setApiStatus({});
+  };
+
+  const fetchLiveData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      let oddsEvents = [];
+      let polyMarkets = [];
+      let apiErrors = [];
+      
+      // Always fetch Polymarket CBB games for the dedicated tab
+      try {
+        const result = await fetchPolymarketCBB();
+        setPolyGames(result.games || []);
+        setPolyDebug(result.debug || {});
+        console.log('Polymarket games loaded:', (result.games || []).length);
+      } catch (err) {
+        console.error('Polymarket CBB error:', err);
+        setPolyDebug({ error: err.message });
+      }
+      
+      // Fetch from SportsGameOdds API if key is set
+      if (sgoApiKey) {
+        try {
+          console.log('Fetching from SportsGameOdds...');
+          const ncaabData = await fetchSportsGameOdds(sgoApiKey, 'NCAAB').catch(e => { console.log('SGO NCAAB error:', e); return { data: [] }; });
+          const nbaData = await fetchSportsGameOdds(sgoApiKey, 'NBA').catch(e => { console.log('SGO NBA error:', e); return { data: [] }; });
+          console.log('SGO raw data:', ncaabData, nbaData);
+          const allData = [...(ncaabData.data || ncaabData.items || []), ...(nbaData.data || nbaData.items || [])];
+          if (allData.length > 0) {
+            oddsEvents = processSGOData({ data: allData });
+            console.log('SGO processed events:', oddsEvents.length);
+          }
+        } catch (err) {
+          console.error('SportsGameOdds API error:', err);
+          apiErrors.push(`SportsGameOdds: ${err.message}`);
+        }
+      }
+      
+      // Fetch from Polymarket (always free)
+      try {
+        polyMarkets = await fetchPolymarketBasketball();
+        console.log('Polymarket markets:', polyMarkets.length);
+      } catch (err) {
+        console.error('Polymarket error:', err);
+      }
+      
+      // If we have odds data, try to match with Polymarket
+      if (oddsEvents.length > 0) {
+        const matched = matchPolymarketToOdds(polyMarkets, oddsEvents);
+        const todayGames = matched.filter(g => isToday(g.time));
+        setData(todayGames.length > 0 ? todayGames : matched);
+        setDataSource('live');
+        if (apiErrors.length > 0) setError(apiErrors.join('; '));
+      } else if (polyMarkets.length > 0) {
+        // No odds API data but have polymarket
+        const processed = polyMarkets.map((pm, i) => {
+          const outcomes = JSON.parse(pm.outcomes || '[]');
+          const prices = JSON.parse(pm.outcomePrices || '[]').map(Number);
+          const tokens = pm.clobTokenIds ? JSON.parse(pm.clobTokenIds) : [];
+          return {
+            id: pm.id || `poly_${i}`,
+            home: outcomes[0] || 'Team A',
+            away: outcomes[1] || 'Team B',
+            time: pm.startDate || pm.endDate || new Date().toISOString(),
+            odds: {},
+            poly: {
+              h: { mid: prices[0] || 0.5, ask: prices[0] || 0.5, askSz: 0, askU: 0, tokenId: tokens[0], vol: parseFloat(pm.volume) || 0 },
+              a: { mid: prices[1] || 0.5, ask: prices[1] || 0.5, askSz: 0, askU: 0, tokenId: tokens[1], vol: parseFloat(pm.volume) || 0 }
+            },
+            source: 'polymarket-only',
+            marketUrl: `https://polymarket.com/event/${pm.slug}`
+          };
+        });
+        setData(processed);
+        setDataSource('polymarket-only');
+      } else {
+        setData([]);
+        setDataSource('live');
+      }
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setError(`${err.message}`);
+      setData([]);
+      setDataSource('mock');
+    }
+    
+    setLoading(false);
+  }, [sgoApiKey]);
+
+  const fetchMockData = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    setTimeout(() => {
+      setData(genMockData());
+      setDataSource('mock');
+      setLoading(false);
+    }, 500);
+  }, []);
+
+  useEffect(() => { fetchLiveData(); }, []);
+  useEffect(() => { if(auto) { const i = setInterval(fetchLiveData, 60000); return () => clearInterval(i); } }, [auto, fetchLiveData]);
+
+  const {all,poly,liveCount,upcomingCount}=useMemo(()=>{
+    const bets=[];
+    const incPoly=target.includes('polymarket');
+    let live=0, upcoming=0;
+    
+    data.forEach(ev=>{
+      const gameIsLive = isLive(ev.time);
+      
+      // Process sportsbook odds
+      if (ev.odds?.ml?.bk) {
+        const od = ev.odds.ml;
+        const sOdds=[];
+        sharp.forEach(bk=>{const o=od.bk[bk];if(o?.av)sOdds.push({h:a2p(o.h),a:a2p(o.a)});});
+        
+        if(sOdds.length > 0) {
+          const avgH=sOdds.reduce((x,y)=>x+y.h,0)/sOdds.length;
+          const avgA=sOdds.reduce((x,y)=>x+y.a,0)/sOdds.length;
+          const dv=DEVIG[devig].f([avgH,avgA]);
+          const fairH=dv[0],fairA=dv[1];
+          
+          // Check target books
+          target.filter(b=>b!=='polymarket').forEach(bk=>{
+            const o=od.bk[bk];if(!o?.av)return;
+            const hP=a2p(o.h),hEV=calcEV(hP,fairH);
+            if(hEV>=minEV){
+              bets.push({id:ev.id,home:ev.home,away:ev.away,time:ev.time,mkt:'ml',sel:ev.home,side:'h',book:bk,bookOdds:o.h,fair:p2a(fairH),ev:hEV,kelly:calcK(hP,fairH),src:'sb',isLive:gameIsLive});
+              if(gameIsLive)live++;else upcoming++;
+            }
+            const aP=a2p(o.a),aEV=calcEV(aP,fairA);
+            if(aEV>=minEV){
+              bets.push({id:ev.id,home:ev.home,away:ev.away,time:ev.time,mkt:'ml',sel:ev.away,side:'a',book:bk,bookOdds:o.a,fair:p2a(fairA),ev:aEV,kelly:calcK(aP,fairA),src:'sb',isLive:gameIsLive});
+              if(gameIsLive)live++;else upcoming++;
+            }
+          });
+          
+          // Check Polymarket using fair value from sharp books
+          if(incPoly && ev.poly){
+            const ph=ev.poly.h;
+            if(ph.ask>0 && (ph.askU>=minLiq || !ph.askU)){
+              const hEV=calcEV(ph.ask,fairH);
+              if(hEV>=minEV){
+                bets.push({id:ev.id,home:ev.home,away:ev.away,time:ev.time,mkt:'ml',sel:ev.home,side:'h',book:'polymarket',bookOdds:p2a(ph.ask),fair:p2a(fairH),ev:hEV,kelly:calcK(ph.ask,fairH),src:'poly',pd:{ask:ph.ask,askSz:ph.askSz||0,askU:ph.askU||0,mid:ph.mid,vol:ph.vol,bk:ph.bk},isLive:gameIsLive,marketUrl:ev.marketUrl});
+                if(gameIsLive)live++;else upcoming++;
+              }
+            }
+            const pa=ev.poly.a;
+            if(pa.ask>0 && (pa.askU>=minLiq || !pa.askU)){
+              const aEV=calcEV(pa.ask,fairA);
+              if(aEV>=minEV){
+                bets.push({id:ev.id,home:ev.home,away:ev.away,time:ev.time,mkt:'ml',sel:ev.away,side:'a',book:'polymarket',bookOdds:p2a(pa.ask),fair:p2a(fairA),ev:aEV,kelly:calcK(pa.ask,fairA),src:'poly',pd:{ask:pa.ask,askSz:pa.askSz||0,askU:pa.askU||0,mid:pa.mid,vol:pa.vol,bk:pa.bk},isLive:gameIsLive,marketUrl:ev.marketUrl});
+                if(gameIsLive)live++;else upcoming++;
+              }
+            }
+          }
+        }
+      }
+      
+      // Polymarket only mode (no fair value)
+      if (ev.source === 'polymarket-only' && incPoly && ev.poly) {
+        const ph = ev.poly.h;
+        bets.push({id:ev.id,home:ev.home,away:ev.away,time:ev.time,mkt:'ml',sel:ev.home,side:'h',book:'polymarket',bookOdds:p2a(ph.ask),fair:p2a(ph.mid),ev:0,kelly:0,src:'poly',pd:{ask:ph.ask,askSz:0,askU:0,mid:ph.mid,vol:ph.vol},isLive:gameIsLive,marketUrl:ev.marketUrl});
+        const pa = ev.poly.a;
+        bets.push({id:ev.id,home:ev.home,away:ev.away,time:ev.time,mkt:'ml',sel:ev.away,side:'a',book:'polymarket',bookOdds:p2a(pa.ask),fair:p2a(pa.mid),ev:0,kelly:0,src:'poly',pd:{ask:pa.ask,askSz:0,askU:0,mid:pa.mid,vol:pa.vol},isLive:gameIsLive,marketUrl:ev.marketUrl});
+      }
+    });
+    
+    bets.sort((a,b)=>{
+      if(a.isLive && !b.isLive) return -1;
+      if(!a.isLive && b.isLive) return 1;
+      if(sort==='ev')return b.ev-a.ev;
+      if(sort==='kelly')return b.kelly-a.kelly;
+      if(sort==='liq')return (b.pd?.askU||0)-(a.pd?.askU||0);
+      return new Date(a.time)-new Date(b.time);
+    });
+    return {all:bets,poly:bets.filter(x=>x.book==='polymarket'),liveCount:live,upcomingCount:upcoming};
+  },[data,sharp,target,devig,minEV,minLiq,sort,currentTime]);
+
+  const filtered=tab==='all'?all:tab==='poly'?poly:tab==='live'?all.filter(x=>x.isLive):tab==='upcoming'?all.filter(x=>!x.isLive):all.filter(x=>x.book!=='polymarket');
+  const avgEV=all.length?all.reduce((a,b)=>a+b.ev,0)/all.length:0;
+  const maxEV=all.length?Math.max(...all.map(x=>x.ev)):0;
+  const totLiq=poly.reduce((a,b)=>a+(b.pd?.askU||0),0);
+  
+  const todayStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const sourceLabel = dataSource === 'live' ? '🟢 Live' : dataSource === 'polymarket-only' ? '🟣 Poly Only' : '🟡 Mock';
+
+  return(
+    <div className="min-h-screen">
+      <header className="sticky top-0 z-50 bg-[#0a0a0f]/95 backdrop-blur border-b border-[#2a2a3a] px-6 py-4">
+        <div className="max-w-[1800px] mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00ff88] to-[#9775fa] flex items-center justify-center text-black font-bold text-lg">+</div>
+            <div>
+              <h1 className="text-xl font-bold" style={{background:'linear-gradient(135deg,#00ff88,#4dabf7)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>EV Finder</h1>
+              <p className="text-xs text-[#a0a0b0]">{todayStr} • {sourceLabel}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 text-sm">
+              <span className="flex items-center gap-1"><span className="live-dot"></span><span className="text-[#ff4757]">{liveCount} Live</span></span>
+              <span className="text-[#a0a0b0]">|</span>
+              <span className="text-[#00ff88]">{upcomingCount} Upcoming</span>
+            </div>
+            <button onClick={()=>setAuto(!auto)} className={`btn text-xs ${auto?'border-[#00ff88]':''}`}>{auto?'🔄':'⏸️'} Auto</button>
+            <button onClick={fetchMockData} className="btn text-xs">Mock</button>
+            <span className={`w-2 h-2 rounded-full ${loading?'bg-yellow-400 animate-pulse':'bg-green-400'}`}></span>
+            <button onClick={fetchLiveData} className="btn btn-primary">{loading?'...':'Refresh'}</button>
+          </div>
+        </div>
+      </header>
+      <main className="max-w-[1800px] mx-auto px-6 py-6">
+        <APIConfigPanel 
+          sgoApiKey={sgoApiKey}
+          setSgoApiKey={setSgoApiKey}
+          apiStatus={apiStatus}
+          onTestSgoAPI={testSgoAPI}
+          onClearAPI={clearAPI}
+        />
+        
+        {error && <div className="error-box"><p className="text-[#ff4757] text-sm">{error}</p></div>}
+        
+        <div className="card p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4">⚙️ Filters</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <div className="lg:col-span-3"><label className="block text-sm text-[#a0a0b0] mb-2">Sharp Books (Fair Value)</label><div className="flex flex-wrap gap-2">{SHARP.map(b=><button key={b} onClick={()=>setSharp(sharp.includes(b)?sharp.filter(x=>x!==b):[...sharp,b])} className={`tag ${sharp.includes(b)?'tag-sharp':'bg-[#1a1a25] text-[#a0a0b0] border border-[#2a2a3a]'}`}>{BOOKS[b]?.l} {BOOKS[b]?.n}</button>)}</div></div>
+            <div className="lg:col-span-4"><label className="block text-sm text-[#a0a0b0] mb-2">Target Books (Bet At)</label><div className="flex flex-wrap gap-2">{TARGET.map(b=><button key={b} onClick={()=>setTarget(target.includes(b)?target.filter(x=>x!==b):[...target,b])} className={`tag ${target.includes(b)?(b==='polymarket'?'tag-poly':'tag-soft'):'bg-[#1a1a25] text-[#a0a0b0] border border-[#2a2a3a]'}`}>{BOOKS[b]?.l} {BOOKS[b]?.n}</button>)}</div></div>
+            <div className="lg:col-span-2"><label className="block text-sm text-[#a0a0b0] mb-2">Devig</label><select value={devig} onChange={e=>setDevig(e.target.value)} className="w-full">{Object.entries(DEVIG).map(([k,v])=><option key={k} value={k}>{v.n}</option>)}</select></div>
+            <div className="lg:col-span-1"><label className="block text-sm text-[#a0a0b0] mb-2">Min EV</label><input type="number" value={minEV} onChange={e=>setMinEV(+e.target.value||0)} className="w-full mono"/></div>
+            <div className="lg:col-span-2"><label className="block text-sm text-[#a0a0b0] mb-2">Min Liq</label><select value={minLiq} onChange={e=>setMinLiq(+e.target.value)} className="w-full"><option value={0}>Any</option><option value={500}>$500+</option><option value={1000}>$1K+</option><option value={2500}>$2.5K+</option><option value={5000}>$5K+</option></select></div>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+          <div className="card p-4"><div className="text-sm text-[#a0a0b0]">Total +EV</div><div className="text-3xl font-bold mono" style={{background:'linear-gradient(135deg,#00ff88,#4dabf7)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>{all.length}</div></div>
+          <div className="card p-4"><div className="text-sm text-[#a0a0b0]">Avg EV</div><div className="text-3xl font-bold mono text-[#00ff88]">+{avgEV.toFixed(2)}%</div></div>
+          <div className="card p-4"><div className="text-sm text-[#a0a0b0]">Best EV</div><div className="text-3xl font-bold mono text-[#00ff88]">+{maxEV.toFixed(2)}%</div></div>
+          <div className="card p-4"><div className="text-sm text-[#a0a0b0]">Poly Opps</div><div className="text-3xl font-bold mono text-[#9775fa]">{poly.length}</div></div>
+          <div className="card p-4"><div className="text-sm text-[#a0a0b0]">Poly Ask $</div><div className="text-2xl font-bold mono text-[#9775fa]">{fmtU(totLiq)}</div></div>
+        </div>
+        
+        <div className="flex justify-between mb-4 flex-wrap gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <button className={`tab ${tab==='polymarket'?'active':''}`} onClick={()=>setTab('polymarket')}>🔮 Polymarket ({polyGames.length})</button>
+            <button className={`tab ${tab==='all'?'active':''}`} onClick={()=>setTab('all')}>+EV All ({all.length})</button>
+            <button className={`tab ${tab==='live'?'active':''}`} onClick={()=>setTab('live')}><span className="live-dot"></span>Live ({all.filter(x=>x.isLive).length})</button>
+            <button className={`tab ${tab==='upcoming'?'active':''}`} onClick={()=>setTab('upcoming')}>⏰ Upcoming ({all.filter(x=>!x.isLive).length})</button>
+            <button className={`tab ${tab==='poly'?'active':''}`} onClick={()=>setTab('poly')}>+EV Poly ({poly.length})</button>
+            <button className={`tab ${tab==='sb'?'active':''}`} onClick={()=>setTab('sb')}>📚 Books ({all.filter(x=>x.book!=='polymarket').length})</button>
+          </div>
+          {tab !== 'polymarket' && <select value={sort} onChange={e=>setSort(e.target.value)} className="text-sm"><option value="ev">EV ↓</option><option value="kelly">Kelly ↓</option><option value="liq">Liquidity ↓</option><option value="time">Time ↑</option></select>}
+        </div>
+        
+        {/* Polymarket Tab */}
+        {tab === 'polymarket' && (
+          <PolymarketGamesTab 
+            games={polyGames} 
+            loading={loading} 
+            oddsFormat={oddsFormat}
+            setOddsFormat={setOddsFormat}
+            debugInfo={polyDebug}
+          />
+        )}
+        
+        {/* +EV Tabs */}
+        {tab !== 'polymarket' && (
+          <>
+            {loading&&!filtered.length?<div className="text-center py-20"><div className="w-12 h-12 border-4 border-[#00ff88] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div><p className="text-[#a0a0b0]">Fetching data...</p></div>:
+            !filtered.length?<div className="text-center py-20 card"><h3 className="text-xl">No +EV found</h3><p className="text-[#a0a0b0]">Add an Odds API key or adjust filters</p></div>:
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">{filtered.map((b,i)=><EVCard key={`${b.id}-${b.sel}-${b.book}-${i}`} b={b} onAlert={x=>!alerts.find(a=>a.id===x.id&&a.sel===x.sel&&a.book===x.book)&&setAlerts([...alerts,x])}/>)}</div>}
+          </>
+        )}
+      </main>
+    </div>
+  );
+};
+
+ReactDOM.render(<App/>,document.getElementById('root'));
+</script>
+</body>
+</html>
