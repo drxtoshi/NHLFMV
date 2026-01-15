@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NHL Periods | +EV Finder</title>
+    <title>CBB</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -90,19 +90,25 @@
         }
         
         /* Game Header */
-        .game-header { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--bg3); }
-        .matchup { display:flex; align-items:center; gap:12px; }
-        .team { display:flex; align-items:center; gap:6px; }
-        .team-abbr { font-size:10px; font-weight:600; color:var(--txt3); background:var(--bg); padding:3px 6px; border-radius:3px; }
-        .team-name { font-weight:500; font-size:13px; }
-        .team-score { font-size:18px; font-weight:700; color:var(--accent); margin-left:6px; }
-        .vs { color:var(--txt3); font-size:11px; }
-        .game-info { text-align:right; }
-        .game-status { display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:500; }
-        .game-status.live { background:var(--profit-bg); color:var(--profit); }
-        .game-status.upcoming { background:var(--bg); color:var(--txt3); }
-        .game-time { font-size:14px; font-weight:600; color:var(--warn); margin-top:2px; }
-        .game-date { font-size:11px; color:var(--txt3); margin-top:1px; }
+        .game-header { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--bg3); position:relative; z-index:15; }
+        .teams { display:flex; align-items:center; gap:6px; flex-wrap:nowrap; }
+        .team { display:flex; flex-direction:column; align-items:flex-start; gap:1px; }
+        .team-abbr { font-size:13px; font-weight:700; color:#fff; }
+        .team-name { font-weight:400; font-size:10px; white-space:nowrap; color:var(--txt3); }
+        .score { font-size:16px; font-weight:700; color:var(--accent); }
+        .at { color:var(--txt3); font-size:11px; margin:0 2px; }
+        .game-info { display:flex; flex-direction:column; align-items:flex-end; flex-shrink:0; gap:2px; }
+        .game-info-row { display:flex; align-items:center; gap:6px; }
+        .game-status { display:inline-flex; align-items:center; gap:4px; padding:2px 6px; border-radius:3px; font-size:10px; font-weight:500; }
+        .game-status.live { background:var(--loss-bg); color:var(--loss); }
+        .game-status.live .live-dot { width:6px; height:6px; background:var(--loss); border-radius:50%; animation:livePulse 1.5s ease-in-out infinite; }
+        @keyframes livePulse { 0%, 100% { opacity:1; } 50% { opacity:0.4; } }
+        .game-status.upcoming { background:transparent; color:var(--txt3); font-size:10px; padding:0; }
+        .game-status.final { background:var(--bg); color:var(--txt3); }
+        .game-time { font-size:13px; font-weight:600; color:var(--txt); }
+        .game-time-tz { font-size:9px; color:var(--txt3); margin-left:3px; font-weight:400; }
+        .game-clock { font-size:11px; color:var(--warn); font-weight:500; }
+        .game-date { font-size:10px; color:var(--txt3); }
         
         /* Period Tabs */
         .period-tabs { display:flex; gap:3px; padding:6px 12px; background:var(--bg); border-bottom:1px solid var(--bdr); }
@@ -157,16 +163,22 @@
         .odds-table .consensus-row .odds-value { color:#c084fc; background:rgba(168,85,247,0.15); }
         .consensus-label { color:#a855f7; }
         
-        /* Alerts */
-        .alerts { position:fixed; top:16px; right:16px; width:280px; max-height:40vh; overflow-y:auto; display:flex; flex-direction:column; gap:6px; z-index:1000; }
-        .alert { padding:10px 12px; background:var(--bg2); border:1px solid var(--profit); border-radius:6px; cursor:pointer; transition:all 0.15s; }
-        .alert:hover { transform:translateX(-2px); background:var(--bg3); }
-        .alert-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
-        .alert-title { font-size:12px; font-weight:600; color:var(--profit); }
-        .alert-time { font-size:10px; color:var(--txt3); }
-        .alert-body { font-size:12px; color:var(--txt2); }
+        /* Alerts - inline next to tabs */
+        .alerts-inline { display:flex; flex-wrap:wrap; gap:8px; flex:1; overflow:hidden; }
+        .alerts-inline:empty { display:none; }
+        .alert { padding:8px 12px; background:var(--bg2); border:1px solid var(--profit); border-radius:6px; cursor:pointer; transition:all 0.15s; max-width:350px; }
+        .alert:hover { background:var(--bg3); }
+        .alert-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:2px; }
+        .alert-title { font-size:11px; font-weight:600; color:var(--profit); }
+        .alert-time { font-size:9px; color:var(--txt3); }
+        .alert-body { font-size:11px; color:var(--txt2); }
         .alert-body strong { color:var(--txt); }
-        .alert-ev { display:inline-block; margin-left:6px; padding:2px 6px; background:var(--profit-bg); color:var(--profit); border-radius:3px; font-weight:600; font-size:11px; }
+        .alert-ev { display:inline-block; margin-left:6px; padding:2px 6px; background:var(--profit-bg); color:var(--profit); border-radius:3px; font-weight:600; font-size:10px; }
+        
+        /* Steam alerts - orange/yellow theme */
+        .alert.steam-alert { border-color:var(--warn); background:rgba(245,158,11,0.08); }
+        .alert.steam-alert .alert-title { color:var(--warn); }
+        .steam-move { color:var(--warn); font-weight:600; font-size:10px; }
         
         /* Empty/Loading States */
         .empty { text-align:center; padding:48px 20px; color:var(--txt3); }
@@ -179,6 +191,48 @@
         /* Debug */
         .debug { background:var(--bg2); border:1px solid var(--bdr); border-radius:6px; padding:12px; margin-top:16px; font-size:11px; font-family:monospace; max-height:180px; overflow-y:auto; display:none; }
         .debug pre { white-space:pre-wrap; word-break:break-all; color:var(--txt3); }
+        
+        /* Collapsed Game Mode */
+        .game.collapsed .period-tabs,
+        .game.collapsed .odds-section { display:none; }
+        .game.collapsed .game-header { cursor:pointer; }
+        .collapsed-summary { display:none; padding:6px 12px; background:var(--bg); border-top:1px solid var(--bdr); font-size:11px; }
+        .game.collapsed .collapsed-summary { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+        .collapsed-summary .cs-item { display:flex; align-items:center; gap:4px; padding:3px 6px; background:var(--bg3); border-radius:4px; }
+        .collapsed-summary .cs-label { color:var(--txt3); font-size:9px; font-weight:600; }
+        .collapsed-summary .cs-value { font-weight:600; color:var(--txt); font-size:11px; }
+        .collapsed-summary .cs-value.purple { color:#c084fc; }
+        .collapsed-summary .cs-value.blue { color:var(--accent); }
+        .collapsed-summary .cs-best-stack { display:flex; flex-direction:column; gap:2px; }
+        .collapsed-summary .cs-best-line { display:flex; align-items:center; gap:3px; }
+        .collapsed-summary .cs-best-line .cs-side { font-weight:700; color:var(--txt); font-size:10px; width:10px; }
+        .collapsed-summary .cs-best-line .book-logo { width:20px; height:13px; font-size:6px; border-radius:2px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; color:#fff; flex-shrink:0; }
+        .collapsed-summary .cs-best-line .cs-odds { color:var(--txt2); font-weight:500; font-size:10px; }
+        
+        /* Best bets bar (shown when expanded) */
+        .best-bets-bar { display:flex; flex-wrap:wrap; gap:8px; padding:6px 12px; background:var(--bg); border-bottom:1px solid var(--bdr); align-items:center; }
+        .best-bets-bar:empty { display:none; }
+        .best-bets-label { font-size:10px; color:var(--txt3); font-weight:600; text-transform:uppercase; margin-right:4px; }
+        .best-bets-stack { display:flex; flex-direction:column; gap:2px; }
+        .best-bet-chip { display:flex; align-items:center; gap:3px; font-size:10px; }
+        .best-bet-chip .bet-label { font-weight:700; color:var(--txt); width:10px; }
+        .best-bet-chip .book-logo { width:20px; height:13px; font-size:6px; border-radius:2px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; color:#fff; flex-shrink:0; }
+        .best-bet-chip .bet-odds { color:var(--txt2); font-weight:500; }
+        .game.collapsed .best-bets-bar { display:none; }
+        
+        /* Pin Button */
+        .pin-btn { background:none; border:none; cursor:pointer; font-size:14px; padding:4px; opacity:0.4; transition:all 0.15s; position:relative; z-index:20; }
+        .pin-btn:hover { opacity:0.8; }
+        .game.pinned .pin-btn { opacity:1; color:var(--warn); }
+        .game.pinned { border-color:var(--warn); }
+        
+        /* Expand/Collapse Button per game */
+        .expand-btn { background:none; border:none; cursor:pointer; font-size:12px; padding:4px 6px; color:var(--txt3); transition:all 0.15s; position:relative; z-index:20; }
+        .expand-btn:hover { color:var(--txt); }
+        .game.collapsed .expand-btn { transform:rotate(-90deg); }
+        
+        /* Header controls group */
+        .game-controls { display:flex; align-items:center; gap:2px; margin-left:auto; position:relative; z-index:20; }
         
         /* Table scroll wrapper */
         .table-scroll { overflow-x:auto; }
@@ -235,10 +289,11 @@
         .bet-slip-actions .btn { flex:1; padding:12px; font-size:14px; }
         
         /* Bet Log Tab */
-        .tabs-container { display:flex; gap:4px; margin-bottom:0; }
-        .tab-btn { padding:8px 16px; background:var(--bg2); border:1px solid var(--bdr); border-radius:6px 6px 0 0; color:var(--txt3); font-family:inherit; font-size:12px; font-weight:500; cursor:pointer; border-bottom:none; margin-bottom:-1px; position:relative; z-index:1; }
-        .tab-btn.active { background:transparent; color:var(--txt); border-bottom:1px solid transparent; }
-        .tab-btn:hover:not(.active) { color:var(--txt2); }
+        .tabs-row { display:flex; align-items:flex-start; gap:12px; margin-bottom:12px; }
+        .tabs-container { display:flex; gap:4px; flex-shrink:0; }
+        .tab-btn { padding:8px 16px; background:var(--bg2); border:1px solid var(--bdr); border-radius:6px; color:var(--txt3); font-family:inherit; font-size:12px; font-weight:500; cursor:pointer; }
+        .tab-btn.active { background:var(--accent); color:white; border-color:var(--accent); }
+        .tab-btn:hover:not(.active) { color:var(--txt2); background:var(--bg3); }
         .tab-content { display:none; }
         .tab-content.active { display:block; }
         
@@ -288,13 +343,17 @@
         .mobile-mode .game { border-radius:6px; }
         .mobile-mode .game-header { padding:10px 12px; }
         .mobile-mode .matchup { gap:8px; }
-        .mobile-mode .team { gap:5px; }
-        .mobile-mode .team-name { font-size:13px; }
+        .mobile-mode .team { gap:1px; }
+        .mobile-mode .team-name { font-size:9px; }
         .mobile-mode .team-score { font-size:18px; margin-left:5px; }
-        .mobile-mode .team-abbr { font-size:10px; padding:3px 5px; }
+        .mobile-mode .team-abbr { font-size:12px; }
         .mobile-mode .vs { font-size:11px; }
-        .mobile-mode .game-status { padding:4px 8px; font-size:11px; }
-        .mobile-mode .game-date { font-size:11px; }
+        .mobile-mode .game-status { padding:4px 8px; font-size:10px; }
+        .mobile-mode .game-status.live .live-dot { width:5px; height:5px; }
+        .mobile-mode .game-time { font-size:12px; }
+        .mobile-mode .game-time-tz { font-size:8px; }
+        .mobile-mode .game-clock { font-size:10px; }
+        .mobile-mode .game-date { font-size:10px; }
         
         .mobile-mode .period-tabs { padding:5px 10px; gap:3px; }
         .mobile-mode .period-tab { padding:5px 10px; font-size:11px; }
@@ -343,17 +402,29 @@
         .mobile-mode .book-tag { padding:3px 6px; font-size:10px; }
         
         /* Alerts mobile */
-        .mobile-mode .alerts { width:200px; top:8px; right:8px; gap:4px; }
-        .mobile-mode .alert { padding:6px 8px; border-radius:4px; }
-        .mobile-mode .alert-title { font-size:10px; }
-        .mobile-mode .alert-time { font-size:8px; }
-        .mobile-mode .alert-body { font-size:10px; }
-        .mobile-mode .alert-ev { font-size:9px; padding:1px 4px; margin-left:4px; }
+        .mobile-mode .tabs-row { flex-direction:column; gap:8px; }
+        .mobile-mode .alerts-inline { width:100%; }
+        .mobile-mode .alert { padding:8px 10px; border-radius:4px; max-width:100%; flex:1; }
+        .mobile-mode .alert-title { font-size:11px; }
+        .mobile-mode .alert-time { font-size:9px; }
+        .mobile-mode .alert-body { font-size:11px; }
+        .mobile-mode .alert-ev { font-size:10px; padding:2px 5px; margin-left:4px; }
         
         .mobile-mode #mobileToggle { background:var(--accent); color:white; }
         
         /* Debug mobile */
         .mobile-mode .debug { font-size:9px; padding:8px; max-height:120px; }
+        
+        /* Collapsed mobile */
+        .mobile-mode .collapsed-summary { padding:8px 10px; gap:6px; }
+        .mobile-mode .collapsed-summary .cs-item { padding:3px 6px; }
+        .mobile-mode .collapsed-summary .cs-label { font-size:9px; }
+        .mobile-mode .collapsed-summary .cs-value { font-size:11px; }
+        .mobile-mode .pin-btn { font-size:12px; padding:2px; }
+        .mobile-mode .expand-btn { font-size:10px; padding:2px 4px; }
+        .mobile-mode .best-bets-bar { padding:6px 10px; gap:4px; }
+        .mobile-mode .best-bets-label { font-size:9px; }
+        .mobile-mode .best-bet-chip { padding:3px 6px; font-size:10px; }
     </style>
 </head>
 <body>
@@ -361,10 +432,11 @@
     <header class="header">
         <div class="logo">
             <span class="logo-icon">🏀</span>
-            <h1>CBB Lines</h1>
+            <h1>CBB</h1>
         </div>
         <div class="controls">
             <div class="status"><div class="dot off" id="dot"></div><span id="statusTxt">Disconnected</span></div>
+            <button class="btn btn-secondary" id="collapseAllBtn" onclick="toggleCollapseAll()">▼ Collapse</button>
             <button class="btn btn-secondary" id="mobileToggle" onclick="toggleMobile()">📱</button>
             <button class="btn btn-secondary" onclick="toggleConfig()">Settings</button>
             <button class="btn btn-primary" onclick="fetchData()">Refresh</button>
@@ -434,6 +506,28 @@
                 <label>Compare Books (Check for +EV)</label>
                 <div class="book-selector" id="compareSelector"></div>
             </div>
+            <div class="field" style="grid-column: span 4; border-top: 1px solid var(--bdr); padding-top: 12px; margin-top: 8px;">
+                <label style="font-size:12px; color:var(--txt2);">🚨 Steam Move Alerts</label>
+            </div>
+            <div class="field">
+                <label>Steam Alerts</label>
+                <select id="steamEnabled">
+                    <option value="on">Enabled</option>
+                    <option value="off">Disabled</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Spread Move (pts)</label>
+                <input type="number" id="steamSpreadMove" value="1.0" min="0.5" max="5" step="0.5">
+            </div>
+            <div class="field">
+                <label>Total Move (pts)</label>
+                <input type="number" id="steamTotalMove" value="1.5" min="0.5" max="10" step="0.5">
+            </div>
+            <div class="field">
+                <label>Time Window (min)</label>
+                <input type="number" id="steamTimeWindow" value="3" min="1" max="30" step="1">
+            </div>
         </div>
     </div>
     
@@ -444,9 +538,12 @@
         <div class="stat"><div class="stat-label">Updated</div><div class="stat-value" id="sTime" style="font-size:14px">--</div></div>
     </div>
     
-    <div class="tabs-container">
-        <button class="tab-btn active" onclick="switchTab('games')">Games</button>
-        <button class="tab-btn" onclick="switchTab('betlog')">Bet Log</button>
+    <div class="tabs-row">
+        <div class="tabs-container">
+            <button class="tab-btn active" onclick="switchTab('games')">Games</button>
+            <button class="tab-btn" onclick="switchTab('betlog')">Bet Log</button>
+        </div>
+        <div class="alerts-inline" id="alerts"></div>
     </div>
     
     <div class="tab-content active" id="tab-games">
@@ -470,8 +567,6 @@
     
     <div class="debug" id="debug"><pre id="log"></pre></div>
 </div>
-
-<div class="alerts" id="alerts"></div>
 
 <!-- Bet Slip Popup -->
 <div class="bet-slip-overlay" id="betSlipOverlay" onclick="closeBetSlip(event)">
@@ -563,7 +658,12 @@ const CFG = {
     telegramChatId: '1567501072',
     telegramMinEV: 5,
     sharpBooks: ['pinnacle', 'circa', 'bookmaker'],
-    compareBooks: ['draftkings', 'fanduel', 'betmgm', 'caesars']
+    compareBooks: ['draftkings', 'fanduel', 'betmgm', 'caesars'],
+    // Steam alert settings
+    steamEnabled: true,
+    steamSpreadMove: 1.0,    // Points of spread movement to trigger
+    steamTotalMove: 1.5,     // Points of total movement to trigger
+    steamTimeWindow: 3       // Minutes to detect movement within
 };
 
 const BOOKS = {
@@ -588,11 +688,19 @@ const SOFT_LIST = ['draftkings','fanduel','betmgm','caesars','pointsbet','betriv
 
 let DATA = [], alerted = new Set(), timer = null, mobileMode = false;
 let lineHistory = {}; // Track line changes: {eventId-bookId-period-side: {price, timestamp}}
+let consensusHistory = {}; // Track consensus/sharp line changes for steam alerts: {eventId-period-type: [{line, timestamp}]}
+let steamAlerted = new Set(); // Track steam alerts to avoid duplicates
 let betLog = []; // Array of logged bets
 let currentBetSlip = null; // Current bet being created
 let bookAliases = {}; // Map of bookKey -> custom display name
 
 function log(m) { document.getElementById('log').textContent += `${new Date().toLocaleTimeString()} ${m}\n`; console.log(m); }
+
+// Dismiss alert by removing it from the DOM
+function dismissAlert(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+}
 
 // Tab switching
 function switchTab(tab) {
@@ -1070,6 +1178,11 @@ function loadCfg() {
         document.getElementById('telegramToken').value = CFG.telegramToken || '';
         document.getElementById('telegramChatId').value = CFG.telegramChatId || '';
         document.getElementById('telegramMinEV').value = CFG.telegramMinEV || 5;
+        // Steam settings
+        document.getElementById('steamEnabled').value = CFG.steamEnabled !== false ? 'on' : 'off';
+        document.getElementById('steamSpreadMove').value = CFG.steamSpreadMove || 1.0;
+        document.getElementById('steamTotalMove').value = CFG.steamTotalMove || 1.5;
+        document.getElementById('steamTimeWindow').value = CFG.steamTimeWindow || 3;
     }
 }
 
@@ -1084,6 +1197,11 @@ function saveCfg() {
     CFG.telegramToken = document.getElementById('telegramToken').value;
     CFG.telegramChatId = document.getElementById('telegramChatId').value;
     CFG.telegramMinEV = parseFloat(document.getElementById('telegramMinEV').value);
+    // Steam settings
+    CFG.steamEnabled = document.getElementById('steamEnabled').value === 'on';
+    CFG.steamSpreadMove = parseFloat(document.getElementById('steamSpreadMove').value);
+    CFG.steamTotalMove = parseFloat(document.getElementById('steamTotalMove').value);
+    CFG.steamTimeWindow = parseInt(document.getElementById('steamTimeWindow').value);
     localStorage.setItem('sgKey', CFG.apiKey);
     localStorage.setItem('cbbCfg', JSON.stringify(CFG));
 }
@@ -1139,42 +1257,81 @@ async function fetchData() {
     }
     
     try {
-        // CBB: Get events with odds available
+        // First try to get available leagues
+        const leagueUrl = `https://api.sportsgameodds.com/v2/leagues?apiKey=${CFG.apiKey}`;
+        const leagueRes = await fetch(leagueUrl);
+        if (leagueRes.ok) {
+            const leagueJson = await leagueRes.json();
+            const leagues = (leagueJson.data || []).filter(l => l.leagueID?.toLowerCase().includes('ncaa') || l.leagueID?.toLowerCase().includes('cbb'));
+            log('Basketball leagues: ' + leagues.map(l => l.leagueID).join(', '));
+        }
+        
+        // Use NCAAB for college basketball
         const url = `https://api.sportsgameodds.com/v2/events?apiKey=${CFG.apiKey}&leagueID=NCAAB&oddsAvailable=true&includeOpposingOdds=true`;
-        log('Fetching...');
+        log('Fetching NCAAB...');
         
         const res = await fetch(url);
         if (!res.ok) throw new Error('API Error ' + res.status);
         
         const json = await res.json();
-        const events = json.data || [];
+        let events = json.data || [];
         log(`Got ${events.length} events`);
         
         // Log first event's odds keys to debug
         if (events.length > 0 && events[0].odds) {
-            log('Odds keys: ' + Object.keys(events[0].odds).slice(0, 10).join(', '));
+            log('Odds keys: ' + Object.keys(events[0].odds).slice(0, 5).join(', '));
+        }
+        
+        // Debug first event
+        if (events.length > 0) {
+            const e = events[0];
+            const st = e.status || {};
+            log(`First: ${e.teams?.away?.names?.short} @ ${e.teams?.home?.names?.short}`);
+            log(`Status: started=${st.started}, completed=${st.completed}, ended=${st.ended}, cancelled=${st.cancelled}`);
         }
         
         // Properly detect live games using status object
         const live = events.filter(e => {
             const st = e.status || {};
-            return st.started === true && st.completed !== true && st.cancelled !== true;
+            return st.started === true && st.completed !== true && st.ended !== true && st.cancelled !== true;
         });
         log(`Live: ${live.length}`);
         
-        // Show live games first, then upcoming
+        // Show live games first, then upcoming (not started, not completed/ended/cancelled)
         const upcoming = events.filter(e => {
             const st = e.status || {};
-            return !st.started && !st.completed && !st.cancelled;
+            // Must NOT be started, completed, ended, or cancelled
+            if (st.started === true) return false;
+            if (st.completed === true) return false;
+            if (st.ended === true) return false;
+            if (st.cancelled === true) return false;
+            return true;
         });
         
+        // Also count completed/cancelled
+        const completed = events.filter(e => {
+            const st = e.status || {};
+            return st.completed === true || st.ended === true || st.cancelled === true;
+        });
+        log(`Upcoming: ${upcoming.length}, Completed/Cancelled: ${completed.length}`);
+        
+        // Log first upcoming event details for debugging
+        if (upcoming.length > 0) {
+            const e = upcoming[0];
+            log(`First upcoming: ${e.teams?.away?.names?.short || 'Away'} @ ${e.teams?.home?.names?.short || 'Home'}`);
+            if (e.startTime || e.status?.startsAt) log(`Start: ${e.startTime || e.status?.startsAt}`);
+        }
+        
+        // Only show live and upcoming games
         const toShow = [...live, ...upcoming.slice(0, 20 - live.length)];
+        
         DATA = toShow.map(e => ({ game: e, odds: extractOdds(e.odds || {}) }));
         
         log(`Showing ${DATA.length} games (${live.length} live, ${DATA.length - live.length} upcoming)`);
         
         render(!isFirstLoad); // Pass true for refresh after first load
         updateStats();
+        trackAllConsensusLines(); // Track consensus lines for steam alerts
         setStatus(true, live.length > 0 ? `${live.length} Live` : 'Connected');
         
         isFirstLoad = false;
@@ -1192,52 +1349,53 @@ async function fetchData() {
 
 function extractOdds(odds) {
     const r = {
-        'fullgame': { spread: { books: [] }, total: { line: 0, books: [] } },
+        'game': { spread: { books: [] }, total: { line: 0, books: [] } },
         '1h': { spread: { books: [] }, total: { line: 0, books: [] } }
     };
     
     for (const [id, o] of Object.entries(odds)) {
-        const idLower = id.toLowerCase();
+        // Format: {statID}-{statEntityID}-{periodID}-{betTypeID}-{sideID}
+        // Examples: points-home-game-sp-home, points-all-game-ou-over
+        const parts = id.split('-');
+        if (parts.length < 5) continue;
         
-        // Spreads: various formats like spread-home-fullgame, spread-away-1h, etc.
-        if (idLower.includes('spread')) {
-            const isHome = idLower.includes('home');
-            const isAway = idLower.includes('away');
-            const is1H = idLower.includes('1h') || idLower.includes('first');
-            const period = is1H ? '1h' : 'fullgame';
-            
-            if ((isHome || isAway) && o.byBookmaker) {
+        const [statID, entityID, periodID, betTypeID, sideID] = parts;
+        
+        // Only process points stats
+        if (statID !== 'points') continue;
+        
+        // Map period
+        const period = (periodID === 'game' || periodID === 'game') ? 'game' : periodID;
+        if (!r[period]) continue;
+        
+        // Spreads (sp)
+        if (betTypeID === 'sp' && (sideID === 'home' || sideID === 'away')) {
+            if (o.byBookmaker) {
                 for (const [bk, bd] of Object.entries(o.byBookmaker)) {
                     if (!bd.available) continue;
                     let be = r[period].spread.books.find(x => x.bk === bk);
                     if (!be) { be = { bk }; r[period].spread.books.push(be); }
-                    const line = parseFloat(bd.handicap || bd.spread) || 0;
+                    const line = parseFloat(bd.spread || bd.handicap) || 0;
                     const price = parseInt(bd.odds);
-                    if (isHome) { be.homeLine = line; be.homePrice = price; }
-                    if (isAway) { be.awayLine = line; be.awayPrice = price; }
+                    if (sideID === 'home') { be.homeLine = line; be.homePrice = price; }
+                    if (sideID === 'away') { be.awayLine = line; be.awayPrice = price; }
                 }
             }
-            continue;
         }
         
-        // Totals: various formats like total-over, total-under, ou-over, etc.
-        if (idLower.includes('total') || idLower.includes('-ou-')) {
-            const isOver = idLower.includes('over');
-            const isUnder = idLower.includes('under');
-            const is1H = idLower.includes('1h') || idLower.includes('first');
-            const period = is1H ? '1h' : 'fullgame';
-            
-            const line = parseFloat(o.bookOverUnder || o.fairOverUnder || o.line) || 0;
+        // Totals (ou)
+        if (betTypeID === 'ou' && (sideID === 'over' || sideID === 'under')) {
+            const line = parseFloat(o.bookOverUnder || o.fairOverUnder || o.overUnder) || 0;
             if (line > 0) r[period].total.line = line;
             
-            if ((isOver || isUnder) && o.byBookmaker) {
+            if (o.byBookmaker) {
                 for (const [bk, bd] of Object.entries(o.byBookmaker)) {
                     if (!bd.available) continue;
                     let be = r[period].total.books.find(x => x.bk === bk);
-                    const bookLine = parseFloat(bd.overUnder || bd.total) || line;
+                    const bookLine = parseFloat(bd.overUnder) || line;
                     if (!be) { be = { bk, line: bookLine }; r[period].total.books.push(be); }
-                    if (isOver) be.overPrice = parseInt(bd.odds);
-                    if (isUnder) be.underPrice = parseInt(bd.odds);
+                    if (sideID === 'over') be.overPrice = parseInt(bd.odds);
+                    if (sideID === 'under') be.underPrice = parseInt(bd.odds);
                 }
             }
         }
@@ -1252,6 +1410,7 @@ const a2p = a => a >= 100 ? 100/(a+100) : Math.abs(a)/(Math.abs(a)+100);
 const noVig = (o,u) => { const op=a2p(o), up=a2p(u), t=op+up; return {o:op/t, u:up/t}; };
 const p2a = p => p >= 0.5 ? Math.round(-100*p/(1-p)) : Math.round(100*(1-p)/p);
 const calcEV = (odds, fp) => ((fp * a2d(odds)) - 1) * 100;
+const fmt = o => o > 0 ? '+' + o : String(o);
 
 // Consensus for totals (over/under)
 function consensusTotal(books) {
@@ -1274,6 +1433,177 @@ function consensusSpread(books) {
     return { hP: th/sb.length, aP: ta/sb.length, hFair: p2a(th/sb.length), aFair: p2a(ta/sb.length), homeLine, awayLine, cnt: sb.length };
 }
 
+// Steam move detection
+function trackConsensusLine(eventId, period, type, line, game) {
+    if (line === null || line === undefined || isNaN(line)) return;
+    
+    const key = `${eventId}-${period}-${type}`;
+    const now = Date.now();
+    
+    if (!consensusHistory[key]) {
+        consensusHistory[key] = [];
+    }
+    
+    const history = consensusHistory[key];
+    const lastEntry = history[history.length - 1];
+    
+    // Only add if line changed
+    if (!lastEntry || lastEntry.line !== line) {
+        history.push({ line, timestamp: now, game });
+        
+        // Clean up old entries (keep last 10 minutes worth)
+        const cutoff = now - (10 * 60 * 1000);
+        consensusHistory[key] = history.filter(h => h.timestamp > cutoff);
+        
+        // Check for steam move
+        checkSteamMove(eventId, period, type, game);
+    }
+}
+
+function checkSteamMove(eventId, period, type, game) {
+    if (!CFG.steamEnabled) return;
+    
+    const key = `${eventId}-${period}-${type}`;
+    const history = consensusHistory[key];
+    if (!history || history.length < 2) return;
+    
+    const now = Date.now();
+    const timeWindow = CFG.steamTimeWindow * 60 * 1000; // Convert minutes to ms
+    const threshold = type === 'spread' ? CFG.steamSpreadMove : CFG.steamTotalMove;
+    
+    // Get entries within time window
+    const recentEntries = history.filter(h => (now - h.timestamp) <= timeWindow);
+    if (recentEntries.length < 2) return;
+    
+    const oldestInWindow = recentEntries[0];
+    const newest = recentEntries[recentEntries.length - 1];
+    
+    const movement = Math.abs(newest.line - oldestInWindow.line);
+    
+    if (movement >= threshold) {
+        const direction = newest.line > oldestInWindow.line ? '📈' : '📉';
+        const alertKey = `${key}-${oldestInWindow.line}-${newest.line}`;
+        
+        // Avoid duplicate alerts
+        if (steamAlerted.has(alertKey)) return;
+        steamAlerted.add(alertKey);
+        
+        // Clear old alerts after 5 minutes
+        setTimeout(() => steamAlerted.delete(alertKey), 5 * 60 * 1000);
+        
+        showSteamAlert(game, period, type, oldestInWindow.line, newest.line, movement, direction);
+    }
+}
+
+function showSteamAlert(game, period, type, oldLine, newLine, movement, direction) {
+    const t = game.teams || {};
+    const away = t.away?.names?.short || t.away?.names?.abbr || 'Away';
+    const home = t.home?.names?.short || t.home?.names?.abbr || 'Home';
+    const periodLabel = period === 'game' ? 'FG' : '1H';
+    const typeLabel = type === 'spread' ? 'Spread' : 'Total';
+    
+    const formatLine = (line, type) => {
+        if (type === 'spread') {
+            return line > 0 ? `+${line}` : line;
+        }
+        return line;
+    };
+    
+    // Play sound
+    if (CFG.sound) {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 880; // Higher pitch for steam
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.3);
+        } catch(e) {}
+    }
+    
+    // Send to Telegram
+    sendSteamTelegram(away, home, periodLabel, typeLabel, oldLine, newLine, movement, type);
+    
+    const c = document.getElementById('alerts');
+    const id = 'steam' + Date.now();
+    c.insertAdjacentHTML('afterbegin', `<div class="alert steam-alert" id="${id}" onclick="dismissAlert('${id}')">
+        <div class="alert-header">
+            <span class="alert-title">${direction} STEAM MOVE</span>
+            <span class="alert-time">${new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}</span>
+        </div>
+        <div class="alert-body">
+            <strong>${away} @ ${home}</strong> ${periodLabel} ${typeLabel}<br>
+            ${formatLine(oldLine, type)} → ${formatLine(newLine, type)} <span class="steam-move">(${movement.toFixed(1)} pts in ${CFG.steamTimeWindow}min)</span>
+        </div>
+    </div>`);
+    
+    // Auto-dismiss after 2 minutes
+    setTimeout(() => dismissAlert(id), 120000);
+    
+    log(`🚨 STEAM: ${away}@${home} ${periodLabel} ${typeLabel} moved ${movement.toFixed(1)} pts`);
+}
+
+async function sendSteamTelegram(away, home, periodLabel, typeLabel, oldLine, newLine, movement, type) {
+    if (!CFG.telegramEnabled || !CFG.telegramToken || !CFG.telegramChatId) return;
+    
+    const formatLine = (line) => {
+        if (type === 'spread') {
+            return line > 0 ? `+${line}` : line;
+        }
+        return line;
+    };
+    
+    const direction = newLine > oldLine ? '📈' : '📉';
+    
+    const message = `${direction} *STEAM MOVE* 🚨
+
+*${away} @ ${home}*
+📊 ${periodLabel} ${typeLabel}
+${formatLine(oldLine)} → ${formatLine(newLine)}
+⚡ *${movement.toFixed(1)} pts in ${CFG.steamTimeWindow}min*`;
+
+    try {
+        await fetch(`https://api.telegram.org/bot${CFG.telegramToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: CFG.telegramChatId,
+                text: message,
+                parse_mode: 'Markdown'
+            })
+        });
+        console.log('Steam Telegram sent:', `${away}@${home} ${periodLabel} ${typeLabel}`);
+    } catch(err) {
+        console.error('Steam Telegram error:', err);
+    }
+}
+
+function trackAllConsensusLines() {
+    DATA.forEach(({game, odds}) => {
+        ['game', '1h'].forEach(period => {
+            const pd = odds[period];
+            if (!pd) return;
+            
+            // Track spread consensus
+            const spreadCons = consensusSpread(pd.spread.books);
+            if (spreadCons && spreadCons.homeLine !== undefined) {
+                trackConsensusLine(game.eventID, period, 'spread', spreadCons.homeLine, game);
+            }
+            
+            // Track total consensus
+            const totalCons = consensusTotal(pd.total.books);
+            if (totalCons && totalCons.line) {
+                trackConsensusLine(game.eventID, period, 'total', totalCons.line, game);
+            }
+        });
+    });
+}
+
 function render(isRefresh = false) {
     const c = document.getElementById('games');
     if (!DATA.length) { c.innerHTML = '<div class="empty"><div class="empty-icon">🏀</div><h3>No Games</h3><p>Click Demo to preview</p></div>'; return; }
@@ -1288,34 +1618,53 @@ function render(isRefresh = false) {
         if (g.classList.contains('seen')) seenGames.add(id);
     });
     
+    // Sort data: pinned games first, then by start time
+    const sortedData = [...DATA].sort((a, b) => {
+        const aPinned = pinnedGames.has(a.game.eventID);
+        const bPinned = pinnedGames.has(b.game.eventID);
+        if (aPinned && !bPinned) return -1;
+        if (!aPinned && bPinned) return 1;
+        return 0;
+    });
+    
     if (isRefresh && c.children.length > 0) {
-        DATA.forEach(({game: g, odds}) => {
+        sortedData.forEach(({game: g, odds}) => {
             const existingGame = document.getElementById('g-' + g.eventID);
-            const savedPeriod = activeTabs[g.eventID] || 'fullgame';
+            const savedPeriod = activeTabs[g.eventID] || 'game';
             const edge = hasEdge(odds, g);
             const wasSeen = seenGames.has(g.eventID);
+            const isPinned = pinnedGames.has(g.eventID);
+            const isCollapsed = collapsedGames.has(g.eventID);
             
             if (existingGame) {
-                existingGame.innerHTML = `${gameHeader(g)}${periodTabs(g, odds, savedPeriod)}${oddsSection(g, odds, savedPeriod)}`;
-                existingGame.className = `game${edge ? ' has-edge' : ''}${wasSeen ? ' seen' : ''}`;
+                existingGame.innerHTML = `${gameHeader(g, odds)}${periodTabs(g, odds, savedPeriod)}${oddsSection(g, odds, savedPeriod)}${collapsedSummary(g, odds)}`;
+                existingGame.className = `game${edge ? ' has-edge' : ''}${wasSeen ? ' seen' : ''}${isPinned ? ' pinned' : ''}${isCollapsed ? ' collapsed' : ''}`;
             } else {
                 const newGame = document.createElement('div');
-                newGame.className = `game${edge ? ' has-edge' : ''}`;
+                newGame.className = `game${edge ? ' has-edge' : ''}${isPinned ? ' pinned' : ''}${isCollapsed ? ' collapsed' : ''}`;
                 newGame.id = 'g-' + g.eventID;
-                newGame.onclick = () => markSeen(g.eventID);
-                newGame.innerHTML = `${gameHeader(g)}${periodTabs(g, odds, savedPeriod)}${oddsSection(g, odds, savedPeriod)}`;
+                newGame.onclick = (e) => { if (!e.target.closest('button')) markSeen(g.eventID); };
+                newGame.innerHTML = `${gameHeader(g, odds)}${periodTabs(g, odds, savedPeriod)}${oddsSection(g, odds, savedPeriod)}${collapsedSummary(g, odds)}`;
                 c.appendChild(newGame);
             }
         });
         
         const currentIds = new Set(DATA.map(d => 'g-' + d.game.eventID));
         Array.from(c.children).forEach(child => { if (!currentIds.has(child.id)) child.remove(); });
+        
+        // Re-order DOM to match sorted order
+        sortedData.forEach(({game: g}) => {
+            const el = document.getElementById('g-' + g.eventID);
+            if (el) c.appendChild(el);
+        });
     } else {
-        c.innerHTML = DATA.map(({game: g, odds}) => {
+        c.innerHTML = sortedData.map(({game: g, odds}) => {
             const edge = hasEdge(odds, g);
-            const savedPeriod = activeTabs[g.eventID] || 'fullgame';
+            const savedPeriod = activeTabs[g.eventID] || 'game';
             const wasSeen = seenGames.has(g.eventID);
-            return `<div class="game${edge ? ' has-edge' : ''}${wasSeen ? ' seen' : ''}" id="g-${g.eventID}" onclick="markSeen('${g.eventID}')">${gameHeader(g)}${periodTabs(g, odds, savedPeriod)}${oddsSection(g, odds, savedPeriod)}</div>`;
+            const isPinned = pinnedGames.has(g.eventID);
+            const isCollapsed = collapsedGames.has(g.eventID);
+            return `<div class="game${edge ? ' has-edge' : ''}${wasSeen ? ' seen' : ''}${isPinned ? ' pinned' : ''}${isCollapsed ? ' collapsed' : ''}" id="g-${g.eventID}" onclick="if(!event.target.closest('button'))markSeen('${g.eventID}')">${gameHeader(g, odds)}${periodTabs(g, odds, savedPeriod)}${oddsSection(g, odds, savedPeriod)}${collapsedSummary(g, odds)}</div>`;
         }).join('');
     }
     
@@ -1327,13 +1676,44 @@ function markSeen(eventId) {
     if (game) game.classList.add('seen');
 }
 
-function gameHeader(g) {
+function gameHeader(g, odds) {
     const t = g.teams || {};
     const aw = t.away || {}, hm = t.home || {};
-    const awA = aw.names?.abbr || aw.teamID?.split('_')[0] || 'AWY';
-    const hmA = hm.names?.abbr || hm.teamID?.split('_')[0] || 'HME';
-    const awN = aw.names?.short || aw.names?.long || awA;
-    const hmN = hm.names?.short || hm.names?.long || hmA;
+    
+    // Handle various name formats - ensure we always get a string
+    const getAbbr = (team) => {
+        if (!team || !team.names) {
+            if (team?.teamID) return String(team.teamID).split('_')[0].substring(0, 4).toUpperCase();
+            return 'TBD';
+        }
+        const names = team.names;
+        if (typeof names === 'string') return names.substring(0, 4).toUpperCase();
+        if (names.abbr) return String(names.abbr);
+        if (names.short) return String(names.short).substring(0, 4).toUpperCase();
+        if (team.teamID) return String(team.teamID).split('_')[0].substring(0, 4).toUpperCase();
+        return 'TBD';
+    };
+    
+    const getName = (team) => {
+        if (!team || !team.names) {
+            if (team?.teamID) return String(team.teamID).replace(/_/g, ' ');
+            return 'TBD';
+        }
+        const names = team.names;
+        if (typeof names === 'string') return names;
+        // Prefer longer names: medium > long > short > abbr
+        if (names.medium) return String(names.medium);
+        if (names.long) return String(names.long);
+        if (names.short) return String(names.short);
+        if (names.abbr) return String(names.abbr);
+        if (team.teamID) return String(team.teamID).replace(/_/g, ' ');
+        return 'TBD';
+    };
+    
+    const awA = getAbbr(aw);
+    const hmA = getAbbr(hm);
+    const awN = getName(aw);
+    const hmN = getName(hm);
     
     let awS = 0, hmS = 0;
     if (g.results) {
@@ -1347,28 +1727,77 @@ function gameHeader(g) {
     
     const st = g.status || {};
     const isLive = st.started && !st.completed;
-    const startTime = g.startTime ? new Date(g.startTime).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : '--';
+    const startTime = g.startTime || st.startsAt;
+    const timeStr = startTime ? new Date(startTime).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : '--';
     
-    let statusText = 'Upcoming', statusClass = '';
-    if (isLive) { statusText = st.displayShort || 'Live'; statusClass = 'live'; }
-    else if (st.completed) { statusText = 'Final'; statusClass = 'final'; }
+    // Get timezone abbreviation
+    const tzAbbr = new Date().toLocaleTimeString('en-US', {timeZoneName: 'short'}).split(' ').pop();
+    
+    // Get game clock/period info for live games
+    let clockDisplay = '';
+    if (isLive) {
+        const period = st.period || st.quarter || st.half;
+        const clock = st.clock || st.gameClock || st.displayClock || st.displayShort;
+        if (clock) {
+            clockDisplay = clock;
+        } else if (period) {
+            clockDisplay = `${period}${period === 1 ? 'st' : period === 2 ? 'nd' : period === 3 ? 'rd' : 'th'}`;
+        }
+        // Check for timeout/halftime status (if API provides it)
+        if (st.inTimeout || st.timeout) {
+            clockDisplay += ' ⏸️ TO';
+        } else if (st.halftime || st.isHalftime) {
+            clockDisplay = 'HALF';
+        }
+    }
+    
+    let gameInfoContent = '';
+    if (isLive) {
+        gameInfoContent = `
+            <div class="game-info-row">
+                <span class="game-status live"><span class="live-dot"></span>LIVE</span>
+            </div>
+            ${clockDisplay ? `<div class="game-clock">${clockDisplay}</div>` : ''}`;
+    } else if (st.completed || st.ended) {
+        gameInfoContent = `<span class="game-status final">Final</span>`;
+    } else {
+        gameInfoContent = `
+            <div class="game-info-row">
+                <span class="game-status upcoming">Upcoming</span>
+                <span class="game-time">${timeStr}<span class="game-time-tz">${tzAbbr}</span></span>
+            </div>`;
+    }
+    
+    const isPinned = pinnedGames.has(g.eventID);
+    const isCollapsed = collapsedGames.has(g.eventID);
     
     return `<div class="game-header">
         <div class="teams">
-            <div class="team"><span class="team-abbr">${awA}</span><span class="team-name">${awN}</span>${isLive || st.completed ? `<span class="score">${awS}</span>` : ''}</div>
-            <div class="at">@</div>
-            <div class="team"><span class="team-abbr">${hmA}</span><span class="team-name">${hmN}</span>${isLive || st.completed ? `<span class="score">${hmS}</span>` : ''}</div>
+            <div class="team">
+                <span class="team-abbr">${awA}</span>
+                <span class="team-name">${awN}</span>
+            </div>
+            ${isLive || st.completed || st.ended ? `<span class="score">${awS}</span>` : ''}
+            <span class="at">@</span>
+            <div class="team">
+                <span class="team-abbr">${hmA}</span>
+                <span class="team-name">${hmN}</span>
+            </div>
+            ${isLive || st.completed || st.ended ? `<span class="score">${hmS}</span>` : ''}
         </div>
         <div class="game-info">
-            <span class="status ${statusClass}">${statusText}</span>
-            ${!isLive && !st.completed ? `<span class="time">${startTime}</span>` : ''}
+            ${gameInfoContent}
+        </div>
+        <div class="game-controls">
+            <button class="pin-btn" onclick="event.stopPropagation(); togglePin('${g.eventID}')" title="${isPinned ? 'Unpin' : 'Pin to top'}">${isPinned ? '📌' : '📍'}</button>
+            <button class="expand-btn" onclick="event.stopPropagation(); toggleGameCollapse('${g.eventID}')" title="${isCollapsed ? 'Expand' : 'Collapse'}">▼</button>
         </div>
     </div>`;
 }
 
 function periodTabs(g, odds, activePeriod) {
     const periods = [
-        { id: 'fullgame', label: 'Full Game' },
+        { id: 'game', label: 'Game' },
         { id: '1h', label: '1st Half' }
     ];
     
@@ -1377,7 +1806,10 @@ function periodTabs(g, odds, activePeriod) {
     </div>`;
 }
 
-let viewingPeriod = 'fullgame';
+let viewingPeriod = 'game';
+let allCollapsed = false;
+const pinnedGames = new Set();
+const collapsedGames = new Set();
 
 function switchPeriod(eventId, period) {
     const game = document.getElementById('g-' + eventId);
@@ -1388,6 +1820,134 @@ function switchPeriod(eventId, period) {
     if (data) {
         const section = game.querySelector('.odds-section');
         if (section) section.outerHTML = oddsSection(data.game, data.odds, period);
+    }
+}
+
+function collapsedSummary(g, odds) {
+    const st = g.status || {};
+    const isLive = st.started && !st.completed;
+    const startTime = g.startTime || st.startsAt;
+    const timeStr = startTime ? new Date(startTime).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : '--';
+    
+    // Get scores
+    let awS = 0, hmS = 0;
+    if (g.results) {
+        const pts = Object.values(g.results).find(r => r.away !== undefined && r.home !== undefined);
+        if (pts) { awS = pts.away || 0; hmS = pts.home || 0; }
+    }
+    if (g.score) {
+        awS = g.score.away?.total ?? g.score.away ?? awS;
+        hmS = g.score.home?.total ?? g.score.home ?? hmS;
+    }
+    
+    // Get fair value and best lines
+    const pd = odds['game'] || { spread: { books: [] }, total: { line: 0, books: [] } };
+    const spreadCons = consensusSpread(pd.spread.books);
+    const totalCons = consensusTotal(pd.total.books);
+    
+    // Find best lines for each side
+    const bestLines = findBestLines(pd, spreadCons, totalCons, isLive);
+    
+    return `<div class="collapsed-summary">
+        ${isLive ? `<div class="cs-item"><span class="cs-value blue">${awS}-${hmS}</span></div>` : 
+                   `<div class="cs-item"><span class="cs-value">${timeStr}</span></div>`}
+        ${spreadCons ? `<div class="cs-item"><span class="cs-label">FV</span><span class="cs-value purple">${spreadCons.homeLine > 0 ? '+' : ''}${spreadCons.homeLine}</span></div>` : ''}
+        ${totalCons ? `<div class="cs-item"><span class="cs-value purple">${totalCons.line}</span></div>` : ''}
+        ${(bestLines.homeSpread || bestLines.awaySpread) ? `<div class="cs-best-stack">
+            ${bestLines.homeSpread ? `<div class="cs-best-line"><span class="cs-side">H</span><div class="book-logo" style="background:${bestLines.homeSpread.color}">${bestLines.homeSpread.book}</div><span class="cs-odds">${bestLines.homeSpread.line > 0 ? '+' : ''}${bestLines.homeSpread.line} ${fmt(bestLines.homeSpread.price)}</span></div>` : ''}
+            ${bestLines.awaySpread ? `<div class="cs-best-line"><span class="cs-side">A</span><div class="book-logo" style="background:${bestLines.awaySpread.color}">${bestLines.awaySpread.book}</div><span class="cs-odds">${bestLines.awaySpread.line > 0 ? '+' : ''}${bestLines.awaySpread.line} ${fmt(bestLines.awaySpread.price)}</span></div>` : ''}
+        </div>` : ''}
+        ${(bestLines.over || bestLines.under) ? `<div class="cs-best-stack">
+            ${bestLines.over ? `<div class="cs-best-line"><span class="cs-side">O</span><div class="book-logo" style="background:${bestLines.over.color}">${bestLines.over.book}</div><span class="cs-odds">${bestLines.over.line} ${fmt(bestLines.over.price)}</span></div>` : ''}
+            ${bestLines.under ? `<div class="cs-best-line"><span class="cs-side">U</span><div class="book-logo" style="background:${bestLines.under.color}">${bestLines.under.book}</div><span class="cs-odds">${bestLines.under.line} ${fmt(bestLines.under.price)}</span></div>` : ''}
+        </div>` : ''}
+    </div>`;
+}
+
+function findBestLines(pd, spreadCons, totalCons, isLive) {
+    const result = { awaySpread: null, homeSpread: null, over: null, under: null };
+    
+    // Find best away spread (highest price)
+    let bestAwayPrice = -Infinity;
+    pd.spread.books.forEach(b => {
+        if (!CFG.compareBooks.includes(b.bk?.toLowerCase())) return;
+        if (b.awayPrice && b.awayPrice > bestAwayPrice) {
+            bestAwayPrice = b.awayPrice;
+            const bkd = BOOKS[b.bk?.toLowerCase()] || {a: (b.bk || '').substring(0,3).toUpperCase(), c: '#666'};
+            result.awaySpread = { book: bkd.a, line: b.awayLine, price: b.awayPrice, color: bkd.c };
+        }
+    });
+    
+    // Find best home spread (highest price)
+    let bestHomePrice = -Infinity;
+    pd.spread.books.forEach(b => {
+        if (!CFG.compareBooks.includes(b.bk?.toLowerCase())) return;
+        if (b.homePrice && b.homePrice > bestHomePrice) {
+            bestHomePrice = b.homePrice;
+            const bkd = BOOKS[b.bk?.toLowerCase()] || {a: (b.bk || '').substring(0,3).toUpperCase(), c: '#666'};
+            result.homeSpread = { book: bkd.a, line: b.homeLine, price: b.homePrice, color: bkd.c };
+        }
+    });
+    
+    // Find best over (highest price)
+    let bestOverPrice = -Infinity;
+    pd.total.books.forEach(b => {
+        if (!CFG.compareBooks.includes(b.bk?.toLowerCase())) return;
+        if (b.overPrice && b.overPrice > bestOverPrice) {
+            bestOverPrice = b.overPrice;
+            const bkd = BOOKS[b.bk?.toLowerCase()] || {a: (b.bk || '').substring(0,3).toUpperCase(), c: '#666'};
+            result.over = { book: bkd.a, line: b.line, price: b.overPrice, color: bkd.c };
+        }
+    });
+    
+    // Find best under (highest price)
+    let bestUnderPrice = -Infinity;
+    pd.total.books.forEach(b => {
+        if (!CFG.compareBooks.includes(b.bk?.toLowerCase())) return;
+        if (b.underPrice && b.underPrice > bestUnderPrice) {
+            bestUnderPrice = b.underPrice;
+            const bkd = BOOKS[b.bk?.toLowerCase()] || {a: (b.bk || '').substring(0,3).toUpperCase(), c: '#666'};
+            result.under = { book: bkd.a, line: b.line, price: b.underPrice, color: bkd.c };
+        }
+    });
+    
+    return result;
+}
+
+function togglePin(eventId) {
+    if (pinnedGames.has(eventId)) {
+        pinnedGames.delete(eventId);
+    } else {
+        pinnedGames.add(eventId);
+    }
+    render(true);
+}
+
+function toggleGameCollapse(eventId) {
+    const game = document.getElementById('g-' + eventId);
+    if (!game) return;
+    
+    if (collapsedGames.has(eventId)) {
+        collapsedGames.delete(eventId);
+        game.classList.remove('collapsed');
+    } else {
+        collapsedGames.add(eventId);
+        game.classList.add('collapsed');
+    }
+}
+
+function toggleCollapseAll() {
+    allCollapsed = !allCollapsed;
+    const btn = document.getElementById('collapseAllBtn');
+    
+    if (allCollapsed) {
+        DATA.forEach(d => collapsedGames.add(d.game.eventID));
+        document.querySelectorAll('.game').forEach(g => g.classList.add('collapsed'));
+        btn.textContent = '▶ Expand';
+    } else {
+        collapsedGames.clear();
+        document.querySelectorAll('.game').forEach(g => g.classList.remove('collapsed'));
+        btn.textContent = '▼ Collapse';
     }
 }
 
@@ -1402,7 +1962,12 @@ function oddsSection(g, odds, period) {
     // For CBB: Only calc EV for full game pregame, or 1H pregame
     const canCalcEV = !isLive;
     
+    // Generate best lines bar for expanded view
+    const bestLines = findBestLines(pd, spreadCons, totalCons, isLive);
+    const bestLinesHtml = getBestLinesBar(bestLines);
+    
     return `<div class="odds-section">
+        ${bestLinesHtml}
         <div class="market-section">
             <div class="market-header">📊 Spread</div>
             ${spreadTable(pd.spread, spreadCons, g, period, canCalcEV)}
@@ -1411,6 +1976,35 @@ function oddsSection(g, odds, period) {
             <div class="market-header">🎯 Total</div>
             ${totalTable(pd.total, totalCons, g, period, canCalcEV)}
         </div>
+    </div>`;
+}
+
+function getBestLinesBar(bestLines) {
+    const hasSpread = bestLines.homeSpread || bestLines.awaySpread;
+    const hasTotal = bestLines.over || bestLines.under;
+    
+    if (!hasSpread && !hasTotal) return '';
+    
+    let spreadStack = '';
+    if (hasSpread) {
+        spreadStack = `<div class="best-bets-stack">
+            ${bestLines.homeSpread ? `<span class="best-bet-chip"><span class="bet-label">H</span><div class="book-logo" style="background:${bestLines.homeSpread.color}">${bestLines.homeSpread.book}</div><span class="bet-odds">${bestLines.homeSpread.line > 0 ? '+' : ''}${bestLines.homeSpread.line} ${fmt(bestLines.homeSpread.price)}</span></span>` : ''}
+            ${bestLines.awaySpread ? `<span class="best-bet-chip"><span class="bet-label">A</span><div class="book-logo" style="background:${bestLines.awaySpread.color}">${bestLines.awaySpread.book}</div><span class="bet-odds">${bestLines.awaySpread.line > 0 ? '+' : ''}${bestLines.awaySpread.line} ${fmt(bestLines.awaySpread.price)}</span></span>` : ''}
+        </div>`;
+    }
+    
+    let totalStack = '';
+    if (hasTotal) {
+        totalStack = `<div class="best-bets-stack">
+            ${bestLines.over ? `<span class="best-bet-chip"><span class="bet-label">O</span><div class="book-logo" style="background:${bestLines.over.color}">${bestLines.over.book}</div><span class="bet-odds">${bestLines.over.line} ${fmt(bestLines.over.price)}</span></span>` : ''}
+            ${bestLines.under ? `<span class="best-bet-chip"><span class="bet-label">U</span><div class="book-logo" style="background:${bestLines.under.color}">${bestLines.under.book}</div><span class="bet-odds">${bestLines.under.line} ${fmt(bestLines.under.price)}</span></span>` : ''}
+        </div>`;
+    }
+    
+    return `<div class="best-bets-bar">
+        <span class="best-bets-label">🔥 Best</span>
+        ${spreadStack}
+        ${totalStack}
     </div>`;
 }
 
@@ -1612,7 +2206,7 @@ function hasEdge(odds, g) {
     const isLive = st.started && !st.completed;
     if (isLive) return false; // No EV calcs for live
     
-    for (const period of ['fullgame', '1h']) {
+    for (const period of ['game', '1h']) {
         const pd = odds[period];
         if (!pd) continue;
         
@@ -1648,7 +2242,7 @@ function updateStats() {
         const isLive = st.started && !st.completed;
         if (isLive) return; // No EV calcs for live games in CBB
         
-        ['fullgame', '1h'].forEach(period => {
+        ['game', '1h'].forEach(period => {
             const pd = odds[period];
             if (!pd) return;
             
@@ -1680,13 +2274,42 @@ function updateStats() {
 function loadDemo() {
     alerted.clear();
     telegramSent.clear();
+    consensusHistory = {}; // Clear consensus history for steam alerts
+    steamAlerted.clear();
     document.getElementById('debug').style.display = 'none';
     DATA = [
+        {
+            game: { eventID: 'd0', teams: {away: {names: {short: 'Gonzaga', abbr: 'GONZ'}}, home: {names: {short: 'Arizona', abbr: 'ARIZ'}}},
+                status: {started: true, completed: false, displayShort: '2nd 12:34', period: 2, clock: '12:34'}, 
+                score: {away: 42, home: 38},
+                startTime: new Date(Date.now() - 1800000).toISOString() },
+            odds: {
+                'game': {
+                    spread: { books: [
+                        {bk:'pinnacle', homeLine:-4.5, awayLine:4.5, homePrice:-108, awayPrice:-112},
+                        {bk:'circa', homeLine:-4.5, awayLine:4.5, homePrice:-110, awayPrice:-110},
+                        {bk:'bookmaker', homeLine:-4.5, awayLine:4.5, homePrice:-109, awayPrice:-111},
+                        {bk:'draftkings', homeLine:-4.5, awayLine:4.5, homePrice:-105, awayPrice:-115},
+                        {bk:'fanduel', homeLine:-4.5, awayLine:4.5, homePrice:-112, awayPrice:-108},
+                        {bk:'betmgm', homeLine:-4.5, awayLine:4.5, homePrice:-110, awayPrice:-110}
+                    ]},
+                    total: { line: 151.5, books: [
+                        {bk:'pinnacle', line:151.5, overPrice:-110, underPrice:-110},
+                        {bk:'circa', line:151.5, overPrice:-108, underPrice:-112},
+                        {bk:'bookmaker', line:151.5, overPrice:-110, underPrice:-110},
+                        {bk:'draftkings', line:151.5, overPrice:-108, underPrice:-112},
+                        {bk:'fanduel', line:151.5, overPrice:-112, underPrice:-108},
+                        {bk:'betmgm', line:151.5, overPrice:-105, underPrice:-115}
+                    ]}
+                },
+                '1h': { spread: { books: [] }, total: { line: 0, books: [] } }
+            }
+        },
         {
             game: { eventID: 'd1', teams: {away: {names: {short: 'Duke', abbr: 'DUKE'}}, home: {names: {short: 'UNC', abbr: 'UNC'}}},
                 status: {started: false, completed: false}, startTime: new Date(Date.now() + 3600000).toISOString() },
             odds: {
-                'fullgame': {
+                'game': {
                     spread: { books: [
                         {bk:'pinnacle', homeLine:-5.5, awayLine:5.5, homePrice:-110, awayPrice:-110},
                         {bk:'circa', homeLine:-5.5, awayLine:5.5, homePrice:-108, awayPrice:-112},
@@ -1724,7 +2347,7 @@ function loadDemo() {
             game: { eventID: 'd2', teams: {away: {names: {short: 'Kentucky', abbr: 'UK'}}, home: {names: {short: 'Kansas', abbr: 'KU'}}},
                 status: {started: false, completed: false}, startTime: new Date(Date.now() + 7200000).toISOString() },
             odds: {
-                'fullgame': {
+                'game': {
                     spread: { books: [
                         {bk:'pinnacle', homeLine:-3.5, awayLine:3.5, homePrice:-112, awayPrice:-108},
                         {bk:'circa', homeLine:-3.5, awayLine:3.5, homePrice:-110, awayPrice:-110},
