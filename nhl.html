@@ -1315,9 +1315,9 @@ function oddsSection(g, pOdds, selP = null) {
     const pd = pOdds[cp] || {line: 1.5, books: []};
     const cons = consensus(pd.books, pd.line);
     
-    // Find best over and under books
+    // Find best over and under books (only from compare books)
     let bestOver = null, bestUnder = null, bestOverPrice = -Infinity, bestUnderPrice = -Infinity;
-    const show = [...new Set([...CFG.sharpBooks, ...CFG.compareBooks])];
+    const show = [...new Set([...CFG.compareBooks])];
     pd.books.filter(b => show.includes(b.bk?.toLowerCase())).forEach(b => {
         if (b.overPrice && b.overPrice > bestOverPrice) { bestOverPrice = b.overPrice; bestOver = b.bk; }
         if (b.underPrice && b.underPrice > bestUnderPrice) { bestUnderPrice = b.underPrice; bestUnder = b.bk; }
@@ -1352,7 +1352,8 @@ let viewingPeriod = '1p'; // Track which period tab is being viewed
 function oddsTable(pd, cons, g, periodId) {
     if (!pd.books.length) return '<div class="empty" style="padding:24px">No odds available</div>';
     
-    const show = [...new Set([...CFG.sharpBooks, ...CFG.compareBooks])];
+    // Show compare books, plus sharp books only if they're also selected as compare
+    const show = [...new Set([...CFG.compareBooks])];
     const filtered = pd.books.filter(b => show.includes(b.bk?.toLowerCase()));
     if (!filtered.length) return '<div class="empty" style="padding:24px">No odds from selected books</div>';
     
