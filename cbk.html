@@ -181,6 +181,10 @@
         .alert.steam-alert .alert-title { color:var(--warn); }
         .steam-move { color:var(--warn); font-weight:600; font-size:10px; }
         
+        /* Live alerts - red theme */
+        .alert.live-alert { border-color:var(--loss); background:rgba(239,68,68,0.1); }
+        .alert.live-alert .alert-title { color:var(--loss); }
+        
         /* Empty/Loading States */
         .empty { text-align:center; padding:48px 20px; color:var(--txt3); }
         .empty-icon { font-size:40px; margin-bottom:12px; }
@@ -211,6 +215,55 @@
         .collapsed-summary .cs-best-line .cs-side { font-weight:700; color:var(--txt); font-size:9px; width:8px; }
         .collapsed-summary .cs-best-line .book-logo { width:18px; height:11px; font-size:5px; border-radius:2px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; color:#fff; flex-shrink:0; }
         .collapsed-summary .cs-best-line .cs-odds { color:var(--txt2); font-weight:500; font-size:9px; white-space:nowrap; }
+        .collapsed-summary .cs-poly-stack { display:flex; flex-direction:column; gap:1px; flex-shrink:0; background:rgba(124,58,237,0.15); padding:2px 4px; border-radius:3px; border:1px solid rgba(124,58,237,0.3); }
+        .collapsed-summary .cs-poly-line { display:flex; align-items:center; gap:2px; }
+        .collapsed-summary .cs-poly-line .cs-side { font-weight:700; color:var(--txt); font-size:9px; width:8px; }
+        .collapsed-summary .cs-poly-line .book-logo { width:16px; height:10px; font-size:5px; border-radius:2px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; color:#fff; flex-shrink:0; }
+        .collapsed-summary .cs-poly-line .cs-odds { color:#a78bfa; font-weight:600; font-size:9px; white-space:nowrap; }
+        .collapsed-summary .cs-poly-liq { font-size:8px; color:var(--txt3); text-align:center; }
+        
+        /* PM Tab styling */
+        .period-tab.pm-tab { background:rgba(124,58,237,0.2); color:#a78bfa; }
+        .period-tab.pm-tab.active { background:#7c3aed; color:#fff; }
+        
+        /* PM Detail Section */
+        .pm-detail-section { padding:12px; }
+        .pm-detail-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px; }
+        .pm-detail-title { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; color:#a78bfa; }
+        .pm-detail-stats { display:flex; gap:6px; flex-wrap:wrap; }
+        .pm-stat-chip { background:rgba(124,58,237,0.15); color:#a78bfa; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:500; }
+        .pm-slug { font-size:9px; color:var(--txt3); padding:6px; background:var(--bg2); border-radius:4px; margin-top:8px; font-family:monospace; }
+        
+        /* PM Orderbook Container */
+        .pm-ob-container { display:flex; gap:12px; }
+        .pm-ob-team { flex:1; background:var(--bg); border-radius:6px; padding:8px; min-width:0; }
+        .pm-ob-team-header { display:flex; align-items:center; gap:6px; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--bdr); }
+        .pm-ob-side { font-size:10px; font-weight:700; color:var(--txt3); background:var(--bg3); padding:2px 6px; border-radius:3px; }
+        .pm-ob-team-name { font-size:11px; font-weight:600; color:var(--txt); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .pm-ob-team-price { font-size:12px; font-weight:700; color:#a78bfa; }
+        .pm-ob-team-odds { font-size:10px; color:var(--txt3); font-weight:400; }
+        .pm-ob-no-data { font-size:10px; color:var(--txt3); text-align:center; padding:20px; }
+        
+        /* Orderbook Labels */
+        .pm-ob-label { font-size:9px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; padding:4px 0 2px; }
+        .pm-ob-label.ask-label { color:var(--loss); }
+        .pm-ob-label.bid-label { color:var(--profit); }
+        
+        /* Orderbook Rows */
+        .pm-ob-book { display:flex; flex-direction:column; gap:1px; }
+        .pm-ob-row { display:flex; align-items:center; height:18px; position:relative; padding:0 4px; }
+        .pm-ob-bar { height:100%; position:absolute; top:0; left:0; border-radius:2px; }
+        .pm-ob-row.ask .pm-ob-bar { background:linear-gradient(90deg, rgba(239,68,68,0.35), rgba(239,68,68,0.1)); }
+        .pm-ob-row.bid .pm-ob-bar { background:linear-gradient(90deg, rgba(34,197,94,0.35), rgba(34,197,94,0.1)); }
+        .pm-ob-price { font-size:10px; font-weight:600; z-index:1; min-width:38px; }
+        .pm-ob-row.ask .pm-ob-price { color:var(--loss); }
+        .pm-ob-row.bid .pm-ob-price { color:var(--profit); }
+        .pm-ob-odds { font-size:9px; color:var(--txt2); z-index:1; min-width:42px; text-align:right; }
+        .pm-ob-size { font-size:9px; color:var(--txt3); z-index:1; margin-left:auto; }
+        
+        /* Spread Row */
+        .pm-ob-spread { display:flex; justify-content:center; align-items:center; gap:12px; padding:6px 0; margin:4px 0; border-top:1px solid var(--bdr); border-bottom:1px solid var(--bdr); font-size:10px; color:var(--txt3); }
+        .pm-ob-last { color:var(--txt2); }
         
         /* Best bets bar (shown when expanded) */
         .best-bets-bar { display:flex; flex-wrap:nowrap; gap:6px; padding:4px 10px; background:var(--bg); border-bottom:1px solid var(--bdr); align-items:center; overflow-x:auto; }
@@ -233,6 +286,52 @@
         .arb-chip .arb-vs { color:var(--txt3); font-size:9px; margin:0 2px; }
         .arb-chip .arb-pct { color:var(--warn); font-weight:700; margin-left:4px; }
         .game.collapsed .arb-bar { display:none; }
+        
+        /* Polymarket section */
+        .poly-section { padding:6px 12px; background:rgba(124,58,237,0.08); border-bottom:1px solid rgba(124,58,237,0.3); }
+        .poly-header { display:flex; align-items:center; gap:6px; font-size:10px; font-weight:600; color:#a78bfa; margin-bottom:4px; }
+        .poly-header .book-logo { width:28px; height:14px; font-size:7px; }
+        .poly-ml-row { display:flex; flex-wrap:wrap; gap:12px; }
+        .poly-ml-market { display:flex; flex-direction:column; gap:2px; }
+        .poly-ml-teams { display:flex; gap:12px; font-size:11px; }
+        .poly-team { display:flex; align-items:center; gap:4px; color:var(--txt2); }
+        .poly-team .poly-side { font-weight:700; color:var(--txt3); font-size:9px; width:10px; }
+        .poly-team strong { color:#a78bfa; }
+        .poly-team .poly-odds { color:var(--txt3); font-size:10px; }
+        .poly-stats { display:flex; gap:8px; font-size:9px; color:var(--txt3); }
+        .poly-stat { background:var(--bg3); padding:1px 4px; border-radius:2px; }
+        .game.collapsed .poly-section { display:none; }
+        
+        /* Polymarket Orderbook Style */
+        .poly-orderbook { padding:6px 10px; background:rgba(124,58,237,0.08); border-bottom:1px solid rgba(124,58,237,0.3); }
+        .poly-ob-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+        .poly-ob-title { display:flex; align-items:center; gap:6px; font-size:10px; font-weight:600; color:#a78bfa; }
+        .poly-ob-title .book-logo { width:24px; height:12px; font-size:6px; }
+        .poly-ob-stats { display:flex; gap:4px; font-size:8px; color:var(--txt3); }
+        .poly-ob-stat { background:var(--bg3); padding:1px 4px; border-radius:2px; }
+        .poly-ob-markets { display:flex; flex-direction:column; gap:4px; }
+        .poly-ob-market { background:var(--bg); border-radius:4px; padding:4px 6px; }
+        .poly-ob-market-title { font-size:10px; color:var(--txt2); margin-bottom:6px; font-weight:500; }
+        .poly-ob-teams { display:flex; gap:6px; }
+        .poly-ob-team { flex:1; min-width:0; }
+        .poly-ob-team-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:2px; padding-bottom:2px; border-bottom:1px solid var(--bdr); }
+        .poly-ob-team-name { font-size:9px; font-weight:600; color:var(--txt); }
+        .poly-ob-team-price { font-size:11px; font-weight:700; color:#a78bfa; }
+        .poly-ob-team-odds { font-size:8px; color:var(--txt3); margin-left:3px; }
+        .poly-ob-book { display:flex; flex-direction:column; gap:0px; }
+        .poly-ob-row { display:flex; align-items:center; height:12px; position:relative; }
+        .poly-ob-row.ask { flex-direction:row-reverse; }
+        .poly-ob-bar { height:100%; position:absolute; top:0; border-radius:1px; opacity:0.7; }
+        .poly-ob-row.bid .poly-ob-bar { left:0; background:linear-gradient(90deg, rgba(34,197,94,0.5), rgba(34,197,94,0.2)); }
+        .poly-ob-row.ask .poly-ob-bar { right:0; background:linear-gradient(270deg, rgba(239,68,68,0.5), rgba(239,68,68,0.2)); }
+        .poly-ob-price { font-size:8px; font-weight:600; z-index:1; padding:0 3px; min-width:28px; }
+        .poly-ob-row.bid .poly-ob-price { color:var(--profit); text-align:left; }
+        .poly-ob-row.ask .poly-ob-price { color:var(--loss); text-align:right; }
+        .poly-ob-size { font-size:7px; color:var(--txt3); z-index:1; padding:0 2px; }
+        .poly-ob-spread-row { display:flex; justify-content:center; align-items:center; padding:1px 0; border-top:1px solid var(--bdr); border-bottom:1px solid var(--bdr); margin:1px 0; }
+        .poly-ob-spread { font-size:8px; color:var(--txt3); }
+        .poly-ob-last { font-size:8px; color:var(--txt2); margin-left:6px; }
+        .game.collapsed .poly-orderbook { display:none; }
         
         /* Pin Button */
         .pin-btn { background:none; border:none; cursor:pointer; font-size:14px; padding:4px; opacity:0.4; transition:all 0.15s; position:relative; z-index:20; }
@@ -308,6 +407,9 @@
         .tab-btn { padding:8px 16px; background:var(--bg2); border:1px solid var(--bdr); border-radius:6px; color:var(--txt3); font-family:inherit; font-size:12px; font-weight:500; cursor:pointer; }
         .tab-btn.active { background:var(--accent); color:white; border-color:var(--accent); }
         .tab-btn:hover:not(.active) { color:var(--txt2); background:var(--bg3); }
+        .live-count { display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px; margin-left:4px; background:var(--loss); color:white; border-radius:9px; font-size:10px; font-weight:700; }
+        .live-count:empty, .live-count[data-count="0"] { display:none; }
+        .tab-btn.active .live-count { background:rgba(255,255,255,0.3); }
         .tab-content { display:none; }
         .tab-content.active { display:block; }
         
@@ -400,10 +502,6 @@
         
         .mobile-mode .consensus-row td:first-child { font-size:10px; }
         .mobile-mode .consensus-row td:first-child span { font-size:10px !important; }
-        
-        /* Hide Line column on mobile */
-        .mobile-mode .odds-table th:nth-child(2),
-        .mobile-mode .odds-table td:nth-child(2) { display:none; }
         
         /* Config mobile */
         .mobile-mode .config { padding:10px; }
@@ -572,11 +670,57 @@
                     <option value="on">Enabled</option>
                 </select>
             </div>
+            <div class="field" style="grid-column: span 4; border-top: 1px solid var(--bdr); padding-top: 12px; margin-top: 8px;">
+                <label style="font-size:12px; color:var(--txt2);">🟣 Polymarket</label>
+            </div>
+            <div class="field">
+                <label>Polymarket</label>
+                <select id="polyEnabled">
+                    <option value="on">Enabled</option>
+                    <option value="off">Disabled</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Min Liquidity ($)</label>
+                <input type="number" id="polyMinLiquidity" value="500" min="50" max="10000" step="50">
+            </div>
+            <div class="field" style="grid-column: span 4; border-top: 1px solid var(--bdr); padding-top: 12px; margin-top: 8px;">
+                <label style="font-size:12px; color:var(--loss);">🔴 Live Game Alerts</label>
+            </div>
+            <div class="field">
+                <label>Live Alerts</label>
+                <select id="liveAlertsEnabled">
+                    <option value="on">Enabled</option>
+                    <option value="off">Disabled</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Live Sound</label>
+                <select id="liveSoundEnabled">
+                    <option value="on">Enabled</option>
+                    <option value="off">Disabled</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Live Telegram</label>
+                <select id="liveTelegramEnabled">
+                    <option value="off">Disabled</option>
+                    <option value="on">Enabled</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Auto-switch to Live</label>
+                <select id="liveAutoSwitch">
+                    <option value="on">Enabled</option>
+                    <option value="off">Disabled</option>
+                </select>
+            </div>
         </div>
     </div>
     
     <div class="stats">
         <div class="stat"><div class="stat-label">Games</div><div class="stat-value blue" id="sGames">0</div></div>
+        <div class="stat"><div class="stat-label">Live</div><div class="stat-value" id="sLive" style="color:var(--loss)">0</div></div>
         <div class="stat"><div class="stat-label">+EV Opps</div><div class="stat-value green" id="sEV">0</div></div>
         <div class="stat"><div class="stat-label">Best Edge</div><div class="stat-value green" id="sBest">--</div></div>
         <div class="stat"><div class="stat-label">Arbs</div><div class="stat-value" id="sArbs" style="color:var(--warn)">0</div></div>
@@ -586,6 +730,7 @@
     <div class="tabs-row">
         <div class="tabs-container">
             <button class="tab-btn active" onclick="switchTab('games')">Games</button>
+            <button class="tab-btn" onclick="switchTab('live')">Live <span class="live-count" id="liveTabCount">0</span></button>
             <button class="tab-btn" onclick="switchTab('betlog')">Bet Log</button>
         </div>
         <div class="alerts-inline" id="alerts"></div>
@@ -594,6 +739,12 @@
     <div class="tab-content active" id="tab-games">
         <div class="games" id="games">
             <div class="loading"><div class="spinner"></div><div style="color:var(--txt3)">Enter API key and refresh, or click Demo</div></div>
+        </div>
+    </div>
+    
+    <div class="tab-content" id="tab-live">
+        <div class="games" id="liveGames">
+            <div class="empty"><div class="empty-icon">📺</div><h3>No Live Games</h3><p>Live games will appear here automatically</p></div>
         </div>
     </div>
     
@@ -713,8 +864,19 @@ const CFG = {
     // Arbitrage settings
     arbEnabled: true,
     minArb: 0.5,
-    arbTelegramEnabled: false
+    arbTelegramEnabled: false,
+    // Polymarket settings
+    polyEnabled: true,
+    polyMinLiquidity: 500,  // Minimum liquidity for price calculation
+    // Live game alert settings
+    liveAlertsEnabled: true,
+    liveSoundEnabled: true,
+    liveTelegramEnabled: false,
+    liveAutoSwitch: true
 };
+
+// Polymarket data cache
+let POLY_DATA = {};
 
 const BOOKS = {
     pinnacle: {n:'Pinnacle', a:'PIN', c:'#c41230'},
@@ -728,6 +890,7 @@ const BOOKS = {
     caesars: {n:'Caesars', a:'CZR', c:'#0d4524'},
     pointsbet: {n:'PointsBet', a:'PB', c:'#e44c23'},
     betrivers: {n:'BetRivers', a:'BR', c:'#1275ba'},
+    polymarket: {n:'Polymarket', a:'POLY', c:'#7c3aed'},
     bet365: {n:'Bet365', a:'365', c:'#027b5b'},
     espnbet: {n:'ESPN Bet', a:'ESPN', c:'#d00'},
     fanatics: {n:'Fanatics', a:'FAN', c:'#004687'}
@@ -1238,6 +1401,14 @@ function loadCfg() {
         document.getElementById('arbEnabled').value = CFG.arbEnabled !== false ? 'on' : 'off';
         document.getElementById('minArb').value = CFG.minArb || 0.5;
         document.getElementById('arbTelegramEnabled').value = CFG.arbTelegramEnabled ? 'on' : 'off';
+        // Polymarket settings
+        document.getElementById('polyEnabled').value = CFG.polyEnabled !== false ? 'on' : 'off';
+        document.getElementById('polyMinLiquidity').value = CFG.polyMinLiquidity || 500;
+        // Live alert settings
+        document.getElementById('liveAlertsEnabled').value = CFG.liveAlertsEnabled !== false ? 'on' : 'off';
+        document.getElementById('liveSoundEnabled').value = CFG.liveSoundEnabled !== false ? 'on' : 'off';
+        document.getElementById('liveTelegramEnabled').value = CFG.liveTelegramEnabled ? 'on' : 'off';
+        document.getElementById('liveAutoSwitch').value = CFG.liveAutoSwitch !== false ? 'on' : 'off';
     }
 }
 
@@ -1262,6 +1433,14 @@ function saveCfg() {
     CFG.arbEnabled = document.getElementById('arbEnabled').value === 'on';
     CFG.minArb = parseFloat(document.getElementById('minArb').value);
     CFG.arbTelegramEnabled = document.getElementById('arbTelegramEnabled').value === 'on';
+    // Polymarket settings
+    CFG.polyEnabled = document.getElementById('polyEnabled').value === 'on';
+    CFG.polyMinLiquidity = parseInt(document.getElementById('polyMinLiquidity').value) || 500;
+    // Live alert settings
+    CFG.liveAlertsEnabled = document.getElementById('liveAlertsEnabled').value === 'on';
+    CFG.liveSoundEnabled = document.getElementById('liveSoundEnabled').value === 'on';
+    CFG.liveTelegramEnabled = document.getElementById('liveTelegramEnabled').value === 'on';
+    CFG.liveAutoSwitch = document.getElementById('liveAutoSwitch').value === 'on';
     localStorage.setItem('sgKey', CFG.apiKey);
     localStorage.setItem('cbbCfg', JSON.stringify(CFG));
 }
@@ -1421,6 +1600,11 @@ async function fetchData() {
         
         log(`Showing ${DATA.length} games (${live.length} live, ${DATA.length - live.length} upcoming)`);
         
+        // Fetch Polymarket data if enabled
+        if (CFG.polyEnabled) {
+            await fetchPolymarket();
+        }
+        
         render(!isFirstLoad); // Pass true for refresh after first load
         updateStats();
         trackAllConsensusLines(); // Track consensus lines for steam alerts
@@ -1508,6 +1692,317 @@ function extractOdds(odds) {
     }
     
     return r;
+}
+
+// Polymarket fetching and matching
+async function fetchPolymarket() {
+    try {
+        log('Fetching Polymarket CBB...');
+        
+        // CBB: series_id=10470, tag_id=100639 (game-bets tag from Polymarket docs)
+        const params = new URLSearchParams({
+            series_id: '10470',
+            tag_id: '100639',
+            active: 'true',
+            closed: 'false',
+            order: 'startTime',
+            ascending: 'true',
+            limit: '100'
+        });
+        
+        const baseUrl = `https://gamma-api.polymarket.com/events?${params.toString()}`;
+        
+        // Try multiple CORS proxies
+        const corsProxies = [
+            'https://api.allorigins.win/raw?url=',
+            'https://corsproxy.io/?',
+            'https://api.codetabs.com/v1/proxy?quest=',
+            ''
+        ];
+        
+        let events = null;
+        
+        for (const proxy of corsProxies) {
+            try {
+                const url = proxy ? proxy + encodeURIComponent(baseUrl) : baseUrl;
+                const res = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' } });
+                
+                if (res.ok) {
+                    const text = await res.text();
+                    try {
+                        events = JSON.parse(text);
+                        if (events && Array.isArray(events) && events.length > 0) {
+                            log(`Poly via ${(proxy || 'direct').substring(0,25)}...: ${events.length} events`);
+                            break;
+                        }
+                    } catch (parseErr) { continue; }
+                }
+            } catch (e) { continue; }
+        }
+        
+        if (!events || events.length === 0) {
+            log('Polymarket: No events or all proxies blocked');
+            return;
+        }
+        
+        // Process and match to our games
+        POLY_DATA = {};
+        let matchCount = 0;
+        let noMatch = [];
+        
+        // For each SGO game, try to find matching Poly event
+        for (const d of DATA) {
+            const g = d.game;
+            const eventId = g.eventID;
+            
+            // Get all possible team identifiers from SGO
+            const awayAbbr = (g.teams?.away?.names?.abbr || '').toLowerCase();
+            const homeAbbr = (g.teams?.home?.names?.abbr || '').toLowerCase();
+            const awayShort = (g.teams?.away?.names?.short || '').toLowerCase().replace(/\s+/g, '');
+            const homeShort = (g.teams?.home?.names?.short || '').toLowerCase().replace(/\s+/g, '');
+            const awayFull = (g.teams?.away?.names?.name || '').toLowerCase();
+            const homeFull = (g.teams?.home?.names?.name || '').toLowerCase();
+            
+            // Create search terms for each team - be more aggressive
+            const awayTerms = new Set([
+                awayAbbr,
+                awayShort,
+                awayShort.substring(0, 3),
+                awayShort.substring(0, 4),
+                awayShort.substring(0, 5),
+                awayShort.substring(0, 6),
+                ...awayFull.split(/\s+/).filter(w => w.length >= 3),
+                ...awayShort.match(/.{3,}/g) || []
+            ].filter(t => t && t.length >= 3));
+            
+            const homeTerms = new Set([
+                homeAbbr,
+                homeShort,
+                homeShort.substring(0, 3),
+                homeShort.substring(0, 4),
+                homeShort.substring(0, 5),
+                homeShort.substring(0, 6),
+                ...homeFull.split(/\s+/).filter(w => w.length >= 3),
+                ...homeShort.match(/.{3,}/g) || []
+            ].filter(t => t && t.length >= 3));
+            
+            // Find matching Poly event
+            let matchedEvent = null;
+            
+            for (const event of events) {
+                const slug = (event.slug || '').toLowerCase();
+                const title = (event.title || '').toLowerCase();
+                
+                // Check if slug or title contains terms from both teams
+                const slugAndTitle = slug + ' ' + title;
+                
+                let awayMatch = false;
+                let homeMatch = false;
+                
+                for (const term of awayTerms) {
+                    if (slugAndTitle.includes(term)) {
+                        awayMatch = true;
+                        break;
+                    }
+                }
+                
+                for (const term of homeTerms) {
+                    if (slugAndTitle.includes(term)) {
+                        homeMatch = true;
+                        break;
+                    }
+                }
+                
+                if (awayMatch && homeMatch) {
+                    matchedEvent = event;
+                    break;
+                }
+            }
+            
+            if (!matchedEvent) {
+                noMatch.push(`${awayAbbr || awayShort.substring(0,4)}@${homeAbbr || homeShort.substring(0,4)}`);
+                continue;
+            }
+            
+            matchCount++;
+            const markets = matchedEvent.markets || [];
+            
+            POLY_DATA[eventId] = { 
+                markets: [], 
+                event: matchedEvent, 
+                title: matchedEvent.title,
+                slug: matchedEvent.slug,
+                orderbooks: {}
+            };
+            
+            // Process markets - focus on ML
+            for (const m of markets) {
+                const q = (m.question || '').toLowerCase();
+                const outcomes = JSON.parse(m.outcomes || '[]');
+                const prices = JSON.parse(m.outcomePrices || '[]');
+                const volume = parseFloat(m.volume || 0);
+                const liquidity = parseFloat(m.liquidityNum || m.liquidity || 0);
+                
+                if (prices.length < 2) continue;
+                
+                // Determine market type
+                let marketType = 'ml'; // Default to ML
+                let line = null;
+                
+                const isSpread = q.includes('spread') || q.includes('cover') || /[+-]\d+\.?\d*\)/.test(q);
+                const isTotal = q.includes('over') || q.includes('under') || q.includes('o/u');
+                
+                if (isSpread) {
+                    marketType = 'spread';
+                    const match = q.match(/([+-]?\d+\.?\d*)/);
+                    if (match) line = parseFloat(match[1]);
+                } else if (isTotal) {
+                    marketType = 'total';
+                    const match = q.match(/(\d+\.?\d*)/);
+                    if (match) line = parseFloat(match[1]);
+                }
+                
+                // Get token IDs for orderbook fetch
+                const clobTokenIds = JSON.parse(m.clobTokenIds || '[]');
+                
+                POLY_DATA[eventId].markets.push({
+                    type: marketType,
+                    question: m.question,
+                    outcomes,
+                    prices: prices.map(p => parseFloat(p)),
+                    volume,
+                    liquidity,
+                    line,
+                    slug: m.slug,
+                    conditionId: m.conditionId,
+                    clobTokenIds
+                });
+                
+                // Fetch orderbook for each token (only for ML markets to save API calls)
+                if (marketType === 'ml' && clobTokenIds.length >= 2) {
+                    for (let i = 0; i < clobTokenIds.length; i++) {
+                        const tokenId = clobTokenIds[i];
+                        try {
+                            const obData = await fetchOrderbook(tokenId, corsProxies);
+                            if (obData) {
+                                POLY_DATA[eventId].orderbooks[tokenId] = {
+                                    ...obData,
+                                    outcome: outcomes[i]
+                                };
+                            }
+                        } catch (e) {
+                            // Silent fail for orderbook fetch
+                        }
+                    }
+                }
+            }
+        }
+        
+        log(`Poly matched: ${matchCount}/${DATA.length} games`);
+        if (noMatch.length > 0) {
+            log(`No Poly: ${noMatch.slice(0,15).join(', ')}${noMatch.length > 15 ? '...' : ''}`);
+        }
+        
+    } catch (err) {
+        log('Polymarket error: ' + err.message);
+    }
+}
+
+// Fetch orderbook from Polymarket CLOB API
+async function fetchOrderbook(tokenId, proxies) {
+    const clobUrl = `https://clob.polymarket.com/book?token_id=${tokenId}`;
+    
+    for (const proxy of proxies) {
+        try {
+            const url = proxy ? proxy + encodeURIComponent(clobUrl) : clobUrl;
+            const res = await fetch(url, { 
+                method: 'GET', 
+                headers: { 'Accept': 'application/json' }
+            });
+            
+            if (res.ok) {
+                const data = await res.json();
+                if (data && (data.bids || data.asks)) {
+                    return data;
+                }
+            }
+        } catch (e) { 
+            continue; 
+        }
+    }
+    return null;
+}
+
+// Calculate weighted average price for given liquidity amount
+function calcWeightedAskPrice(asks, targetLiquidity) {
+    if (!asks || asks.length === 0) return null;
+    
+    // Sort asks by price ascending (best asks first)
+    const sortedAsks = [...asks].sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+    
+    let totalSize = 0;
+    let weightedSum = 0;
+    
+    for (const ask of sortedAsks) {
+        const price = parseFloat(ask.price);
+        const size = parseFloat(ask.size);
+        const dollarValue = price * size;
+        
+        if (totalSize + dollarValue >= targetLiquidity) {
+            // Partial fill of this level
+            const remaining = targetLiquidity - totalSize;
+            const partialSize = remaining / price;
+            weightedSum += price * partialSize;
+            totalSize += remaining;
+            break;
+        } else {
+            weightedSum += price * size;
+            totalSize += dollarValue;
+        }
+    }
+    
+    if (totalSize === 0) return null;
+    
+    // Return weighted average as decimal (0-1)
+    const totalShares = sortedAsks.reduce((sum, ask) => {
+        const price = parseFloat(ask.price);
+        const size = parseFloat(ask.size);
+        return sum + (totalSize >= price * size ? size : 0);
+    }, 0);
+    
+    // Recalculate properly
+    let sharesAccum = 0;
+    let priceWeightedSum = 0;
+    let dollarAccum = 0;
+    
+    for (const ask of sortedAsks) {
+        const price = parseFloat(ask.price);
+        const size = parseFloat(ask.size);
+        const dollarValue = price * size;
+        
+        if (dollarAccum + dollarValue >= targetLiquidity) {
+            const remaining = targetLiquidity - dollarAccum;
+            const partialShares = remaining / price;
+            priceWeightedSum += price * partialShares;
+            sharesAccum += partialShares;
+            break;
+        } else {
+            priceWeightedSum += price * size;
+            sharesAccum += size;
+            dollarAccum += dollarValue;
+        }
+    }
+    
+    return sharesAccum > 0 ? priceWeightedSum / sharesAccum : null;
+}
+
+// Convert Polymarket decimal odds (0-1) to American
+function polyToAmerican(prob) {
+    if (prob >= 0.5) {
+        return Math.round(-100 * prob / (1 - prob));
+    } else {
+        return Math.round(100 * (1 - prob) / prob);
+    }
 }
 
 // Math
@@ -1879,9 +2374,19 @@ function trackAllConsensusLines() {
     });
 }
 
+// Track games that were previously not live (for alerts)
+let previouslyLiveGames = new Set();
+
 function render(isRefresh = false) {
-    const c = document.getElementById('games');
-    if (!DATA.length) { c.innerHTML = '<div class="empty"><div class="empty-icon">🏀</div><h3>No Games</h3><p>Click Demo to preview</p></div>'; return; }
+    const gamesContainer = document.getElementById('games');
+    const liveContainer = document.getElementById('liveGames');
+    
+    if (!DATA.length) { 
+        gamesContainer.innerHTML = '<div class="empty"><div class="empty-icon">🏀</div><h3>No Games</h3><p>Click Demo to preview</p></div>'; 
+        liveContainer.innerHTML = '<div class="empty"><div class="empty-icon">📺</div><h3>No Live Games</h3><p>Live games will appear here automatically</p></div>';
+        updateLiveCount(0);
+        return; 
+    }
     
     const scrollY = window.scrollY;
     const activeTabs = {};
@@ -1893,8 +2398,32 @@ function render(isRefresh = false) {
         if (g.classList.contains('seen')) seenGames.add(id);
     });
     
-    // Sort data: pinned games first, then by start time
-    const sortedData = [...DATA].sort((a, b) => {
+    // Separate live and upcoming games
+    const liveGames = [];
+    const upcomingGames = [];
+    
+    DATA.forEach(d => {
+        const st = d.game.status || {};
+        const isLive = st.started && !st.completed && !st.ended && !st.cancelled;
+        if (isLive) {
+            liveGames.push(d);
+            // Check if game just went live
+            if (!previouslyLiveGames.has(d.game.eventID)) {
+                triggerLiveAlert(d.game);
+                previouslyLiveGames.add(d.game.eventID);
+            }
+        } else {
+            upcomingGames.push(d);
+            previouslyLiveGames.delete(d.game.eventID);
+        }
+    });
+    
+    // Update live count
+    updateLiveCount(liveGames.length);
+    document.getElementById('sLive').textContent = liveGames.length;
+    
+    // Sort: pinned first, then by start time
+    const sortGames = (games) => [...games].sort((a, b) => {
         const aPinned = pinnedGames.has(a.game.eventID);
         const bPinned = pinnedGames.has(b.game.eventID);
         if (aPinned && !bPinned) return -1;
@@ -1902,48 +2431,124 @@ function render(isRefresh = false) {
         return 0;
     });
     
-    if (isRefresh && c.children.length > 0) {
-        sortedData.forEach(({game: g, odds}) => {
-            const existingGame = document.getElementById('g-' + g.eventID);
-            const savedPeriod = activeTabs[g.eventID] || 'game';
-            const edge = hasEdge(odds, g);
-            const wasSeen = seenGames.has(g.eventID);
-            const isPinned = pinnedGames.has(g.eventID);
-            const isCollapsed = collapsedGames.has(g.eventID);
-            
-            if (existingGame) {
-                existingGame.innerHTML = `${gameHeader(g, odds)}${periodTabs(g, odds, savedPeriod)}${oddsSection(g, odds, savedPeriod)}${collapsedSummary(g, odds)}`;
-                existingGame.className = `game${edge ? ' has-edge' : ''}${wasSeen ? ' seen' : ''}${isPinned ? ' pinned' : ''}${isCollapsed ? ' collapsed' : ''}`;
-            } else {
-                const newGame = document.createElement('div');
-                newGame.className = `game${edge ? ' has-edge' : ''}${isPinned ? ' pinned' : ''}${isCollapsed ? ' collapsed' : ''}`;
-                newGame.id = 'g-' + g.eventID;
-                newGame.onclick = (e) => { if (!e.target.closest('button')) markSeen(g.eventID); };
-                newGame.innerHTML = `${gameHeader(g, odds)}${periodTabs(g, odds, savedPeriod)}${oddsSection(g, odds, savedPeriod)}${collapsedSummary(g, odds)}`;
-                c.appendChild(newGame);
-            }
-        });
-        
-        const currentIds = new Set(DATA.map(d => 'g-' + d.game.eventID));
-        Array.from(c.children).forEach(child => { if (!currentIds.has(child.id)) child.remove(); });
-        
-        // Re-order DOM to match sorted order
-        sortedData.forEach(({game: g}) => {
-            const el = document.getElementById('g-' + g.eventID);
-            if (el) c.appendChild(el);
-        });
+    const sortedLive = sortGames(liveGames);
+    const sortedUpcoming = sortGames(upcomingGames);
+    
+    // Render helper
+    const renderGameCard = (g, odds, container) => {
+        const savedPeriod = activeTabs[g.eventID] || 'game';
+        const edge = hasEdge(odds, g);
+        const wasSeen = seenGames.has(g.eventID);
+        const isPinned = pinnedGames.has(g.eventID);
+        const isCollapsed = collapsedGames.has(g.eventID);
+        return `<div class="game${edge ? ' has-edge' : ''}${wasSeen ? ' seen' : ''}${isPinned ? ' pinned' : ''}${isCollapsed ? ' collapsed' : ''}" id="g-${g.eventID}" onclick="if(!event.target.closest('button'))markSeen('${g.eventID}')">${gameHeader(g, odds)}${periodTabs(g, odds, savedPeriod)}${oddsSection(g, odds, savedPeriod)}${collapsedSummary(g, odds)}</div>`;
+    };
+    
+    // Render upcoming games
+    if (sortedUpcoming.length === 0) {
+        gamesContainer.innerHTML = '<div class="empty"><div class="empty-icon">🏀</div><h3>No Upcoming Games</h3><p>All games are live!</p></div>';
     } else {
-        c.innerHTML = sortedData.map(({game: g, odds}) => {
-            const edge = hasEdge(odds, g);
-            const savedPeriod = activeTabs[g.eventID] || 'game';
-            const wasSeen = seenGames.has(g.eventID);
-            const isPinned = pinnedGames.has(g.eventID);
-            const isCollapsed = collapsedGames.has(g.eventID);
-            return `<div class="game${edge ? ' has-edge' : ''}${wasSeen ? ' seen' : ''}${isPinned ? ' pinned' : ''}${isCollapsed ? ' collapsed' : ''}" id="g-${g.eventID}" onclick="if(!event.target.closest('button'))markSeen('${g.eventID}')">${gameHeader(g, odds)}${periodTabs(g, odds, savedPeriod)}${oddsSection(g, odds, savedPeriod)}${collapsedSummary(g, odds)}</div>`;
-        }).join('');
+        gamesContainer.innerHTML = sortedUpcoming.map(({game: g, odds}) => renderGameCard(g, odds, gamesContainer)).join('');
+    }
+    
+    // Render live games
+    if (sortedLive.length === 0) {
+        liveContainer.innerHTML = '<div class="empty"><div class="empty-icon">📺</div><h3>No Live Games</h3><p>Live games will appear here automatically</p></div>';
+    } else {
+        liveContainer.innerHTML = sortedLive.map(({game: g, odds}) => renderGameCard(g, odds, liveContainer)).join('');
     }
     
     requestAnimationFrame(() => { window.scrollTo(0, scrollY); });
+}
+
+function updateLiveCount(count) {
+    const badge = document.getElementById('liveTabCount');
+    if (badge) {
+        badge.textContent = count > 0 ? count : '';
+        badge.dataset.count = count;
+    }
+}
+
+function triggerLiveAlert(g) {
+    if (!CFG.liveAlertsEnabled) return;
+    
+    const t = g.teams || {};
+    const away = t.away?.names?.short || t.away?.names?.abbr || 'Away';
+    const home = t.home?.names?.short || t.home?.names?.abbr || 'Home';
+    
+    // Sound alert
+    if (CFG.liveSoundEnabled) {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 660;
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.2);
+            // Second beep
+            setTimeout(() => {
+                const osc2 = ctx.createOscillator();
+                const gain2 = ctx.createGain();
+                osc2.connect(gain2);
+                gain2.connect(ctx.destination);
+                osc2.frequency.value = 880;
+                osc2.type = 'sine';
+                gain2.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+                osc2.start(ctx.currentTime);
+                osc2.stop(ctx.currentTime + 0.2);
+            }, 150);
+        } catch(e) {}
+    }
+    
+    // Visual alert
+    const c = document.getElementById('alerts');
+    const id = 'live' + Date.now();
+    c.insertAdjacentHTML('afterbegin', `<div class="alert live-alert" id="${id}" onclick="dismissAlert('${id}'); switchTab('live');">
+        <div class="alert-header">
+            <span class="alert-title">🔴 GAME LIVE</span>
+            <span class="alert-time">${new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}</span>
+        </div>
+        <div class="alert-body"><strong>${away} @ ${home}</strong></div>
+    </div>`);
+    
+    // Auto-dismiss after 30 seconds
+    setTimeout(() => dismissAlert(id), 30000);
+    
+    // Auto-switch to live tab if enabled
+    if (CFG.liveAutoSwitch) {
+        switchTab('live');
+    }
+    
+    // Telegram alert
+    if (CFG.liveTelegramEnabled && CFG.telegramToken && CFG.telegramChatId) {
+        sendLiveTelegram(away, home);
+    }
+    
+    log(`🔴 LIVE: ${away} @ ${home}`);
+}
+
+async function sendLiveTelegram(away, home) {
+    const message = `🔴 *GAME LIVE*\n\n🏀 *${away} @ ${home}*`;
+    
+    try {
+        await fetch(`https://api.telegram.org/bot${CFG.telegramToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: CFG.telegramChatId,
+                text: message,
+                parse_mode: 'Markdown'
+            })
+        });
+    } catch(err) {
+        console.error('Live Telegram error:', err);
+    }
 }
 
 function markSeen(eventId) {
@@ -1990,14 +2595,37 @@ function gameHeader(g, odds) {
     const awN = getName(aw);
     const hmN = getName(hm);
     
+    // Helper to extract score value from potentially nested objects
+    const extractScore = (score) => {
+        if (score === null || score === undefined) return 0;
+        if (typeof score === 'number') return score;
+        if (typeof score === 'string') return parseInt(score) || 0;
+        if (typeof score === 'object') {
+            // Try common property names
+            if (typeof score.total === 'number') return score.total;
+            if (typeof score.points === 'number') return score.points;
+            if (typeof score.score === 'number') return score.score;
+            if (typeof score.total === 'string') return parseInt(score.total) || 0;
+            if (typeof score.points === 'string') return parseInt(score.points) || 0;
+            // Last resort: try to find any numeric property
+            for (const val of Object.values(score)) {
+                if (typeof val === 'number') return val;
+            }
+        }
+        return 0;
+    };
+    
     let awS = 0, hmS = 0;
     if (g.results) {
         const pts = Object.values(g.results).find(r => r.away !== undefined && r.home !== undefined);
-        if (pts) { awS = pts.away || 0; hmS = pts.home || 0; }
+        if (pts) { 
+            awS = extractScore(pts.away);
+            hmS = extractScore(pts.home);
+        }
     }
     if (g.score) {
-        awS = g.score.away?.total ?? g.score.away ?? awS;
-        hmS = g.score.home?.total ?? g.score.home ?? hmS;
+        awS = extractScore(g.score.away) || awS;
+        hmS = extractScore(g.score.home) || hmS;
     }
     
     const st = g.status || {};
@@ -2069,13 +2697,19 @@ function gameHeader(g, odds) {
 }
 
 function periodTabs(g, odds, activePeriod) {
+    const hasPoly = POLY_DATA[g.eventID] && POLY_DATA[g.eventID].markets.length > 0;
+    
     const periods = [
         { id: 'game', label: 'Game' },
         { id: '1h', label: '1st Half' }
     ];
     
+    if (hasPoly) {
+        periods.push({ id: 'pm', label: 'PM' });
+    }
+    
     return `<div class="period-tabs">
-        ${periods.map(p => `<button class="period-tab${activePeriod === p.id ? ' active' : ''}" data-p="${p.id}" onclick="event.stopPropagation(); switchPeriod('${g.eventID}', '${p.id}')">${p.label}</button>`).join('')}
+        ${periods.map(p => `<button class="period-tab${activePeriod === p.id ? ' active' : ''}${p.id === 'pm' ? ' pm-tab' : ''}" data-p="${p.id}" onclick="event.stopPropagation(); switchPeriod('${g.eventID}', '${p.id}')">${p.label}</button>`).join('')}
     </div>`;
 }
 
@@ -2092,7 +2726,13 @@ function switchPeriod(eventId, period) {
     const data = DATA.find(d => d.game.eventID === eventId);
     if (data) {
         const section = game.querySelector('.odds-section');
-        if (section) section.outerHTML = oddsSection(data.game, data.odds, period);
+        if (section) {
+            if (period === 'pm') {
+                section.outerHTML = polymarketDetailSection(data.game);
+            } else {
+                section.outerHTML = oddsSection(data.game, data.odds, period);
+            }
+        }
     }
 }
 
@@ -2102,15 +2742,36 @@ function collapsedSummary(g, odds) {
     const startTime = g.startTime || st.startsAt;
     const timeStr = startTime ? new Date(startTime).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : '--';
     
+    // Helper to extract score value from potentially nested objects
+    const extractScore = (score) => {
+        if (score === null || score === undefined) return 0;
+        if (typeof score === 'number') return score;
+        if (typeof score === 'string') return parseInt(score) || 0;
+        if (typeof score === 'object') {
+            if (typeof score.total === 'number') return score.total;
+            if (typeof score.points === 'number') return score.points;
+            if (typeof score.score === 'number') return score.score;
+            if (typeof score.total === 'string') return parseInt(score.total) || 0;
+            if (typeof score.points === 'string') return parseInt(score.points) || 0;
+            for (const val of Object.values(score)) {
+                if (typeof val === 'number') return val;
+            }
+        }
+        return 0;
+    };
+    
     // Get scores
     let awS = 0, hmS = 0;
     if (g.results) {
         const pts = Object.values(g.results).find(r => r.away !== undefined && r.home !== undefined);
-        if (pts) { awS = pts.away || 0; hmS = pts.home || 0; }
+        if (pts) { 
+            awS = extractScore(pts.away);
+            hmS = extractScore(pts.home);
+        }
     }
     if (g.score) {
-        awS = g.score.away?.total ?? g.score.away ?? awS;
-        hmS = g.score.home?.total ?? g.score.home ?? hmS;
+        awS = extractScore(g.score.away) || awS;
+        hmS = extractScore(g.score.home) || hmS;
     }
     
     // Get fair value and best lines
@@ -2121,6 +2782,59 @@ function collapsedSummary(g, odds) {
     
     // Find best lines for each side
     const bestLines = findBestLines(pd, spreadCons, totalCons, mlCons, isLive);
+    
+    // Get Polymarket ML data
+    const polyData = POLY_DATA[g.eventID];
+    let polyHtml = '';
+    if (polyData && polyData.markets.length > 0) {
+        const mlMarket = polyData.markets.find(m => m.type === 'ml') || polyData.markets[0];
+        if (mlMarket && mlMarket.prices.length >= 2) {
+            const awayShort = g.teams?.away?.names?.short || 'Away';
+            const homeShort = g.teams?.home?.names?.short || 'Home';
+            const out1 = (mlMarket.outcomes[0] || '').toLowerCase();
+            const awayLower = awayShort.toLowerCase();
+            
+            // Try to get orderbook prices
+            const clobTokenIds = mlMarket.clobTokenIds || [];
+            const orderbooks = polyData.orderbooks || {};
+            const ob1 = clobTokenIds[0] ? orderbooks[clobTokenIds[0]] : null;
+            const ob2 = clobTokenIds[1] ? orderbooks[clobTokenIds[1]] : null;
+            
+            let awayOb, homeOb;
+            if (out1.includes(awayLower) || (ob1?.outcome || '').toLowerCase().includes(awayLower)) {
+                awayOb = ob1;
+                homeOb = ob2;
+            } else {
+                awayOb = ob2;
+                homeOb = ob1;
+            }
+            
+            // Calculate weighted ask prices based on min liquidity
+            const minLiq = CFG.polyMinLiquidity || 500;
+            const awayAskPrice = awayOb ? calcWeightedAskPrice(awayOb.asks, minLiq) : null;
+            const homeAskPrice = homeOb ? calcWeightedAskPrice(homeOb.asks, minLiq) : null;
+            
+            // Fallback to market prices
+            let awayPrice, homePrice;
+            if (out1.includes(awayLower) || out1.includes(awayLower.substring(0,4))) {
+                awayPrice = awayAskPrice || mlMarket.prices[0];
+                homePrice = homeAskPrice || mlMarket.prices[1];
+            } else {
+                awayPrice = awayAskPrice || mlMarket.prices[1];
+                homePrice = homeAskPrice || mlMarket.prices[0];
+            }
+            
+            const awayOdds = polyToAmerican(awayPrice);
+            const homeOdds = polyToAmerican(homePrice);
+            const liq = mlMarket.liquidity >= 1000 ? `$${(mlMarket.liquidity/1000).toFixed(0)}k` : `$${Math.round(mlMarket.liquidity)}`;
+            
+            polyHtml = `<div class="cs-poly-stack">
+                <div class="cs-poly-line"><span class="cs-side">A</span><div class="book-logo" style="background:#7c3aed">PM</div><span class="cs-odds">${(awayPrice*100).toFixed(0)}¢ ${fmt(awayOdds)}</span></div>
+                <div class="cs-poly-line"><span class="cs-side">H</span><div class="book-logo" style="background:#7c3aed">PM</div><span class="cs-odds">${(homePrice*100).toFixed(0)}¢ ${fmt(homeOdds)}</span></div>
+                <div class="cs-poly-liq">${liq}</div>
+            </div>`;
+        }
+    }
     
     return `<div class="collapsed-summary">
         ${isLive ? `<div class="cs-item"><span class="cs-value blue">${awS}-${hmS}</span></div>` : 
@@ -2142,6 +2856,7 @@ function collapsedSummary(g, odds) {
             ${bestLines.over ? `<div class="cs-best-line"><span class="cs-side">O</span><div class="book-logo" style="background:${bestLines.over.color}">${bestLines.over.book}</div><span class="cs-odds">${bestLines.over.line} ${fmt(bestLines.over.price)}</span></div>` : ''}
             ${bestLines.under ? `<div class="cs-best-line"><span class="cs-side">U</span><div class="book-logo" style="background:${bestLines.under.color}">${bestLines.under.book}</div><span class="cs-odds">${bestLines.under.line} ${fmt(bestLines.under.price)}</span></div>` : ''}
         </div>` : ''}
+        ${polyHtml}
     </div>`;
 }
 
@@ -2256,6 +2971,160 @@ function toggleCollapseAll() {
     }
 }
 
+function polymarketDetailSection(g) {
+    const polyData = POLY_DATA[g.eventID];
+    if (!polyData || !polyData.markets.length) {
+        return `<div class="odds-section"><div class="empty" style="padding:20px;text-align:center;">No Polymarket data available</div></div>`;
+    }
+    
+    const awayShort = g.teams?.away?.names?.short || 'Away';
+    const homeShort = g.teams?.home?.names?.short || 'Home';
+    
+    // Find ML market
+    const mlMarket = polyData.markets.find(m => m.type === 'ml') || polyData.markets.find(m => {
+        const q = (m.question || '').toLowerCase();
+        return !q.includes('spread') && !q.includes('over') && !q.includes('under');
+    });
+    
+    if (!mlMarket) {
+        return `<div class="odds-section"><div class="empty" style="padding:20px;text-align:center;">No ML market found</div></div>`;
+    }
+    
+    // Get orderbook data
+    const clobTokenIds = mlMarket.clobTokenIds || [];
+    const orderbooks = polyData.orderbooks || {};
+    const ob1 = clobTokenIds[0] ? orderbooks[clobTokenIds[0]] : null;
+    const ob2 = clobTokenIds[1] ? orderbooks[clobTokenIds[1]] : null;
+    
+    // Determine team mapping
+    const out1 = (mlMarket.outcomes[0] || '').toLowerCase();
+    const awayLower = awayShort.toLowerCase();
+    
+    let awayOb, homeOb, awayName, homeName;
+    if (out1.includes(awayLower) || (ob1?.outcome || '').toLowerCase().includes(awayLower)) {
+        awayOb = ob1;
+        homeOb = ob2;
+        awayName = mlMarket.outcomes[0] || awayShort;
+        homeName = mlMarket.outcomes[1] || homeShort;
+    } else {
+        awayOb = ob2;
+        homeOb = ob1;
+        awayName = mlMarket.outcomes[1] || awayShort;
+        homeName = mlMarket.outcomes[0] || homeShort;
+    }
+    
+    // Calculate weighted ask prices for header
+    const minLiq = CFG.polyMinLiquidity || 500;
+    const awayAskPrice = awayOb ? calcWeightedAskPrice(awayOb.asks, minLiq) : mlMarket.prices[out1.includes(awayLower) ? 0 : 1];
+    const homeAskPrice = homeOb ? calcWeightedAskPrice(homeOb.asks, minLiq) : mlMarket.prices[out1.includes(awayLower) ? 1 : 0];
+    
+    // Render orderbook with bid and ask
+    const renderOrderbook = (ob, teamName, isAway) => {
+        if (!ob || (!ob.asks?.length && !ob.bids?.length)) {
+            return `<div class="pm-ob-team">
+                <div class="pm-ob-team-header">
+                    <span class="pm-ob-side">${isAway ? 'A' : 'H'}</span>
+                    <span class="pm-ob-team-name">${teamName}</span>
+                </div>
+                <div class="pm-ob-no-data">No orderbook data</div>
+            </div>`;
+        }
+        
+        // Get asks (sorted ascending - best/lowest first) and bids (sorted descending - best/highest first)
+        const asks = (ob.asks || []).sort((a,b) => parseFloat(a.price) - parseFloat(b.price)).slice(0, 6);
+        const bids = (ob.bids || []).sort((a,b) => parseFloat(b.price) - parseFloat(a.price)).slice(0, 6);
+        
+        // Calculate max dollar value for bar scaling
+        const allDollarVals = [...asks, ...bids].map(o => parseFloat(o.price) * parseFloat(o.size));
+        const maxDollar = Math.max(...allDollarVals, 100);
+        
+        // Best bid/ask for spread calculation
+        const bestAsk = asks[0] ? parseFloat(asks[0].price) : null;
+        const bestBid = bids[0] ? parseFloat(bids[0].price) : null;
+        const spread = bestAsk && bestBid ? ((bestAsk - bestBid) * 100).toFixed(1) : '--';
+        
+        // Render asks (reversed so lowest/best price is at bottom near spread)
+        const asksHtml = asks.reverse().map(order => {
+            const p = parseFloat(order.price);
+            const s = parseFloat(order.size);
+            const dollarVal = p * s;
+            const barWidth = Math.min((dollarVal / maxDollar) * 100, 100);
+            const dollarStr = dollarVal >= 1000 ? `$${(dollarVal/1000).toFixed(1)}k` : `$${Math.round(dollarVal)}`;
+            const odds = polyToAmerican(p);
+            return `<div class="pm-ob-row ask">
+                <div class="pm-ob-bar" style="width:${barWidth}%"></div>
+                <span class="pm-ob-price">${(p*100).toFixed(1)}¢</span>
+                <span class="pm-ob-odds">${fmt(odds)}</span>
+                <span class="pm-ob-size">${dollarStr}</span>
+            </div>`;
+        }).join('');
+        
+        // Render bids
+        const bidsHtml = bids.map(order => {
+            const p = parseFloat(order.price);
+            const s = parseFloat(order.size);
+            const dollarVal = p * s;
+            const barWidth = Math.min((dollarVal / maxDollar) * 100, 100);
+            const dollarStr = dollarVal >= 1000 ? `$${(dollarVal/1000).toFixed(1)}k` : `$${Math.round(dollarVal)}`;
+            const odds = polyToAmerican(p);
+            return `<div class="pm-ob-row bid">
+                <div class="pm-ob-bar" style="width:${barWidth}%"></div>
+                <span class="pm-ob-price">${(p*100).toFixed(1)}¢</span>
+                <span class="pm-ob-odds">${fmt(odds)}</span>
+                <span class="pm-ob-size">${dollarStr}</span>
+            </div>`;
+        }).join('');
+        
+        // Weighted price for header
+        const weightedAsk = calcWeightedAskPrice(ob.asks, minLiq);
+        const headerPrice = weightedAsk || (bestAsk || 0);
+        const headerOdds = polyToAmerican(headerPrice);
+        
+        return `<div class="pm-ob-team">
+            <div class="pm-ob-team-header">
+                <span class="pm-ob-side">${isAway ? 'A' : 'H'}</span>
+                <span class="pm-ob-team-name">${teamName}</span>
+                <span class="pm-ob-team-price">${(headerPrice*100).toFixed(1)}¢ <span class="pm-ob-team-odds">${fmt(headerOdds)}</span></span>
+            </div>
+            <div class="pm-ob-label ask-label">Asks (Buy Yes)</div>
+            <div class="pm-ob-book">
+                ${asksHtml}
+            </div>
+            <div class="pm-ob-spread">
+                <span>Spread: ${spread}¢</span>
+                ${bestBid ? `<span class="pm-ob-last">Best Bid: ${(bestBid*100).toFixed(1)}¢</span>` : ''}
+            </div>
+            <div class="pm-ob-label bid-label">Bids (Sell Yes)</div>
+            <div class="pm-ob-book">
+                ${bidsHtml}
+            </div>
+        </div>`;
+    };
+    
+    // Calculate totals
+    const vol = mlMarket.volume >= 1000 ? `$${(mlMarket.volume/1000).toFixed(1)}k` : `$${Math.round(mlMarket.volume)}`;
+    const liq = mlMarket.liquidity >= 1000 ? `$${(mlMarket.liquidity/1000).toFixed(1)}k` : `$${Math.round(mlMarket.liquidity)}`;
+    
+    return `<div class="odds-section pm-detail-section">
+        <div class="pm-detail-header">
+            <div class="pm-detail-title">
+                <div class="book-logo" style="background:#7c3aed;width:32px;height:18px;font-size:8px;">POLY</div>
+                <span>Moneyline Orderbook</span>
+            </div>
+            <div class="pm-detail-stats">
+                <span class="pm-stat-chip">Vol: ${vol}</span>
+                <span class="pm-stat-chip">Liq: ${liq}</span>
+                <span class="pm-stat-chip">Min $${CFG.polyMinLiquidity}</span>
+            </div>
+        </div>
+        <div class="pm-ob-container">
+            ${renderOrderbook(awayOb, awayName, true)}
+            ${renderOrderbook(homeOb, homeName, false)}
+        </div>
+        <div class="pm-slug">Slug: ${polyData.slug || 'N/A'}</div>
+    </div>`;
+}
+
 function oddsSection(g, odds, period) {
     const pd = odds[period] || { spread: { books: [] }, total: { line: 0, books: [] }, ml: { books: [] } };
     const spreadCons = consensusSpread(pd.spread.books);
@@ -2276,9 +3145,13 @@ function oddsSection(g, odds, period) {
     const arbs = CFG.arbEnabled ? findArbitrageOpportunities(pd, g) : [];
     const arbsHtml = arbs.length > 0 ? getArbsBar(arbs, g) : '';
     
+    // Get Polymarket data for this game
+    const polyHtml = CFG.polyEnabled ? getPolymarketSection(g) : '';
+    
     return `<div class="odds-section">
         ${arbsHtml}
         ${bestLinesHtml}
+        ${polyHtml}
         <div class="market-section">
             <div class="market-header">📊 Spread</div>
             ${spreadTable(pd.spread, spreadCons, g, period, canCalcEV)}
@@ -2290,6 +3163,92 @@ function oddsSection(g, odds, period) {
         <div class="market-section">
             <div class="market-header">💵 Moneyline</div>
             ${mlTable(pd.ml, mlCons, g, period, canCalcEV)}
+        </div>
+    </div>`;
+}
+
+function getPolymarketSection(g) {
+    const polyData = POLY_DATA[g.eventID];
+    if (!polyData || !polyData.markets.length) return '';
+    
+    // Filter to ML markets only (most useful for comparison)
+    const mlMarkets = polyData.markets.filter(m => m.type === 'ml');
+    
+    // If no pure ML, check for the main "vs" market
+    let displayMarkets = mlMarkets;
+    if (mlMarkets.length === 0) {
+        displayMarkets = polyData.markets.filter(m => {
+            const q = (m.question || '').toLowerCase();
+            return !q.includes('spread') && !q.includes('over') && !q.includes('under') && !q.includes('o/u');
+        }).slice(0, 1);
+    }
+    
+    if (displayMarkets.length === 0) return '';
+    
+    // Get team names for display
+    const awayShort = g.teams?.away?.names?.short || 'Away';
+    const homeShort = g.teams?.home?.names?.short || 'Home';
+    
+    const m = displayMarkets[0];
+    const clobTokenIds = m.clobTokenIds || [];
+    const orderbooks = polyData.orderbooks || {};
+    
+    // Get orderbook data for each outcome
+    const ob1 = clobTokenIds[0] ? orderbooks[clobTokenIds[0]] : null;
+    const ob2 = clobTokenIds[1] ? orderbooks[clobTokenIds[1]] : null;
+    
+    // Determine which outcome is which team
+    const out1 = (m.outcomes[0] || '').toLowerCase();
+    const awayLower = awayShort.toLowerCase();
+    
+    let awayOb, homeOb;
+    if (out1.includes(awayLower) || (ob1?.outcome || '').toLowerCase().includes(awayLower)) {
+        awayOb = ob1;
+        homeOb = ob2;
+    } else {
+        awayOb = ob2;
+        homeOb = ob1;
+    }
+    
+    // Calculate weighted ask prices based on min liquidity setting
+    const minLiq = CFG.polyMinLiquidity || 500;
+    const awayAskPrice = awayOb ? calcWeightedAskPrice(awayOb.asks, minLiq) : null;
+    const homeAskPrice = homeOb ? calcWeightedAskPrice(homeOb.asks, minLiq) : null;
+    
+    // Fallback to market prices if no orderbook
+    let awayPrice, homePrice;
+    if (out1.includes(awayLower)) {
+        awayPrice = awayAskPrice || m.prices[0];
+        homePrice = homeAskPrice || m.prices[1];
+    } else {
+        awayPrice = awayAskPrice || m.prices[1];
+        homePrice = homeAskPrice || m.prices[0];
+    }
+    
+    const awayOdds = polyToAmerican(awayPrice);
+    const homeOdds = polyToAmerican(homePrice);
+    
+    const vol = m.volume >= 1000 ? `$${(m.volume/1000).toFixed(1)}k` : `$${Math.round(m.volume)}`;
+    const liq = m.liquidity >= 1000 ? `$${(m.liquidity/1000).toFixed(1)}k` : `$${Math.round(m.liquidity)}`;
+    
+    // Simple display without orderbook bars
+    return `<div class="poly-section">
+        <div class="poly-header">
+            <div class="book-logo" style="background:#7c3aed">POLY</div>
+            <span>Polymarket ML</span>
+        </div>
+        <div class="poly-ml-row">
+            <div class="poly-ml-market">
+                <div class="poly-ml-teams">
+                    <span class="poly-team"><span class="poly-side">A</span>${awayShort}: <strong>${(awayPrice*100).toFixed(0)}¢</strong> <span class="poly-odds">${fmt(awayOdds)}</span></span>
+                    <span class="poly-team"><span class="poly-side">H</span>${homeShort}: <strong>${(homePrice*100).toFixed(0)}¢</strong> <span class="poly-odds">${fmt(homeOdds)}</span></span>
+                </div>
+                <div class="poly-stats">
+                    <span class="poly-stat">Vol ${vol}</span>
+                    <span class="poly-stat">Liq ${liq}</span>
+                    <span class="poly-stat">Min $${CFG.polyMinLiquidity}</span>
+                </div>
+            </div>
         </div>
     </div>`;
 }
