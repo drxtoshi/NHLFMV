@@ -116,7 +116,8 @@
         .odds-section { padding:10px 12px; }
         .odds-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
         .odds-title { font-size:12px; font-weight:600; color:var(--txt2); }
-        .consensus-pills { display:flex; gap:12px; }
+        .consensus-pills { display:flex; gap:24px; }
+        .pill-group { display:flex; gap:12px; }
         .pill { text-align:center; }
         .pill-label { font-size:9px; color:var(--txt3); text-transform:uppercase; }
         .pill-value { font-size:13px; font-weight:600; color:var(--accent); }
@@ -182,6 +183,69 @@
         /* Table scroll wrapper */
         .table-scroll { overflow-x:auto; }
         
+        /* Line change indicators */
+        .odds-value.changed-red { box-shadow:0 0 0 2px #ef4444; }
+        .odds-value.changed-yellow { box-shadow:0 0 0 2px #f59e0b; }
+        .line-arrow { font-size:10px; margin-left:2px; }
+        .line-arrow.up { color:#ef4444; }
+        .line-arrow.down { color:#22c55e; }
+        
+        /* Clickable odds */
+        .odds-value.clickable { cursor:pointer; transition:transform 0.1s, box-shadow 0.1s; }
+        .odds-value.clickable:hover { transform:scale(1.05); box-shadow:0 0 0 2px var(--accent); }
+        
+        /* Bet Slip Popup */
+        .bet-slip-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; display:flex; align-items:center; justify-content:center; opacity:0; visibility:hidden; transition:all 0.2s; }
+        .bet-slip-overlay.active { opacity:1; visibility:visible; }
+        .bet-slip { background:var(--bg2); border:1px solid var(--bdr); border-radius:12px; width:90%; max-width:400px; overflow:hidden; transform:scale(0.9); transition:transform 0.2s; }
+        .bet-slip-overlay.active .bet-slip { transform:scale(1); }
+        .bet-slip-header { background:var(--bg3); padding:12px 16px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--bdr); }
+        .bet-slip-title { font-weight:600; font-size:14px; }
+        .bet-slip-close { background:none; border:none; color:var(--txt3); font-size:20px; cursor:pointer; padding:0; line-height:1; }
+        .bet-slip-close:hover { color:var(--txt); }
+        .bet-slip-body { padding:16px; }
+        .bet-slip-game { display:flex; align-items:center; gap:8px; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--bdr); }
+        .bet-slip-teams { font-weight:500; }
+        .bet-slip-period { font-size:12px; color:var(--txt3); }
+        .bet-slip-selection { background:var(--bg3); border-radius:8px; padding:12px; margin-bottom:16px; }
+        .bet-slip-side { font-size:18px; font-weight:600; color:var(--accent); }
+        .bet-slip-details { display:flex; gap:16px; margin-top:8px; font-size:13px; color:var(--txt2); }
+        .bet-slip-book { display:flex; align-items:center; gap:6px; }
+        .bet-slip-book .book-logo { width:24px; height:16px; font-size:7px; }
+        .bet-slip-field { margin-bottom:12px; }
+        .bet-slip-field label { display:block; font-size:11px; color:var(--txt3); text-transform:uppercase; margin-bottom:4px; }
+        .bet-slip-field input { width:100%; padding:10px 12px; background:var(--bg); border:1px solid var(--bdr); border-radius:6px; color:var(--txt); font-size:14px; font-family:inherit; }
+        .bet-slip-field input:focus { outline:none; border-color:var(--accent); }
+        .bet-slip-ev { display:flex; justify-content:space-between; padding:8px 12px; background:var(--profit-bg); border-radius:6px; margin-bottom:16px; }
+        .bet-slip-ev-label { font-size:11px; color:var(--profit); }
+        .bet-slip-ev-value { font-weight:600; color:var(--profit); }
+        .bet-slip-actions { display:flex; gap:8px; }
+        .bet-slip-actions .btn { flex:1; padding:12px; font-size:14px; }
+        
+        /* Bet Log Tab */
+        .tabs-container { display:flex; gap:4px; margin-bottom:0; }
+        .tab-btn { padding:8px 16px; background:var(--bg2); border:1px solid var(--bdr); border-radius:6px 6px 0 0; color:var(--txt3); font-family:inherit; font-size:12px; font-weight:500; cursor:pointer; border-bottom:none; margin-bottom:-1px; position:relative; z-index:1; }
+        .tab-btn.active { background:transparent; color:var(--txt); border-bottom:1px solid transparent; }
+        .tab-btn:hover:not(.active) { color:var(--txt2); }
+        .tab-content { display:none; }
+        .tab-content.active { display:block; }
+        
+        .bet-log { max-height:400px; overflow-y:auto; }
+        .bet-log-empty { text-align:center; padding:24px; color:var(--txt3); }
+        .bet-log-table { width:100%; border-collapse:collapse; font-size:12px; }
+        .bet-log-table th { padding:8px 6px; text-align:left; font-size:10px; font-weight:600; color:var(--txt3); text-transform:uppercase; border-bottom:1px solid var(--bdr); position:sticky; top:0; background:var(--bg3); }
+        .bet-log-table td { padding:8px 6px; border-bottom:1px solid var(--bdr); }
+        .bet-log-table tr:hover { background:rgba(255,255,255,0.02); }
+        .bet-log-actions { display:flex; gap:8px; margin-top:12px; }
+        .bet-log-actions .btn { font-size:12px; padding:8px 12px; }
+        .bet-result { padding:2px 6px; border-radius:3px; font-size:10px; font-weight:600; }
+        .bet-result.pending { background:var(--bg); color:var(--txt3); }
+        .bet-result.win { background:var(--profit-bg); color:var(--profit); }
+        .bet-result.loss { background:var(--loss-bg); color:var(--loss); }
+        .bet-result.push { background:rgba(59,130,246,0.1); color:var(--accent); }
+        .bet-delete { background:none; border:none; color:var(--txt3); cursor:pointer; font-size:14px; padding:2px; }
+        .bet-delete:hover { color:var(--loss); }
+        
         /* Responsive */
         @media (max-width: 900px) {
             .config-grid { grid-template-columns:repeat(2, 1fr); }
@@ -190,64 +254,65 @@
             .stat { min-width:calc(50% - 6px); }
         }
         
-        /* Mobile Mode - Fully compact, no horizontal scroll */
+        /* Mobile Mode - Compact but readable */
         .mobile-mode .app { padding:6px; }
         .mobile-mode .header { padding:6px 0 10px; flex-direction:column; gap:8px; }
         .mobile-mode .logo { gap:6px; }
-        .mobile-mode .logo-icon { font-size:18px; }
-        .mobile-mode .logo h1 { font-size:14px; }
+        .mobile-mode .logo-icon { font-size:20px; }
+        .mobile-mode .logo h1 { font-size:15px; }
         .mobile-mode .controls { width:100%; justify-content:center; gap:4px; flex-wrap:wrap; }
-        .mobile-mode .controls .btn { padding:5px 8px; font-size:11px; }
-        .mobile-mode .status { padding:4px 6px; font-size:10px; gap:4px; }
-        .mobile-mode .status .dot { width:5px; height:5px; }
+        .mobile-mode .controls .btn { padding:6px 10px; font-size:12px; }
+        .mobile-mode .status { padding:5px 8px; font-size:11px; gap:4px; }
+        .mobile-mode .status .dot { width:6px; height:6px; }
         
         .mobile-mode .stats { gap:4px; margin-bottom:10px; }
-        .mobile-mode .stat { padding:6px 8px; min-width:calc(25% - 3px); flex:1; border-radius:6px; }
-        .mobile-mode .stat-label { font-size:8px; margin-bottom:2px; }
-        .mobile-mode .stat-value { font-size:13px; }
+        .mobile-mode .stat { padding:8px 10px; min-width:calc(25% - 3px); flex:1; border-radius:6px; }
+        .mobile-mode .stat-label { font-size:9px; margin-bottom:2px; }
+        .mobile-mode .stat-value { font-size:14px; }
         
-        .mobile-mode .games { gap:6px; }
+        .mobile-mode .games { gap:6px; grid-template-columns:1fr; }
         .mobile-mode .game { border-radius:6px; }
-        .mobile-mode .game-header { padding:8px 10px; }
-        .mobile-mode .matchup { gap:6px; }
-        .mobile-mode .team { gap:4px; }
-        .mobile-mode .team-name { font-size:12px; }
-        .mobile-mode .team-score { font-size:16px; margin-left:4px; }
-        .mobile-mode .team-abbr { font-size:9px; padding:2px 4px; }
-        .mobile-mode .vs { font-size:10px; }
-        .mobile-mode .game-status { padding:3px 6px; font-size:10px; }
-        .mobile-mode .game-date { font-size:10px; }
+        .mobile-mode .game-header { padding:10px 12px; }
+        .mobile-mode .matchup { gap:8px; }
+        .mobile-mode .team { gap:5px; }
+        .mobile-mode .team-name { font-size:13px; }
+        .mobile-mode .team-score { font-size:18px; margin-left:5px; }
+        .mobile-mode .team-abbr { font-size:10px; padding:3px 5px; }
+        .mobile-mode .vs { font-size:11px; }
+        .mobile-mode .game-status { padding:4px 8px; font-size:11px; }
+        .mobile-mode .game-date { font-size:11px; }
         
-        .mobile-mode .period-tabs { padding:4px 8px; gap:2px; }
-        .mobile-mode .period-tab { padding:4px 8px; font-size:10px; }
+        .mobile-mode .period-tabs { padding:5px 10px; gap:3px; }
+        .mobile-mode .period-tab { padding:5px 10px; font-size:11px; }
         
-        .mobile-mode .odds-section { padding:8px; }
+        .mobile-mode .odds-section { padding:10px; }
         .mobile-mode .odds-header { margin-bottom:8px; flex-direction:column; gap:6px; align-items:stretch; }
-        .mobile-mode .odds-title { font-size:11px; }
-        .mobile-mode .consensus-pills { gap:8px; justify-content:space-between; }
-        .mobile-mode .pill-label { font-size:8px; }
-        .mobile-mode .pill-value { font-size:11px; }
+        .mobile-mode .odds-title { font-size:12px; }
+        .mobile-mode .consensus-pills { gap:16px; justify-content:space-between; }
+        .mobile-mode .pill-group { gap:8px; }
+        .mobile-mode .pill-label { font-size:9px; }
+        .mobile-mode .pill-value { font-size:12px; }
         
-        /* Mobile table - ultra compact */
+        /* Mobile table - compact but readable */
         .mobile-mode .table-scroll { overflow-x:visible; }
         .mobile-mode .odds-table { min-width:auto; width:100%; table-layout:fixed; }
-        .mobile-mode .odds-table th { padding:4px 2px; font-size:8px; text-align:center; }
+        .mobile-mode .odds-table th { padding:5px 2px; font-size:9px; text-align:center; }
         .mobile-mode .odds-table th:first-child { text-align:left; width:50px; }
-        .mobile-mode .odds-table td { padding:5px 2px; text-align:center; font-size:10px; }
+        .mobile-mode .odds-table td { padding:6px 2px; text-align:center; font-size:11px; }
         .mobile-mode .odds-table td:first-child { text-align:left; }
         
         .mobile-mode .book-cell { gap:0; justify-content:flex-start; }
-        .mobile-mode .book-logo { width:28px; height:20px; font-size:7px; border-radius:3px; font-weight:700; }
+        .mobile-mode .book-logo { width:30px; height:22px; font-size:8px; border-radius:3px; font-weight:700; }
         .mobile-mode .book-name { display:none; }
         .mobile-mode .book-badge { display:none; }
         
-        .mobile-mode .odds-value { padding:2px 3px; min-width:auto; font-size:10px; border-radius:3px; }
-        .mobile-mode .ev-value { padding:2px 3px; min-width:auto; font-size:10px; border-radius:3px; }
-        .mobile-mode .edge-badge { padding:2px 4px; font-size:9px; border-radius:3px; }
-        .mobile-mode .signal-cell { font-size:9px; }
+        .mobile-mode .odds-value { padding:3px 4px; min-width:auto; font-size:11px; border-radius:3px; }
+        .mobile-mode .ev-value { padding:3px 4px; min-width:auto; font-size:11px; border-radius:3px; }
+        .mobile-mode .edge-badge { padding:3px 5px; font-size:10px; border-radius:3px; }
+        .mobile-mode .signal-cell { font-size:10px; }
         
-        .mobile-mode .consensus-row td:first-child { font-size:9px; }
-        .mobile-mode .consensus-row td:first-child span { font-size:9px !important; }
+        .mobile-mode .consensus-row td:first-child { font-size:10px; }
+        .mobile-mode .consensus-row td:first-child span { font-size:10px !important; }
         
         /* Hide Line column on mobile */
         .mobile-mode .odds-table th:nth-child(2),
@@ -335,14 +400,76 @@
         <div class="stat"><div class="stat-label">Updated</div><div class="stat-value" id="sTime" style="font-size:14px">--</div></div>
     </div>
     
-    <div class="games" id="games">
-        <div class="loading"><div class="spinner"></div><div style="color:var(--txt3)">Enter API key and refresh, or click Demo</div></div>
+    <div class="tabs-container">
+        <button class="tab-btn active" onclick="switchTab('games')">Games</button>
+        <button class="tab-btn" onclick="switchTab('betlog')">Bet Log</button>
+    </div>
+    
+    <div class="tab-content active" id="tab-games">
+        <div class="games" id="games">
+            <div class="loading"><div class="spinner"></div><div style="color:var(--txt3)">Enter API key and refresh, or click Demo</div></div>
+        </div>
+    </div>
+    
+    <div class="tab-content" id="tab-betlog">
+        <div class="bet-log" id="betLog">
+            <div class="bet-log-empty">No bets logged yet. Click on any odds to log a bet.</div>
+        </div>
+        <div class="bet-log-actions">
+            <button class="btn btn-secondary" onclick="exportBetsCSV()">📥 Export CSV</button>
+            <button class="btn btn-secondary" onclick="clearBets()">🗑️ Clear All</button>
+        </div>
     </div>
     
     <div class="debug" id="debug"><pre id="log"></pre></div>
 </div>
 
 <div class="alerts" id="alerts"></div>
+
+<!-- Bet Slip Popup -->
+<div class="bet-slip-overlay" id="betSlipOverlay" onclick="closeBetSlip(event)">
+    <div class="bet-slip" onclick="event.stopPropagation()">
+        <div class="bet-slip-header">
+            <span class="bet-slip-title">Log Bet</span>
+            <button class="bet-slip-close" onclick="closeBetSlip()">&times;</button>
+        </div>
+        <div class="bet-slip-body">
+            <div class="bet-slip-game">
+                <div>
+                    <div class="bet-slip-teams" id="bsTeams">--</div>
+                    <div class="bet-slip-period" id="bsPeriod">--</div>
+                </div>
+            </div>
+            <div class="bet-slip-selection">
+                <div class="bet-slip-side" id="bsSide">--</div>
+                <div class="bet-slip-details">
+                    <div class="bet-slip-book">
+                        <div class="book-logo" id="bsBookLogo">--</div>
+                        <span id="bsBookName">--</span>
+                    </div>
+                    <div id="bsLine">Line: --</div>
+                    <div id="bsOdds">Odds: --</div>
+                </div>
+            </div>
+            <div class="bet-slip-ev" id="bsEV" style="display:none">
+                <span class="bet-slip-ev-label">Expected Value</span>
+                <span class="bet-slip-ev-value" id="bsEVValue">+0.0%</span>
+            </div>
+            <div class="bet-slip-field">
+                <label>Wager Amount ($)</label>
+                <input type="number" id="bsAmount" placeholder="100" min="1" step="1">
+            </div>
+            <div class="bet-slip-field">
+                <label>Notes (optional)</label>
+                <input type="text" id="bsNotes" placeholder="Any notes...">
+            </div>
+            <div class="bet-slip-actions">
+                <button class="btn btn-secondary" onclick="closeBetSlip()">Cancel</button>
+                <button class="btn btn-primary" onclick="submitBet()">Log Bet</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
 const CFG = {
@@ -375,8 +502,217 @@ const SHARP_LIST = ['pinnacle','circa','bookmaker','betcris','betonline'];
 const SOFT_LIST = ['draftkings','fanduel','betmgm','caesars','pointsbet','betrivers','bet365','espnbet','fanatics'];
 
 let DATA = [], alerted = new Set(), timer = null, mobileMode = false;
+let lineHistory = {}; // Track line changes: {eventId-bookId-period-side: {price, timestamp}}
+let betLog = []; // Array of logged bets
+let currentBetSlip = null; // Current bet being created
 
 function log(m) { document.getElementById('log').textContent += `${new Date().toLocaleTimeString()} ${m}\n`; console.log(m); }
+
+// Tab switching
+function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelector(`.tab-btn[onclick="switchTab('${tab}')"]`).classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+    if (tab === 'betlog') renderBetLog();
+}
+
+// Bet Slip functions
+function openBetSlip(gameId, bookKey, period, side, line, odds, ev) {
+    const game = DATA.find(d => d.game.eventID === gameId)?.game;
+    if (!game) return;
+    
+    const bkd = BOOKS[bookKey] || {n: bookKey, a: bookKey.substring(0,3).toUpperCase(), c: '#666'};
+    const away = game.teams?.away?.names?.short || game.teams?.away?.name || 'Away';
+    const home = game.teams?.home?.names?.short || game.teams?.home?.name || 'Home';
+    
+    currentBetSlip = { gameId, bookKey, period, side, line, odds, ev, away, home, timestamp: Date.now() };
+    
+    document.getElementById('bsTeams').textContent = `${away} @ ${home}`;
+    document.getElementById('bsPeriod').textContent = `Period ${period.replace('p','')} Total`;
+    document.getElementById('bsSide').textContent = `${side.toUpperCase()} ${line}`;
+    document.getElementById('bsBookLogo').textContent = bkd.a;
+    document.getElementById('bsBookLogo').style.background = bkd.c;
+    document.getElementById('bsBookName').textContent = bkd.n;
+    document.getElementById('bsLine').textContent = `Line: ${line}`;
+    document.getElementById('bsOdds').textContent = `Odds: ${odds > 0 ? '+' : ''}${odds}`;
+    
+    if (ev !== null) {
+        document.getElementById('bsEV').style.display = 'flex';
+        document.getElementById('bsEVValue').textContent = `${ev > 0 ? '+' : ''}${ev.toFixed(1)}%`;
+    } else {
+        document.getElementById('bsEV').style.display = 'none';
+    }
+    
+    document.getElementById('bsAmount').value = '';
+    document.getElementById('bsNotes').value = '';
+    document.getElementById('betSlipOverlay').classList.add('active');
+    document.getElementById('bsAmount').focus();
+}
+
+function closeBetSlip(event) {
+    if (event && event.target !== event.currentTarget) return;
+    document.getElementById('betSlipOverlay').classList.remove('active');
+    currentBetSlip = null;
+}
+
+function submitBet() {
+    if (!currentBetSlip) return;
+    
+    const amount = parseFloat(document.getElementById('bsAmount').value);
+    if (!amount || amount <= 0) {
+        alert('Please enter a valid wager amount');
+        return;
+    }
+    
+    // Calculate To Win based on odds
+    const odds = currentBetSlip.odds;
+    const toWin = odds >= 100 ? amount * (odds / 100) : amount * (100 / Math.abs(odds));
+    
+    const bet = {
+        id: Date.now(),
+        date: new Date().toLocaleDateString('en-US'), // Format: 1/14/2026
+        market: `${currentBetSlip.away} @ ${currentBetSlip.home} P${currentBetSlip.period.replace('p','')} ${currentBetSlip.side.toUpperCase()} ${currentBetSlip.line}`,
+        propNum: '', // Leave blank as requested
+        juice: currentBetSlip.odds,
+        risk: amount,
+        book: currentBetSlip.bookKey,
+        toWin: toWin,
+        // Keep extra fields for internal use
+        gameId: currentBetSlip.gameId,
+        period: currentBetSlip.period,
+        side: currentBetSlip.side,
+        line: currentBetSlip.line,
+        ev: currentBetSlip.ev,
+        notes: document.getElementById('bsNotes').value || '',
+        result: 'pending',
+        timestamp: new Date().toISOString()
+    };
+    
+    betLog.push(bet);
+    saveBetLog();
+    closeBetSlip();
+    
+    // Show confirmation
+    const bkd = BOOKS[bet.book] || {n: bet.book};
+    triggerAlert({teams: {away: {names: {short: currentBetSlip.away}}, home: {names: {short: currentBetSlip.home}}}}, bkd, {line: bet.line}, bet.ev, null, true, false, true);
+}
+
+function saveBetLog() {
+    localStorage.setItem('ppBetLog', JSON.stringify(betLog));
+}
+
+function loadBetLog() {
+    const saved = localStorage.getItem('ppBetLog');
+    if (saved) betLog = JSON.parse(saved);
+}
+
+function renderBetLog() {
+    const container = document.getElementById('betLog');
+    if (!betLog.length) {
+        container.innerHTML = '<div class="bet-log-empty">No bets logged yet. Click on any odds to log a bet.</div>';
+        return;
+    }
+    
+    // Sort by timestamp descending (newest first)
+    const sorted = [...betLog].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    container.innerHTML = `<table class="bet-log-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Market</th>
+                <th>Prop #</th>
+                <th>Juice</th>
+                <th>Risk</th>
+                <th>Book</th>
+                <th>To Win</th>
+                <th>Result</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            ${sorted.map(bet => {
+                const bkd = BOOKS[bet.book] || {a: bet.book.substring(0,3).toUpperCase(), c: '#666', n: bet.book};
+                return `<tr>
+                    <td>${bet.date}</td>
+                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${bet.market}">${bet.market}</td>
+                    <td>${bet.propNum || ''}</td>
+                    <td>${bet.juice > 0 ? '+' : ''}${bet.juice}</td>
+                    <td>$${bet.risk.toFixed(2)}</td>
+                    <td><span class="book-logo" style="background:${bkd.c};color:#fff;padding:2px 4px;border-radius:2px;font-size:8px">${bkd.a}</span> ${bkd.n}</td>
+                    <td>$${bet.toWin.toFixed(2)}</td>
+                    <td>
+                        <select class="bet-result ${bet.result}" onchange="updateBetResult(${bet.id}, this.value)" style="background:transparent;border:none;color:inherit;font-size:11px;cursor:pointer">
+                            <option value="pending" ${bet.result === 'pending' ? 'selected' : ''}>Pending</option>
+                            <option value="win" ${bet.result === 'win' ? 'selected' : ''}>Win</option>
+                            <option value="loss" ${bet.result === 'loss' ? 'selected' : ''}>Loss</option>
+                            <option value="push" ${bet.result === 'push' ? 'selected' : ''}>Push</option>
+                        </select>
+                    </td>
+                    <td><button class="bet-delete" onclick="deleteBet(${bet.id})" title="Delete">×</button></td>
+                </tr>`;
+            }).join('')}
+        </tbody>
+    </table>`;
+}
+
+function updateBetResult(betId, result) {
+    const bet = betLog.find(b => b.id === betId);
+    if (bet) {
+        bet.result = result;
+        saveBetLog();
+        renderBetLog();
+    }
+}
+
+function deleteBet(betId) {
+    if (confirm('Delete this bet?')) {
+        betLog = betLog.filter(b => b.id !== betId);
+        saveBetLog();
+        renderBetLog();
+    }
+}
+
+function clearBets() {
+    if (confirm('Clear all bets? This cannot be undone.')) {
+        betLog = [];
+        saveBetLog();
+        renderBetLog();
+    }
+}
+
+function exportBetsCSV() {
+    if (!betLog.length) {
+        alert('No bets to export');
+        return;
+    }
+    
+    // Match spreadsheet format: Date, Market, Prop #, Juice, Risk, Book, To Win
+    const headers = ['Date', 'Market', 'Prop #', 'Juice', 'Risk', 'Book', 'To Win'];
+    const rows = betLog.map(bet => {
+        const bkd = BOOKS[bet.book] || {n: bet.book};
+        return [
+            bet.date,
+            bet.market,
+            bet.propNum || '',
+            bet.juice,
+            bet.risk.toFixed(2),
+            bkd.n,
+            bet.toWin.toFixed(2)
+        ];
+    });
+    
+    const csv = [headers, ...rows].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    
+    const blob = new Blob([csv], {type: 'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nhl-period-bets-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
 
 function toggleMobile() {
     mobileMode = !mobileMode;
@@ -387,6 +723,7 @@ function toggleMobile() {
 document.addEventListener('DOMContentLoaded', () => {
     loadCfg();
     renderBookSelectors();
+    loadBetLog();
     const k = localStorage.getItem('sgKey');
     if (k) { document.getElementById('apiKey').value = k; CFG.apiKey = k; }
     // Load mobile state
@@ -449,13 +786,21 @@ function toggleCompare(k) {
 function toggleConfig() { document.getElementById('config').classList.toggle('show'); }
 function setStatus(on, txt) { document.getElementById('dot').className = 'dot' + (on ? '' : ' off'); document.getElementById('statusTxt').textContent = txt; }
 
+let isFirstLoad = true;
+
 async function fetchData() {
     saveCfg();
     if (!CFG.apiKey) { alert('Enter API key in Settings'); toggleConfig(); return; }
     document.getElementById('debug').style.display = 'block';
-    document.getElementById('log').textContent = '';
-    setStatus(false, 'Loading...');
-    document.getElementById('games').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    
+    // Only show loading spinner on first load
+    if (isFirstLoad) {
+        document.getElementById('log').textContent = '';
+        setStatus(false, 'Loading...');
+        document.getElementById('games').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    } else {
+        setStatus(false, 'Refreshing...');
+    }
     
     try {
         const oddIDs = ['points-all-1p-ou-over','points-all-1p-ou-under','points-all-2p-ou-over','points-all-2p-ou-under','points-all-3p-ou-over','points-all-3p-ou-under'].join(',');
@@ -487,15 +832,20 @@ async function fetchData() {
         
         log(`Showing ${DATA.length} games (${live.length} live, ${DATA.length - live.length} upcoming)`);
         
-        render();
+        render(!isFirstLoad); // Pass true for refresh after first load
         updateStats();
         setStatus(true, live.length > 0 ? `${live.length} Live` : 'Connected');
+        
+        isFirstLoad = false;
+        
         if (timer) clearInterval(timer);
         timer = setInterval(fetchData, CFG.refresh * 1000);
     } catch (err) {
         log('Error: ' + err.message);
         setStatus(false, 'Error');
-        document.getElementById('games').innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><h3>Error</h3><p>${err.message}</p></div>`;
+        if (isFirstLoad) {
+            document.getElementById('games').innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><h3>Error</h3><p>${err.message}</p></div>`;
+        }
     }
 }
 
@@ -535,7 +885,7 @@ function consensus(books, line) {
     return { oP: to/sb.length, uP: tu/sb.length, oFair: p2a(to/sb.length), uFair: p2a(tu/sb.length), line, cnt: sb.length };
 }
 
-function render() {
+function render(isRefresh = false) {
     const c = document.getElementById('games');
     if (!DATA.length) { c.innerHTML = '<div class="empty"><div class="empty-icon">🏒</div><h3>No Games</h3><p>Click Demo to preview</p></div>'; return; }
     
@@ -552,12 +902,44 @@ function render() {
         if (g.classList.contains('seen')) seenGames.add(id);
     });
     
-    c.innerHTML = DATA.map(({game: g, pOdds}) => {
-        const edge = hasEdge(pOdds, g);
-        const savedPeriod = activeTabs[g.eventID];
-        const wasSeen = seenGames.has(g.eventID);
-        return `<div class="game${edge ? ' has-edge' : ''}${wasSeen ? ' seen' : ''}" id="g-${g.eventID}" onclick="markSeen('${g.eventID}')">${gameHeader(g)}${periodTabs(g, pOdds, savedPeriod)}${oddsSection(g, pOdds, savedPeriod)}</div>`;
-    }).join('');
+    // If this is a refresh and we have existing games, do incremental update
+    if (isRefresh && c.children.length > 0) {
+        DATA.forEach(({game: g, pOdds}) => {
+            const existingGame = document.getElementById('g-' + g.eventID);
+            const savedPeriod = activeTabs[g.eventID];
+            const edge = hasEdge(pOdds, g);
+            const wasSeen = seenGames.has(g.eventID);
+            
+            if (existingGame) {
+                // Update existing game in place
+                const newContent = `${gameHeader(g)}${periodTabs(g, pOdds, savedPeriod)}${oddsSection(g, pOdds, savedPeriod)}`;
+                existingGame.innerHTML = newContent;
+                existingGame.className = `game${edge ? ' has-edge' : ''}${wasSeen ? ' seen' : ''}`;
+            } else {
+                // Add new game
+                const newGame = document.createElement('div');
+                newGame.className = `game${edge ? ' has-edge' : ''}`;
+                newGame.id = 'g-' + g.eventID;
+                newGame.onclick = () => markSeen(g.eventID);
+                newGame.innerHTML = `${gameHeader(g)}${periodTabs(g, pOdds, savedPeriod)}${oddsSection(g, pOdds, savedPeriod)}`;
+                c.appendChild(newGame);
+            }
+        });
+        
+        // Remove games that no longer exist
+        const currentIds = new Set(DATA.map(d => 'g-' + d.game.eventID));
+        Array.from(c.children).forEach(child => {
+            if (!currentIds.has(child.id)) child.remove();
+        });
+    } else {
+        // Full render
+        c.innerHTML = DATA.map(({game: g, pOdds}) => {
+            const edge = hasEdge(pOdds, g);
+            const savedPeriod = activeTabs[g.eventID];
+            const wasSeen = seenGames.has(g.eventID);
+            return `<div class="game${edge ? ' has-edge' : ''}${wasSeen ? ' seen' : ''}" id="g-${g.eventID}" onclick="markSeen('${g.eventID}')">${gameHeader(g)}${periodTabs(g, pOdds, savedPeriod)}${oddsSection(g, pOdds, savedPeriod)}</div>`;
+        }).join('');
+    }
     
     // Restore scroll position after render
     requestAnimationFrame(() => {
@@ -671,14 +1053,32 @@ function oddsSection(g, pOdds, selP = null) {
     const pd = pOdds[cp] || {line: 1.5, books: []};
     const cons = consensus(pd.books, pd.line);
     
+    // Find best over and under books
+    let bestOver = null, bestUnder = null, bestOverPrice = -Infinity, bestUnderPrice = -Infinity;
+    const show = [...new Set([...CFG.sharpBooks, ...CFG.compareBooks])];
+    pd.books.filter(b => show.includes(b.bk?.toLowerCase())).forEach(b => {
+        if (b.overPrice && b.overPrice > bestOverPrice) { bestOverPrice = b.overPrice; bestOver = b.bk; }
+        if (b.underPrice && b.underPrice > bestUnderPrice) { bestUnderPrice = b.underPrice; bestUnder = b.bk; }
+    });
+    
+    const bestOverBook = BOOKS[bestOver?.toLowerCase()] || {a: '--', c: '#666'};
+    const bestUnderBook = BOOKS[bestUnder?.toLowerCase()] || {a: '--', c: '#666'};
+    
+    // Compact period display
+    const periodLabel = `P${cp.replace('p','')}`;
+    
     return `<div class="odds-section">
         <div class="odds-header">
-            <span class="odds-title">Period ${cp.replace('p','')} Total</span>
+            <span class="odds-title">${periodLabel} · ${cons ? cons.line : '1.5'}</span>
             ${cons ? `<div class="consensus-pills">
-                <div class="pill"><div class="pill-label">Line</div><div class="pill-value">${cons.line}</div></div>
-                <div class="pill"><div class="pill-label">Fair O</div><div class="pill-value">${fmt(cons.oFair)}</div></div>
-                <div class="pill"><div class="pill-label">Fair U</div><div class="pill-value">${fmt(cons.uFair)}</div></div>
-                <div class="pill"><div class="pill-label">Sharp#</div><div class="pill-value">${cons.cnt}</div></div>
+                <div class="pill-group">
+                    <div class="pill"><div class="pill-label">Fair O</div><div class="pill-value" style="color:#c084fc">${fmt(cons.oFair)}</div></div>
+                    <div class="pill"><div class="pill-label">Best O</div><div class="pill-value" style="display:flex;align-items:center;gap:4px;color:#60a5fa"><span class="mini-book" style="background:${bestOverBook.c};color:#fff;padding:2px 4px;border-radius:2px;font-size:8px;font-weight:700">${bestOverBook.a}</span>${fmt(bestOverPrice)}</div></div>
+                </div>
+                <div class="pill-group">
+                    <div class="pill"><div class="pill-label">Fair U</div><div class="pill-value" style="color:#c084fc">${fmt(cons.uFair)}</div></div>
+                    <div class="pill"><div class="pill-label">Best U</div><div class="pill-value" style="display:flex;align-items:center;gap:4px;color:#60a5fa"><span class="mini-book" style="background:${bestUnderBook.c};color:#fff;padding:2px 4px;border-radius:2px;font-size:8px;font-weight:700">${bestUnderBook.a}</span>${fmt(bestUnderPrice)}</div></div>
+                </div>
             </div>` : ''}
         </div>
         ${oddsTable(pd, cons, g, cp)}
@@ -738,7 +1138,6 @@ function oddsRow(b, cons, bo, bu, wo, wu, g, tot, currentPeriod, isLive) {
     const isCompare = CFG.compareBooks.includes(bk);
     
     let oEV = null, uEV = null;
-    // Only calculate EV if: game is live AND we're viewing the current period, OR it's P1 pregame
     const canCalcEV = isLive ? (currentPeriod === viewingPeriod) : (viewingPeriod === '1p');
     
     if (cons && isCompare && canCalcEV) {
@@ -754,28 +1153,83 @@ function oddsRow(b, cons, bo, bu, wo, wu, g, tot, currentPeriod, isLive) {
         if (!alerted.has(k)) { alerted.add(k); triggerAlert(g, bkd, b, oEV, uEV, oE, uE); }
     }
     
+    // Check for line changes
+    const now = Date.now();
+    const oKey = `${g.eventID}-${bk}-${viewingPeriod}-over`;
+    const uKey = `${g.eventID}-${bk}-${viewingPeriod}-under`;
+    
+    const oChange = getLineChange(oKey, b.overPrice, now);
+    const uChange = getLineChange(uKey, b.underPrice, now);
+    
     // Determine styling: green if better than fair, blue if best available
     const oBetterThanFair = cons && b.overPrice && b.overPrice > cons.oFair;
     const uBetterThanFair = cons && b.underPrice && b.underPrice > cons.uFair;
     const oIsBest = b.overPrice === bo;
     const uIsBest = b.underPrice === bu;
     
-    // Class priority: best (blue) > better than fair (green) > default (white)
     const oClass = oIsBest ? 'best' : (oBetterThanFair ? 'better' : '');
     const uClass = uIsBest ? 'best' : (uBetterThanFair ? 'better' : '');
+    
+    // Make odds clickable - pass game ID, book, period, side, line, odds, EV
+    const line = b.line || 1.5;
+    const oClick = b.overPrice ? `onclick="openBetSlip('${g.eventID}','${bk}','${viewingPeriod}','over',${line},${b.overPrice},${oEV !== null ? oEV : 'null'}); event.stopPropagation();"` : '';
+    const uClick = b.underPrice ? `onclick="openBetSlip('${g.eventID}','${bk}','${viewingPeriod}','under',${line},${b.underPrice},${uEV !== null ? uEV : 'null'}); event.stopPropagation();"` : '';
     
     return `<tr>
         <td><div class="book-cell">
             <div class="book-logo" style="background:${bkd.c};color:#fff">${bkd.a}</div>
             <span class="book-name">${bkd.n}</span>
         </div></td>
-        <td>${b.line || 1.5}</td>
-        <td class="odds-cell">${b.overPrice ? `<span class="odds-value ${oClass}">${fmt(b.overPrice)}</span>` : '--'}</td>
-        <td class="odds-cell">${b.underPrice ? `<span class="odds-value ${uClass}">${fmt(b.underPrice)}</span>` : '--'}</td>
+        <td>${line}</td>
+        <td class="odds-cell">${b.overPrice ? `<span class="odds-value clickable ${oClass} ${oChange.class}" ${oClick}>${fmt(b.overPrice)}${oChange.arrow}</span>` : '--'}</td>
+        <td class="odds-cell">${b.underPrice ? `<span class="odds-value clickable ${uClass} ${uChange.class}" ${uClick}>${fmt(b.underPrice)}${uChange.arrow}</span>` : '--'}</td>
         <td class="ev-cell">${oEV !== null ? `<span class="ev-value${oEV >= CFG.minEV ? ' positive' : ' negative'}">${oEV > 0 ? '+' : ''}${oEV.toFixed(1)}%</span>` : '--'}</td>
         <td class="ev-cell">${uEV !== null ? `<span class="ev-value${uEV >= CFG.minEV ? ' positive' : ' negative'}">${uEV > 0 ? '+' : ''}${uEV.toFixed(1)}%</span>` : '--'}</td>
         <td class="signal-cell">${oE ? `<span class="edge-badge">O+${oEV.toFixed(0)}%</span>` : ''}${uE ? `<span class="edge-badge">U+${uEV.toFixed(0)}%</span>` : ''}</td>
     </tr>`;
+}
+
+function getLineChange(key, newPrice, now) {
+    if (!newPrice) return {class: '', arrow: ''};
+    
+    const prev = lineHistory[key];
+    
+    if (!prev) {
+        // First time seeing this line
+        lineHistory[key] = {price: newPrice, timestamp: now, prevPrice: null};
+        return {class: '', arrow: ''};
+    }
+    
+    if (prev.price !== newPrice) {
+        // Line changed!
+        const direction = newPrice < prev.price ? 'up' : 'down'; // worse juice = up arrow, better = down
+        lineHistory[key] = {price: newPrice, timestamp: now, prevPrice: prev.price, direction};
+        return {
+            class: 'changed-red',
+            arrow: `<span class="line-arrow ${direction}">${direction === 'up' ? '↑' : '↓'}</span>`
+        };
+    }
+    
+    // Check if we have a recent change to display
+    if (prev.prevPrice !== null && prev.direction) {
+        const age = now - prev.timestamp;
+        if (age < 30000) {
+            return {
+                class: 'changed-red',
+                arrow: `<span class="line-arrow ${prev.direction}">${prev.direction === 'up' ? '↑' : '↓'}</span>`
+            };
+        } else if (age < 120000) {
+            return {
+                class: 'changed-yellow',
+                arrow: `<span class="line-arrow ${prev.direction}">${prev.direction === 'up' ? '↑' : '↓'}</span>`
+            };
+        } else {
+            // Clear the change indicator after 2 min
+            lineHistory[key] = {price: newPrice, timestamp: now, prevPrice: null};
+        }
+    }
+    
+    return {class: '', arrow: ''};
 }
 
 const fmt = a => a == null ? '--' : (a > 0 ? '+' + a : String(a));
@@ -810,20 +1264,30 @@ function pEdge(pd, g, periodId) {
     });
 }
 
-function triggerAlert(g, bkd, b, oEV, uEV, oE, uE) {
+function triggerAlert(g, bkd, b, oEV, uEV, oE, uE, isBetLogged = false) {
     const c = document.getElementById('alerts');
     const t = g.teams || {};
-    const aw = t.away?.names?.abbr || 'AWY', hm = t.home?.names?.abbr || 'HME';
+    const aw = t.away?.names?.abbr || t.away?.names?.short || 'AWY';
+    const hm = t.home?.names?.abbr || t.home?.names?.short || 'HME';
     const side = oE && (!uE || oEV > uEV) ? `O ${b.line}` : `U ${b.line}`;
     const ev = oE && (!uE || oEV > uEV) ? oEV : uEV;
     const pr = oE && (!uE || oEV > uEV) ? b.overPrice : b.underPrice;
     const id = 'a' + Date.now();
-    c.insertAdjacentHTML('afterbegin', `<div class="alert" id="${id}" onclick="dismissAlert('${id}')">
-        <div class="alert-header"><span class="alert-title">🔥 ${aw} @ ${hm}</span><span class="alert-time">${new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</span></div>
-        <div class="alert-body">${bkd.n}: <strong>${side}</strong> ${fmt(pr)}<span class="alert-ev">+${ev.toFixed(1)}%</span></div>
-    </div>`);
-    if (CFG.sound) beep();
-    setTimeout(() => dismissAlert(id), 120000);
+    
+    if (isBetLogged) {
+        c.insertAdjacentHTML('afterbegin', `<div class="alert" id="${id}" onclick="dismissAlert('${id}')" style="border-color:var(--accent)">
+            <div class="alert-header"><span class="alert-title">✅ Bet Logged</span><span class="alert-time">${new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</span></div>
+            <div class="alert-body">${aw} @ ${hm}: ${bkd.n}</div>
+        </div>`);
+        setTimeout(() => dismissAlert(id), 5000);
+    } else {
+        c.insertAdjacentHTML('afterbegin', `<div class="alert" id="${id}" onclick="dismissAlert('${id}')">
+            <div class="alert-header"><span class="alert-title">🔥 ${aw} @ ${hm}</span><span class="alert-time">${new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</span></div>
+            <div class="alert-body">${bkd.n}: <strong>${side}</strong> ${fmt(pr)}<span class="alert-ev">+${ev.toFixed(1)}%</span></div>
+        </div>`);
+        if (CFG.sound) beep();
+        setTimeout(() => dismissAlert(id), 120000);
+    }
 }
 
 function dismissAlert(id) { const a = document.getElementById(id); if (a) { a.style.opacity = '0'; setTimeout(() => a.remove(), 200); } }
