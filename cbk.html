@@ -1139,14 +1139,8 @@ async function fetchData() {
     }
     
     try {
-        // CBB: Full game and 1H spreads and totals
-        const oddIDs = [
-            'spread-home-fullgame-handicap','spread-away-fullgame-handicap',
-            'spread-home-1h-handicap','spread-away-1h-handicap',
-            'total-total-fullgame-ou-over','total-total-fullgame-ou-under',
-            'total-total-1h-ou-over','total-total-1h-ou-under'
-        ].join(',');
-        const url = `https://api.sportsgameodds.com/v2/events?apiKey=${CFG.apiKey}&leagueID=NCAAB&oddsAvailable=true&includeOpposingOdds=true&oddIDs=${oddIDs}`;
+        // CBB: Get events with odds available
+        const url = `https://api.sportsgameodds.com/v2/events?apiKey=${CFG.apiKey}&leagueID=NCAAB&oddsAvailable=true&includeOpposingOdds=true`;
         log('Fetching...');
         
         const res = await fetch(url);
@@ -1155,6 +1149,11 @@ async function fetchData() {
         const json = await res.json();
         const events = json.data || [];
         log(`Got ${events.length} events`);
+        
+        // Log first event's odds keys to debug
+        if (events.length > 0 && events[0].odds) {
+            log('Odds keys: ' + Object.keys(events[0].odds).slice(0, 10).join(', '));
+        }
         
         // Properly detect live games using status object
         const live = events.filter(e => {
@@ -1198,38 +1197,47 @@ function extractOdds(odds) {
     };
     
     for (const [id, o] of Object.entries(odds)) {
-        // Spreads: spread-home-fullgame-handicap, spread-away-1h-handicap
-        const spreadMatch = id.match(/spread-(home|away)-(fullgame|1h)-handicap/i);
-        if (spreadMatch) {
-            const side = spreadMatch[1].toLowerCase(); // home or away
-            const period = spreadMatch[2].toLowerCase(); // fullgame or 1h
+        const idLower = id.toLowerCase();
+        
+        // Spreads: various formats like spread-home-fullgame, spread-away-1h, etc.
+        if (idLower.includes('spread')) {
+            const isHome = idLower.includes('home');
+            const isAway = idLower.includes('away');
+            const is1H = idLower.includes('1h') || idLower.includes('first');
+            const period = is1H ? '1h' : 'fullgame';
             
-            if (o.byBookmaker) {
+            if ((isHome || isAway) && o.byBookmaker) {
                 for (const [bk, bd] of Object.entries(o.byBookmaker)) {
                     if (!bd.available) continue;
                     let be = r[period].spread.books.find(x => x.bk === bk);
                     if (!be) { be = { bk }; r[period].spread.books.push(be); }
-                    be[side + 'Line'] = parseFloat(bd.handicap) || 0;
-                    be[side + 'Price'] = parseInt(bd.odds);
+                    const line = parseFloat(bd.handicap || bd.spread) || 0;
+                    const price = parseInt(bd.odds);
+                    if (isHome) { be.homeLine = line; be.homePrice = price; }
+                    if (isAway) { be.awayLine = line; be.awayPrice = price; }
                 }
             }
             continue;
         }
         
-        // Totals: total-total-fullgame-ou-over, total-total-1h-ou-under
-        const totalMatch = id.match(/total-total-(fullgame|1h)-ou-(over|under)/i);
-        if (totalMatch) {
-            const period = totalMatch[1].toLowerCase();
-            const side = totalMatch[2].toLowerCase();
-            const line = parseFloat(o.bookOverUnder || o.fairOverUnder) || 0;
-            r[period].total.line = line;
+        // Totals: various formats like total-over, total-under, ou-over, etc.
+        if (idLower.includes('total') || idLower.includes('-ou-')) {
+            const isOver = idLower.includes('over');
+            const isUnder = idLower.includes('under');
+            const is1H = idLower.includes('1h') || idLower.includes('first');
+            const period = is1H ? '1h' : 'fullgame';
             
-            if (o.byBookmaker) {
+            const line = parseFloat(o.bookOverUnder || o.fairOverUnder || o.line) || 0;
+            if (line > 0) r[period].total.line = line;
+            
+            if ((isOver || isUnder) && o.byBookmaker) {
                 for (const [bk, bd] of Object.entries(o.byBookmaker)) {
                     if (!bd.available) continue;
                     let be = r[period].total.books.find(x => x.bk === bk);
-                    if (!be) { be = { bk, line: parseFloat(bd.overUnder) || line }; r[period].total.books.push(be); }
-                    be[side + 'Price'] = parseInt(bd.odds);
+                    const bookLine = parseFloat(bd.overUnder || bd.total) || line;
+                    if (!be) { be = { bk, line: bookLine }; r[period].total.books.push(be); }
+                    if (isOver) be.overPrice = parseInt(bd.odds);
+                    if (isUnder) be.underPrice = parseInt(bd.odds);
                 }
             }
         }
