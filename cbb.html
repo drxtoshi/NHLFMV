@@ -155,153 +155,169 @@ const fetchPolymarketBasketball = async () => {
 };
 
 // Fetch CBB markets from Polymarket using series_id (like NHL tool)
+// ========================================
+// CONFIGURATION - UPDATE THIS AFTER DEPLOYING YOUR CLOUDFLARE WORKER
+// ========================================
+const POLYMARKET_PROXY = 'https://polymarket-proxy.imdrax.workers.dev';
+// Example: 'https://polymarket-proxy.drax123.workers.dev'
+// Leave as empty string '' to fall back to public proxies
+
 const fetchPolymarketCBB = async () => {
-  const debug = { totalMarkets: 0, vsMarkets: 0, basketballMatches: 0, sampleMarket: null, allTags: [], error: null, attempts: [], allFoundEvents: [] };
+  const debug = { totalMarkets: 0, vsMarkets: 0, basketballMatches: 0, sampleMarket: null, error: null, attempts: [] };
   
   try {
-    console.log('Fetching Polymarket CBB...');
+    console.log('Fetching Polymarket basketball...');
     
     const timestamp = Date.now();
+    let events = [];
     
-    // Try a wider range of series IDs to find all sports
-    // NHL is 10346, NBA/CBB are likely nearby
-    const seriesIdsToTry = [
-      '10340', '10341', '10342', '10343', '10344', '10345', 
-      '10347', '10348', '10349', '10350', '10351', '10352',
-      '10353', '10354', '10355', '10360', '10365', '10370',
-      '10375', '10380', '10385', '10390', '10395', '10400'
+    // Try CBB first, then NBA
+    const series = [
+      { name: 'CBB', id: 10470 },
+      { name: 'NBA', id: 10345 },
     ];
     
-    let allEvents = [];
-    
-    // Try each series_id via corsproxy (the only one that works)
-    for (const seriesId of seriesIdsToTry) {
-      const seriesUrl = `https://gamma-api.polymarket.com/events?series_id=${seriesId}&active=true&closed=false&limit=100&_t=${timestamp}`;
-      const url = 'https://corsproxy.io/?' + encodeURIComponent(seriesUrl);
+    for (const s of series) {
+      // Build URLs - add sorting by start date and increase limit
+      // order=startDate sorts by game start time, ascending=false gets newest first
+      const gammaPath = `/events?series_id=${s.id}&active=true&closed=false&order=startDate&ascending=false&limit=500&_t=${timestamp}`;
       
-      try {
-        const res = await fetch(url, { cache: 'no-store' });
-        
-        if (!res.ok) {
-          continue; // Skip failed requests silently
-        }
-        
-        const events = await res.json();
-        
-        if (Array.isArray(events) && events.length > 0) {
-          const firstTitle = events[0]?.title || 'no title';
-          debug.attempts.push(`${seriesId}: ${events.length} - "${firstTitle.substring(0, 40)}..."`);
+      const urls = [];
+      
+      // If Cloudflare Worker is configured, try it first
+      if (POLYMARKET_PROXY && !POLYMARKET_PROXY.includes('YOUR_SUBDOMAIN')) {
+        urls.push({ 
+          name: `${s.name} via CF Worker`, 
+          url: POLYMARKET_PROXY + gammaPath,
+          wrapper: false 
+        });
+      }
+      
+      // Fallback to public proxies
+      const baseUrl = `https://gamma-api.polymarket.com${gammaPath}`;
+      urls.push(
+        { name: `${s.name} via allorigins`, url: `https://api.allorigins.win/get?url=${encodeURIComponent(baseUrl)}`, wrapper: true },
+        { name: `${s.name} via corsproxy`, url: `https://corsproxy.io/?${encodeURIComponent(baseUrl)}`, wrapper: false },
+      );
+      
+      for (const { name, url, wrapper } of urls) {
+        try {
+          debug.attempts.push(`${name}...`);
+          console.log(`Trying: ${name}`);
           
-          // Store all found events for debugging
-          events.forEach(e => {
-            debug.allFoundEvents.push({ seriesId, title: e.title });
+          const res = await fetch(url, {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache' }
           });
           
-          // Collect ALL events with "vs" pattern (not just first match)
-          const vsEvents = events.filter(e => {
-            const t = (e.title || '').toLowerCase();
-            return t.includes(' vs ') || t.includes(' vs. ');
-          });
+          console.log(`${name}: ${res.status}`);
           
-          if (vsEvents.length > 0) {
-            allEvents = allEvents.concat(vsEvents);
+          if (!res.ok) {
+            debug.attempts[debug.attempts.length - 1] += ` (${res.status})`;
+            continue;
           }
-        }
-      } catch (e) {
-        // Silently skip errors
-      }
-    }
-    
-    // Also try general events endpoint
-    try {
-      const generalUrl = `https://gamma-api.polymarket.com/events?active=true&closed=false&limit=200&_t=${timestamp}`;
-      const url = 'https://corsproxy.io/?' + encodeURIComponent(generalUrl);
-      
-      const res = await fetch(url, { cache: 'no-store' });
-      if (res.ok) {
-        const events = await res.json();
-        debug.attempts.push(`general: ${events?.length || 0} events`);
-        
-        if (Array.isArray(events) && events.length > 0) {
-          debug.totalMarkets = events.length;
-          debug.sampleMarket = events[0];
           
-          const vsEvents = events.filter(e => {
-            const t = (e.title || '').toLowerCase();
-            return (t.includes(' vs ') || t.includes(' vs. '));
-          });
+          let data = await res.json();
           
-          // Add any new events not already found
-          vsEvents.forEach(e => {
-            if (!allEvents.find(x => x.id === e.id)) {
-              allEvents.push(e);
+          // allorigins wraps response in { contents: "..." }
+          if (wrapper && data.contents) {
+            try {
+              data = JSON.parse(data.contents);
+            } catch (e) {
+              debug.attempts[debug.attempts.length - 1] += ` (parse error)`;
+              continue;
             }
-          });
+          }
+          
+          if (Array.isArray(data) && data.length > 0) {
+            debug.attempts[debug.attempts.length - 1] += ` ✓ ${data.length} events`;
+            console.log(`SUCCESS! ${data.length} events. First:`, data[0]?.title);
+            events = data;
+            break;
+          } else {
+            debug.attempts[debug.attempts.length - 1] += ` (empty)`;
+          }
+        } catch (e) {
+          debug.attempts[debug.attempts.length - 1] += ` (${e.message})`;
+          console.log(`${name} error:`, e.message);
         }
       }
-    } catch (e) {
-      debug.attempts.push(`general: ${e.message}`);
+      
+      if (events.length > 0) break;
     }
     
-    // Remove duplicates
-    const uniqueEvents = [];
-    const seenIds = new Set();
-    allEvents.forEach(e => {
-      if (!seenIds.has(e.id)) {
-        seenIds.add(e.id);
-        uniqueEvents.push(e);
-      }
-    });
-    allEvents = uniqueEvents;
+    debug.totalMarkets = events.length;
     
-    debug.vsMarkets = allEvents.length;
-    console.log('Total unique vs events found:', allEvents.length);
-    
-    if (allEvents.length === 0) {
-      debug.error = 'No events with "vs" pattern found in any series';
+    if (events.length === 0) {
+      debug.error = POLYMARKET_PROXY.includes('YOUR_SUBDOMAIN') 
+        ? 'Configure POLYMARKET_PROXY with your Cloudflare Worker URL (see instructions in code)'
+        : 'Could not fetch basketball data from any source.';
       return { games: [], debug };
     }
     
-    // Process events into games
+    // Process events - filter for active/upcoming games only
     const processed = [];
+    const now = new Date();
     
-    for (const event of allEvents) {
+    console.log('Raw events count:', events.length);
+    
+    events.forEach(event => {
       const title = event.title || '';
       const match = title.match(/(.+?)\s+vs\.?\s+(.+)/i);
       
-      if (match && event.markets && event.markets.length > 0) {
-        const team1 = match[1].trim();
-        const team2 = match[2].trim();
-        const market = event.markets[0];
-        
-        let prices = [0.5, 0.5];
-        try {
-          prices = JSON.parse(market.outcomePrices || '[0.5, 0.5]').map(Number);
-        } catch (e) {}
-        
-        processed.push({
-          id: event.id || market.id || Math.random().toString(),
-          question: title,
-          team1,
-          team2,
-          team1Price: prices[0],
-          team2Price: prices[1],
-          team1Ask: { price: prices[0], size: 0, total: 0 },
-          team2Ask: { price: prices[1], size: 0, total: 0 },
-          volume: parseFloat(market.volume) || parseFloat(event.volume) || 0,
-          startTime: event.startDate || event.endDate || market.startDate || new Date().toISOString(),
-          slug: event.slug,
-          url: `https://polymarket.com/event/${event.slug || event.id}`,
-        });
-      }
-    }
+      if (!match) return;
+      if (!event.markets || event.markets.length === 0) return;
+      
+      const team1 = match[1].trim();
+      const team2 = match[2].trim();
+      const market = event.markets[0];
+      
+      let prices = [0.5, 0.5];
+      try {
+        prices = JSON.parse(market.outcomePrices || '[0.5, 0.5]').map(Number);
+      } catch (e) {}
+      
+      // Skip settled markets (one side 99%+)
+      if (prices[0] >= 0.99 || prices[0] <= 0.01) return;
+      
+      // Get start time
+      const startTime = new Date(event.startDate || event.endDate || market.startDate || now);
+      
+      // Determine game status
+      const isClosed = event.closed || market.closed;
+      const isResolved = event.resolved || market.resolved;
+      
+      // Skip fully resolved games
+      if (isResolved) return;
+      
+      // For closed markets, only show if prices aren't heavily lopsided (game might be in progress)
+      if (isClosed && (prices[0] >= 0.95 || prices[0] <= 0.05)) return;
+      
+      processed.push({
+        id: event.id || market.id || Math.random().toString(),
+        question: title,
+        team1,
+        team2,
+        team1Price: prices[0],
+        team2Price: prices[1],
+        team1Ask: { price: prices[0], size: 0, total: 0 },
+        team2Ask: { price: prices[1], size: 0, total: 0 },
+        volume: parseFloat(market.volume) || parseFloat(event.volume) || 0,
+        startTime: startTime.toISOString(),
+        slug: event.slug,
+        url: `https://polymarket.com/event/${event.slug || event.id}`,
+        closed: isClosed,
+        resolved: isResolved,
+      });
+    });
     
+    console.log('After filtering:', processed.length, 'games');
     debug.basketballMatches = processed.length;
-    console.log('Processed games:', processed.length);
     
-    return { games: processed.sort((a, b) => new Date(a.startTime) - new Date(b.startTime)), debug };
+    // Sort by start time (upcoming first, then recent)
+    return { games: processed.sort((a, b) => new Date(b.startTime) - new Date(a.startTime)), debug };
   } catch (err) {
-    console.error('Polymarket CBB fetch error:', err);
+    console.error('Polymarket fetch error:', err);
     debug.error = err.message;
     return { games: [], debug };
   }
