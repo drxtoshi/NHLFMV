@@ -392,6 +392,17 @@
                     <option value="off">Disabled</option>
                 </select>
             </div>
+            <div class="field">
+                <label>Auto-Send to Sheet</label>
+                <select id="webhookEnabled">
+                    <option value="on">Enabled</option>
+                    <option value="off">Disabled</option>
+                </select>
+            </div>
+            <div class="field" style="grid-column: span 2">
+                <label>Webhook URL</label>
+                <input type="text" id="webhookUrl" placeholder="https://script.google.com/macros/s/...">
+            </div>
             <div class="field book-section">
                 <label>Sharp Books (Fair Value Source)</label>
                 <div class="book-selector" id="sharpSelector"></div>
@@ -522,6 +533,8 @@ const CFG = {
     minEV: 2,
     refresh: 30,
     sound: true,
+    webhookEnabled: true,
+    webhookUrl: 'https://script.google.com/macros/s/AKfycbwMZkMjgRLXplyj5J3-3GWf0jdxvjMWNmrEuDgy4VLCwgdW7dHIhd-88MMog/exec',
     sharpBooks: ['pinnacle', 'circa', 'bookmaker'],
     compareBooks: ['draftkings', 'fanduel', 'betmgm', 'caesars']
 };
@@ -701,10 +714,58 @@ function submitBet() {
     
     betLog.push(bet);
     saveBetLog();
+    
+    // Send to webhook if enabled
+    if (CFG.webhookEnabled && CFG.webhookUrl) {
+        sendToWebhook(bet);
+    }
+    
     closeBetSlip();
     
     // Show confirmation
     triggerAlert({teams: {away: {names: {short: 'Bet'}}, home: {names: {short: 'Logged'}}}}, {n: bookName}, {line: ''}, bet.ev, null, true, false, true);
+}
+
+async function sendToWebhook(bet) {
+    try {
+        const payload = {
+            type: 'bet',
+            date: bet.date,
+            market: bet.market,
+            propNum: bet.propNum || '',
+            juice: bet.juice,
+            risk: '$' + bet.risk.toFixed(2),
+            book: bet.bookName || BOOKS[bet.book]?.n || bet.book || 'Unknown',
+            toWin: '$' + bet.toWin.toFixed(2)
+        };
+        
+        const response = await fetch(CFG.webhookUrl, {
+            method: 'POST',
+            mode: 'no-cors', // Required for Google Apps Script
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        console.log('Webhook sent:', payload);
+        
+        // Show success notification
+        const c = document.getElementById('alerts');
+        const id = 'wh' + Date.now();
+        c.insertAdjacentHTML('afterbegin', `<div class="alert" id="${id}" onclick="dismissAlert('${id}')" style="border-color:#22c55e">
+            <div class="alert-header"><span class="alert-title">📤 Sent to Sheet</span></div>
+        </div>`);
+        setTimeout(() => dismissAlert(id), 2000);
+        
+    } catch(err) {
+        console.error('Webhook error:', err);
+        const c = document.getElementById('alerts');
+        const id = 'whe' + Date.now();
+        c.insertAdjacentHTML('afterbegin', `<div class="alert" id="${id}" onclick="dismissAlert('${id}')" style="border-color:var(--loss)">
+            <div class="alert-header"><span class="alert-title">⚠️ Webhook Failed</span></div>
+            <div class="alert-body">${err.message}</div>
+        </div>`);
+        setTimeout(() => dismissAlert(id), 5000);
+    }
 }
 
 function saveBookAliases() {
@@ -937,6 +998,8 @@ function loadCfg() {
         document.getElementById('minEV').value = CFG.minEV;
         document.getElementById('refreshInt').value = CFG.refresh;
         document.getElementById('alertSound').value = CFG.sound ? 'on' : 'off';
+        document.getElementById('webhookEnabled').value = CFG.webhookEnabled ? 'on' : 'off';
+        document.getElementById('webhookUrl').value = CFG.webhookUrl || '';
     }
 }
 
@@ -945,6 +1008,8 @@ function saveCfg() {
     CFG.minEV = parseFloat(document.getElementById('minEV').value);
     CFG.refresh = parseInt(document.getElementById('refreshInt').value);
     CFG.sound = document.getElementById('alertSound').value === 'on';
+    CFG.webhookEnabled = document.getElementById('webhookEnabled').value === 'on';
+    CFG.webhookUrl = document.getElementById('webhookUrl').value;
     localStorage.setItem('sgKey', CFG.apiKey);
     localStorage.setItem('ppCfg2', JSON.stringify(CFG));
 }
