@@ -97,15 +97,16 @@
         .team-name { font-weight:400; font-size:10px; white-space:nowrap; color:var(--txt3); }
         .score { font-size:16px; font-weight:700; color:var(--accent); }
         .at { color:var(--txt3); font-size:11px; margin:0 2px; }
-        .game-info { display:flex; flex-direction:column; align-items:flex-end; flex-shrink:0; gap:2px; }
+        .game-right { display:flex; align-items:center; gap:8px; }
+        .game-info { display:flex; flex-direction:column; align-items:flex-end; gap:1px; }
         .game-info-row { display:flex; align-items:center; gap:6px; }
         .game-status { display:inline-flex; align-items:center; gap:4px; padding:2px 6px; border-radius:3px; font-size:10px; font-weight:500; }
         .game-status.live { background:var(--loss-bg); color:var(--loss); }
         .game-status.live .live-dot { width:6px; height:6px; background:var(--loss); border-radius:50%; animation:livePulse 1.5s ease-in-out infinite; }
         @keyframes livePulse { 0%, 100% { opacity:1; } 50% { opacity:0.4; } }
-        .game-status.upcoming { background:transparent; color:var(--txt3); font-size:10px; padding:0; }
+        .game-status.upcoming { background:transparent; color:var(--txt3); font-size:9px; padding:0; text-transform:uppercase; }
         .game-status.final { background:var(--bg); color:var(--txt3); }
-        .game-time { font-size:13px; font-weight:600; color:var(--txt); }
+        .game-time { font-size:14px; font-weight:600; color:var(--txt); }
         .game-time-tz { font-size:9px; color:var(--txt3); margin-left:3px; font-weight:400; }
         .game-clock { font-size:11px; color:var(--warn); font-weight:500; }
         .game-date { font-size:10px; color:var(--txt3); }
@@ -1754,18 +1755,14 @@ function gameHeader(g, odds) {
     let gameInfoContent = '';
     if (isLive) {
         gameInfoContent = `
-            <div class="game-info-row">
-                <span class="game-status live"><span class="live-dot"></span>LIVE</span>
-            </div>
+            <div class="game-status live"><span class="live-dot"></span>LIVE</div>
             ${clockDisplay ? `<div class="game-clock">${clockDisplay}</div>` : ''}`;
     } else if (st.completed || st.ended) {
         gameInfoContent = `<span class="game-status final">Final</span>`;
     } else {
         gameInfoContent = `
-            <div class="game-info-row">
-                <span class="game-status upcoming">Upcoming</span>
-                <span class="game-time">${timeStr}<span class="game-time-tz">${tzAbbr}</span></span>
-            </div>`;
+            <span class="game-status upcoming">Upcoming</span>
+            <span class="game-time">${timeStr}<span class="game-time-tz">${tzAbbr}</span></span>`;
     }
     
     const isPinned = pinnedGames.has(g.eventID);
@@ -1785,12 +1782,14 @@ function gameHeader(g, odds) {
             </div>
             ${isLive || st.completed || st.ended ? `<span class="score">${hmS}</span>` : ''}
         </div>
-        <div class="game-info">
-            ${gameInfoContent}
-        </div>
-        <div class="game-controls">
-            <button class="pin-btn" onclick="event.stopPropagation(); togglePin('${g.eventID}')" title="${isPinned ? 'Unpin' : 'Pin to top'}">${isPinned ? '📌' : '📍'}</button>
-            <button class="expand-btn" onclick="event.stopPropagation(); toggleGameCollapse('${g.eventID}')" title="${isCollapsed ? 'Expand' : 'Collapse'}">▼</button>
+        <div class="game-right">
+            <div class="game-info">
+                ${gameInfoContent}
+            </div>
+            <div class="game-controls">
+                <button class="pin-btn" onclick="event.stopPropagation(); togglePin('${g.eventID}')" title="${isPinned ? 'Unpin' : 'Pin to top'}">${isPinned ? '📌' : '📍'}</button>
+                <button class="expand-btn" onclick="event.stopPropagation(); toggleGameCollapse('${g.eventID}')" title="${isCollapsed ? 'Expand' : 'Collapse'}">▼</button>
+            </div>
         </div>
     </div>`;
 }
