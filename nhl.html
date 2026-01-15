@@ -269,7 +269,8 @@
     // State
     let games = [];
     let gameHistories = {};
-    let expandedGames = {};
+    let expandedGames = {}; // { gameId: true/false }
+    let gameOddsTab = {}; // { gameId: 'moneyline' | 'puckline' | 'total' }
     let lastUpdate = null;
     let isLive = false;
     let oddsFormat = 'probability';
@@ -694,155 +695,98 @@
       return null;
     }
 
-    // SportsGameOdds API configuration
-    const SGO_API_KEY = '0d632498d5f30be5864bd5c4644f853d';
-    
-    // Fetch sportsbook odds from SportsGameOdds API
+    // Fetch sportsbook odds from The Odds API (limited calls - manual or few times per day)
     async function fetchSportsbookOdds(manual = false) {
-      // Check if we should fetch (scheduled times or manual)
-      if (!manual && !shouldFetchNow()) {
-        console.log('Not a scheduled fetch time, skipping SGO fetch');
+      if (!oddsApiKey) {
+        console.log('No Odds API key set');
         return;
       }
       
-      console.log('Fetching odds from SportsGameOdds...');
+      // Check if we should fetch (scheduled times or manual)
+      if (!manual && !shouldFetchNow()) {
+        console.log('Not a scheduled fetch time');
+        return;
+      }
       
-      // SGO API endpoint for NHL events with odds
-      const apiUrl = `https://api.sportsgameodds.com/v2/events/?leagueID=NHL&apiKey=${SGO_API_KEY}`;
+      const apiUrl = `https://api.the-odds-api.com/v4/sports/icehockey_nhl/odds/?apiKey=${oddsApiKey}&regions=us&markets=h2h&oddsFormat=american`;
       
       try {
         const res = await fetch(apiUrl);
         if (!res.ok) {
-          console.error('SportsGameOdds API error:', res.status, await res.text());
+          console.error('Odds API error:', res.status);
           return;
         }
         
-        const responseData = await res.json();
-        const events = responseData.data || responseData || [];
+        const data = await res.json();
         
-        console.log('SportsGameOdds response:', events.length, 'events');
+        // Log all team names from API for debugging
+        console.log('Odds API teams:', data.map(g => `${g.away_team} @ ${g.home_team}`));
         
         // Store raw data and parse odds by team matchup
         oddsApiData = {};
         oddsApiRawData = {};
         
-        for (const event of events) {
-          // Parse team info from SGO format
-          // SGO uses teamIDs like "NHL-TOR", "NHL-MTL"
-          const teams = event.teams || {};
-          let homeTeam = '', awayTeam = '', homeAbbrev = '', awayAbbrev = '';
-          
-          // Try different SGO response formats
-          if (event.homeTeamID && event.awayTeamID) {
-            // Format: NHL-TOR -> TOR
-            homeAbbrev = event.homeTeamID.replace('NHL-', '');
-            awayAbbrev = event.awayTeamID.replace('NHL-', '');
-            homeTeam = TEAMS[homeAbbrev]?.name || homeAbbrev;
-            awayTeam = TEAMS[awayAbbrev]?.name || awayAbbrev;
-          } else if (teams.home && teams.away) {
-            homeTeam = teams.home.name || teams.home;
-            awayTeam = teams.away.name || teams.away;
-            homeAbbrev = normalizeTeamName(homeTeam);
-            awayAbbrev = normalizeTeamName(awayTeam);
-          } else if (event.name) {
-            // Parse from event name like "Toronto Maple Leafs vs Montreal Canadiens"
-            const match = event.name.match(/(.+?)\s+(?:vs\.?|@)\s+(.+)/i);
-            if (match) {
-              awayTeam = match[1].trim();
-              homeTeam = match[2].trim();
-              homeAbbrev = normalizeTeamName(homeTeam);
-              awayAbbrev = normalizeTeamName(awayTeam);
-            }
-          }
-          
-          if (!homeAbbrev || !awayAbbrev) {
-            console.log('Could not parse teams from event:', event.eventID || event.id);
-            continue;
-          }
-          
+        data.forEach(game => {
+          const homeTeam = game.home_team;
+          const awayTeam = game.away_team;
+          const homeAbbrev = normalizeTeamName(homeTeam);
+          const awayAbbrev = normalizeTeamName(awayTeam);
           const key = `${awayAbbrev}-${homeAbbrev}`;
-          console.log(`SGO Game: ${awayAbbrev} @ ${homeAbbrev} -> key: ${key}`);
           
-          // Now fetch odds for this specific event
-          const eventID = event.eventID || event.id;
-          if (eventID) {
-            try {
-              const oddsUrl = `https://api.sportsgameodds.com/v2/events/${eventID}?apiKey=${SGO_API_KEY}`;
-              const oddsRes = await fetch(oddsUrl);
-              if (oddsRes.ok) {
-                const eventData = await oddsRes.json();
-                const odds = eventData.data?.odds || eventData.odds || {};
-                
-                // Parse odds by bookmaker
-                const bookData = {};
-                
-                for (const [oddID, oddValue] of Object.entries(odds)) {
-                  // oddID format: "fanduel_NHL-TOR-NHL-MTL_moneyline_home"
-                  // or could be nested object with bookmaker info
-                  
-                  if (typeof oddValue === 'object') {
-                    const bookmaker = oddValue.sportsbook || oddValue.bookmaker || oddValue.bookmakerID;
-                    const price = oddValue.price || oddValue.odds;
-                    const side = oddValue.side || (oddID.includes('home') ? 'home' : oddID.includes('away') ? 'away' : null);
-                    
-                    if (bookmaker && price && side) {
-                      const bookKey = bookmaker.toLowerCase().replace(/[\s-]/g, '');
-                      if (!bookData[bookKey]) {
-                        bookData[bookKey] = { homeOdds: null, awayOdds: null };
-                      }
-                      if (side === 'home') {
-                        bookData[bookKey].homeOdds = price;
-                      } else if (side === 'away') {
-                        bookData[bookKey].awayOdds = price;
-                      }
-                    }
-                  }
-                }
-                
-                // Calculate probs for complete bookmaker entries
-                for (const [bookKey, bookOdds] of Object.entries(bookData)) {
-                  if (bookOdds.homeOdds && bookOdds.awayOdds) {
-                    bookOdds.homeProb = oddsToProb(bookOdds.homeOdds);
-                    bookOdds.awayProb = oddsToProb(bookOdds.awayOdds);
-                  } else {
-                    delete bookData[bookKey]; // Remove incomplete entries
-                  }
-                }
-                
-                if (Object.keys(bookData).length > 0) {
-                  oddsApiRawData[key] = { homeTeam, awayTeam, books: bookData };
-                  
-                  // Calculate averages
-                  const homeOdds = Object.values(bookData).map(b => b.homeOdds);
-                  const awayOdds = Object.values(bookData).map(b => b.awayOdds);
-                  const avgHomeOdds = Math.round(homeOdds.reduce((a, b) => a + b, 0) / homeOdds.length);
-                  const avgAwayOdds = Math.round(awayOdds.reduce((a, b) => a + b, 0) / awayOdds.length);
-                  
-                  oddsApiData[key] = {
-                    homeTeam, awayTeam,
-                    homeOdds: avgHomeOdds, awayOdds: avgAwayOdds,
-                    homeProb: oddsToProb(avgHomeOdds), awayProb: oddsToProb(avgAwayOdds),
-                    bookmakers: Object.keys(bookData)
-                  };
-                  
-                  console.log(`  -> ${Object.keys(bookData).length} bookmakers: ${Object.keys(bookData).join(', ')}`);
-                }
+          console.log(`Odds API: ${awayTeam} (${awayAbbrev}) @ ${homeTeam} (${homeAbbrev}) -> key: ${key}`);
+          
+          // Store raw bookmaker data
+          const bookData = {};
+          game.bookmakers?.forEach(book => {
+            const h2h = book.markets?.find(m => m.key === 'h2h');
+            if (h2h) {
+              const homeOutcome = h2h.outcomes?.find(o => o.name === homeTeam);
+              const awayOutcome = h2h.outcomes?.find(o => o.name === awayTeam);
+              if (homeOutcome && awayOutcome) {
+                bookData[book.key] = {
+                  homeOdds: homeOutcome.price,
+                  awayOdds: awayOutcome.price,
+                  homeProb: oddsToProb(homeOutcome.price),
+                  awayProb: oddsToProb(awayOutcome.price)
+                };
               }
-            } catch (oddErr) {
-              console.log('Error fetching odds for event:', eventID, oddErr.message);
             }
+          });
+          
+          if (Object.keys(bookData).length > 0) {
+            oddsApiRawData[key] = {
+              homeTeam,
+              awayTeam,
+              books: bookData
+            };
+            
+            // Calculate simple average for display
+            const homeOdds = Object.values(bookData).map(b => b.homeOdds);
+            const awayOdds = Object.values(bookData).map(b => b.awayOdds);
+            const avgHomeOdds = Math.round(homeOdds.reduce((a, b) => a + b, 0) / homeOdds.length);
+            const avgAwayOdds = Math.round(awayOdds.reduce((a, b) => a + b, 0) / awayOdds.length);
+            
+            oddsApiData[key] = {
+              homeTeam,
+              awayTeam,
+              homeOdds: avgHomeOdds,
+              awayOdds: avgAwayOdds,
+              homeProb: oddsToProb(avgHomeOdds),
+              awayProb: oddsToProb(avgAwayOdds),
+              bookmakers: Object.keys(bookData)
+            };
           }
-        }
+        });
         
         // Calculate devigged odds
         calculateDeviggedOdds();
         
         oddsApiLastFetch = new Date();
         localStorage.setItem('oddsApiLastFetch', oddsApiLastFetch.toISOString());
-        console.log('SportsGameOdds fetched:', Object.keys(oddsApiData).length, 'games with odds');
+        console.log('Odds API fetched:', Object.keys(oddsApiData).length, 'games');
         render();
       } catch (e) {
-        console.error('SportsGameOdds fetch error:', e);
+        console.error('Odds API fetch error:', e);
       }
     }
     
@@ -1139,6 +1083,123 @@
         bestLineSettings.books.push(bookKey);
       }
       saveBestLineSettings();
+    }
+    
+    // Toggle game odds panel
+    function toggleGameOdds(gameId) {
+      expandedGames[gameId] = !expandedGames[gameId];
+      if (!gameOddsTab[gameId]) gameOddsTab[gameId] = 'moneyline';
+      render();
+    }
+    
+    // Set odds tab for a game
+    function setGameOddsTab(gameId, tab) {
+      gameOddsTab[gameId] = tab;
+      render();
+    }
+    
+    // Render odds panel for a game
+    function renderOddsPanel(g, fmv) {
+      const key = `${g.awayAbbrev}-${g.homeAbbrev}`;
+      const gameData = oddsApiRawData[key];
+      const tab = gameOddsTab[g.id] || 'moneyline';
+      
+      if (!gameData || Object.keys(gameData.books).length === 0) {
+        return `
+          <div class="border-t border-white/10 mt-3 pt-3">
+            <div class="text-center text-gray-500 text-sm py-4">
+              No sportsbook odds available.<br>
+              <span class="text-xs">Click "Fetch Odds" in settings or wait for scheduled fetch.</span>
+            </div>
+          </div>
+        `;
+      }
+      
+      const home = TEAMS[g.homeAbbrev] || { name: g.homeAbbrev };
+      const away = TEAMS[g.awayAbbrev] || { name: g.awayAbbrev };
+      
+      // Get best odds for highlighting
+      const bestLineData = getBestLineOdds(g.homeAbbrev, g.awayAbbrev);
+      
+      // Build table rows for each bookmaker
+      let rows = '';
+      for (const [bookKey, bookOdds] of Object.entries(gameData.books)) {
+        if (!devigSettings.books.includes(bookKey)) continue;
+        
+        const bookInfo = availableBooks.find(b => b.key === bookKey);
+        const bookName = bookInfo?.name || bookKey;
+        const isBestHome = bestLineData?.home?.book === bookKey;
+        const isBestAway = bestLineData?.away?.book === bookKey;
+        
+        // Calculate EV for this book's odds
+        const homeImplied = bookOdds.homeProb;
+        const awayImplied = bookOdds.awayProb;
+        const homeEV = ((fmv.fmvHome - homeImplied) * 100).toFixed(1);
+        const awayEV = ((fmv.fmvAway - awayImplied) * 100).toFixed(1);
+        
+        const fmtBookOdds = (odds) => odds > 0 ? '+' + odds : '' + odds;
+        
+        rows += `
+          <tr class="border-b border-white/5 hover:bg-white/5 transition-colors ${isBestHome || isBestAway ? 'bg-green-500/5' : ''}">
+            <td class="py-2 px-3 text-sm font-medium text-gray-300">${bookName}</td>
+            <td class="py-2 px-3 text-center">
+              <span class="mono text-sm ${isBestAway ? 'text-green-400 font-bold' : 'text-gray-200'}">${fmtBookOdds(bookOdds.awayOdds)}</span>
+              ${+awayEV > 0 ? `<span class="ml-1 text-[10px] text-green-400">+${awayEV}%</span>` : ''}
+            </td>
+            <td class="py-2 px-3 text-center">
+              <span class="mono text-sm ${isBestHome ? 'text-green-400 font-bold' : 'text-gray-200'}">${fmtBookOdds(bookOdds.homeOdds)}</span>
+              ${+homeEV > 0 ? `<span class="ml-1 text-[10px] text-green-400">+${homeEV}%</span>` : ''}
+            </td>
+          </tr>
+        `;
+      }
+      
+      // Add FMV row at top
+      const fmvRow = `
+        <tr class="border-b border-green-500/30 bg-green-500/10">
+          <td class="py-2 px-3 text-sm font-bold text-green-400">FMV (Fair)</td>
+          <td class="py-2 px-3 text-center">
+            <span class="mono text-sm font-bold text-green-400">${oddsFormat === 'american' ? formatOdds(probToOdds(fmv.fmvAway)) : formatProb(fmv.fmvAway)}</span>
+          </td>
+          <td class="py-2 px-3 text-center">
+            <span class="mono text-sm font-bold text-green-400">${oddsFormat === 'american' ? formatOdds(probToOdds(fmv.fmvHome)) : formatProb(fmv.fmvHome)}</span>
+          </td>
+        </tr>
+      `;
+      
+      return `
+        <div class="border-t border-white/10 mt-3 pt-3">
+          <!-- Tabs -->
+          <div class="flex gap-2 mb-3">
+            <button onclick="setGameOddsTab('${g.id}', 'moneyline')" 
+              class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${tab === 'moneyline' ? 'bg-green-500/20 border-green-500/40 text-green-400' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'}">
+              Moneyline
+            </button>
+          </div>
+          
+          <!-- Odds Table -->
+          <div class="rounded-lg overflow-hidden border border-white/10">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="bg-white/5 text-gray-400 text-xs uppercase">
+                  <th class="py-2 px-3 text-left font-medium">Book</th>
+                  <th class="py-2 px-3 text-center font-medium">${g.awayAbbrev}</th>
+                  <th class="py-2 px-3 text-center font-medium">${g.homeAbbrev}</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${fmvRow}
+                ${rows}
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="mt-2 text-[10px] text-gray-500 flex items-center gap-3">
+            <span><span class="text-green-400 font-bold">Green</span> = Best available line</span>
+            <span><span class="text-green-400">+%</span> = Edge vs FMV</span>
+          </div>
+        </div>
+      `;
     }
     
     // Get best line odds from selected sportsbooks (uses bestLineSettings.books)
@@ -3337,6 +3398,19 @@
                   </div>
                   ` : ''}
                 </div>
+
+                <!-- View Odds Button -->
+                <div class="flex justify-center mt-3">
+                  <button onclick="toggleGameOdds('${g.id}')" 
+                    class="btn-pill px-4 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 ${expandedGames[g.id] ? 'text-green-400' : 'text-gray-400 hover:text-white'}">
+                    <span>${expandedGames[g.id] ? '▼' : '▶'}</span>
+                    <span>${expandedGames[g.id] ? 'Hide Odds' : 'View Odds'}</span>
+                    ${Object.keys(oddsApiRawData).length > 0 ? `<span class="text-[10px] opacity-60">(${Object.keys(oddsApiRawData[\`\${g.awayAbbrev}-\${g.homeAbbrev}\`]?.books || {}).length || 0} books)</span>` : ''}
+                  </button>
+                </div>
+
+                <!-- Expanded Odds Panel -->
+                ${expandedGames[g.id] ? renderOddsPanel(g, fmv) : ''}
               </div>
             </div>
           `;
@@ -3348,16 +3422,16 @@
         </main>
         <footer class="border-t border-white/10 p-6 mt-8" style="background: linear-gradient(180deg, rgba(26, 26, 26, 0.5) 0%, rgba(20, 20, 20, 0.8) 100%);">
           <div class="max-w-lg mx-auto text-center text-xs text-gray-500">
-            Data from NHL API, Kalshi, Polymarket & SportsGameOdds • Win probability via Bernier model
+            Data from NHL API & Kalshi • Win probability via Bernier model
           </div>
           ${viewMode === 'live' ? `
           <div class="max-w-lg mx-auto mt-4 p-3 bg-black/30 rounded-lg">
             <div class="text-xs text-gray-400 mb-2">NHL Games State (${games.length}):</div>
             <div class="text-xs text-cyan-400 font-mono break-all mb-3">${games.length > 0 ? games.map(g => `${g.awayAbbrev}@${g.homeAbbrev}:${g.state}:P${g.period}:${g.awayScore}-${g.homeScore}`).join(', ') : 'No games loaded'}</div>
             ${Object.keys(oddsApiRawData).length > 0 ? `
-            <div class="text-xs text-gray-400">SportsGameOdds Keys (${Object.keys(oddsApiRawData).length}):</div>
+            <div class="text-xs text-gray-400">Odds API Keys (${Object.keys(oddsApiRawData).length}):</div>
             <div class="text-xs text-green-400 font-mono break-all mb-3">${Object.keys(oddsApiRawData).join(', ')}</div>
-            ` : '<div class="text-xs text-yellow-400 mb-3">No SportsGameOdds data (click Fetch Odds)</div>'}
+            ` : '<div class="text-xs text-yellow-400 mb-3">No Odds API data</div>'}
             <div class="text-xs text-gray-400">Polymarket Keys (${Object.keys(polymarketData).length}):</div>
             <div class="text-xs text-pink-400 font-mono break-all mb-3">${Object.keys(polymarketData).length > 0 ? Object.keys(polymarketData).join(', ') : 'None loaded'}</div>
             <div class="text-xs text-gray-400">Games looking for:</div>
@@ -3431,11 +3505,13 @@
           console.error('Polymarket fetch error:', e);
         }
         
-        // Fetch sportsbook odds from SportsGameOdds (no API key prompt needed)
-        try {
-          fetchSportsbookOdds(true); // Manual fetch on init
-        } catch (e) {
-          console.error('Sportsbook fetch error:', e);
+        // Try scheduled odds fetch if API key exists
+        if (oddsApiKey) {
+          try {
+            fetchSportsbookOdds(false);
+          } catch (e) {
+            console.error('Sportsbook fetch error:', e);
+          }
         }
         
         // Fetch games - this is critical
@@ -3462,9 +3538,11 @@
         
         // Check for scheduled odds fetch every minute
         oddsCheckInterval = setInterval(() => {
-          try {
-            fetchSportsbookOdds(false);
-          } catch (e) { console.error('Scheduled sportsbook error:', e); }
+          if (oddsApiKey) {
+            try {
+              fetchSportsbookOdds(false);
+            } catch (e) { console.error('Scheduled sportsbook error:', e); }
+          }
         }, 60000);
       } catch (e) {
         console.error('Init error:', e);
