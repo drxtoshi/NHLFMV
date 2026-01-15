@@ -62,78 +62,99 @@
         .book-tag.selected.sharp { background:var(--profit); border-color:var(--profit); }
         
         /* Stats Bar */
-        .stats { display:flex; gap:12px; margin-bottom:16px; }
-        .stat { background:var(--bg2); border:1px solid var(--bdr); border-radius:8px; padding:12px 16px; flex:1; }
-        .stat-label { font-size:11px; color:var(--txt3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
-        .stat-value { font-size:20px; font-weight:600; }
+        .stats { display:flex; gap:8px; margin-bottom:12px; }
+        .stat { background:var(--bg2); border:1px solid var(--bdr); border-radius:6px; padding:8px 12px; flex:1; }
+        .stat-label { font-size:9px; color:var(--txt3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px; }
+        .stat-value { font-size:16px; font-weight:600; }
         .stat-value.green { color:var(--profit); }
         .stat-value.blue { color:var(--accent); }
         
         /* Games */
-        .games { display:flex; flex-direction:column; gap:12px; }
-        .game { background:var(--bg2); border:1px solid var(--bdr); border-radius:8px; overflow:hidden; }
+        .games { display:grid; grid-template-columns:repeat(auto-fill, minmax(360px, 1fr)); gap:10px; }
+        .game { background:var(--bg2); border:1px solid var(--bdr); border-radius:8px; overflow:hidden; position:relative; cursor:pointer; }
         .game.has-edge { border-color:var(--profit); }
+        .game.has-edge::before { 
+            content:''; 
+            position:absolute; 
+            inset:0; 
+            background:var(--profit); 
+            opacity:0; 
+            pointer-events:none; 
+            z-index:10;
+            animation:edgePulse 2s ease-in-out infinite;
+        }
+        .game.has-edge.seen::before { animation:none; opacity:0; }
+        @keyframes edgePulse {
+            0%, 100% { opacity:0; }
+            50% { opacity:0.15; }
+        }
         
         /* Game Header */
-        .game-header { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:var(--bg3); }
-        .matchup { display:flex; align-items:center; gap:20px; }
-        .team { display:flex; align-items:center; gap:8px; }
-        .team-abbr { font-size:11px; font-weight:600; color:var(--txt3); background:var(--bg); padding:4px 8px; border-radius:4px; }
-        .team-name { font-weight:500; }
-        .team-score { font-size:20px; font-weight:700; color:var(--accent); margin-left:8px; }
-        .vs { color:var(--txt3); font-size:12px; }
+        .game-header { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--bg3); }
+        .matchup { display:flex; align-items:center; gap:12px; }
+        .team { display:flex; align-items:center; gap:6px; }
+        .team-abbr { font-size:10px; font-weight:600; color:var(--txt3); background:var(--bg); padding:3px 6px; border-radius:3px; }
+        .team-name { font-weight:500; font-size:13px; }
+        .team-score { font-size:18px; font-weight:700; color:var(--accent); margin-left:6px; }
+        .vs { color:var(--txt3); font-size:11px; }
         .game-info { text-align:right; }
-        .game-status { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:4px; font-size:12px; font-weight:500; }
+        .game-status { display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:500; }
         .game-status.live { background:var(--profit-bg); color:var(--profit); }
         .game-status.upcoming { background:var(--bg); color:var(--txt3); }
-        .game-time { font-size:18px; font-weight:600; color:var(--warn); margin-top:4px; }
-        .game-date { font-size:12px; color:var(--txt3); margin-top:2px; }
+        .game-time { font-size:14px; font-weight:600; color:var(--warn); margin-top:2px; }
+        .game-date { font-size:11px; color:var(--txt3); margin-top:1px; }
         
         /* Period Tabs */
-        .period-tabs { display:flex; gap:4px; padding:8px 16px; background:var(--bg); border-bottom:1px solid var(--bdr); }
-        .period-tab { padding:6px 14px; background:transparent; border:1px solid transparent; border-radius:4px; color:var(--txt3); font-family:inherit; font-size:12px; font-weight:500; cursor:pointer; transition:all 0.15s; position:relative; }
+        .period-tabs { display:flex; gap:3px; padding:6px 12px; background:var(--bg); border-bottom:1px solid var(--bdr); }
+        .period-tab { padding:5px 12px; background:transparent; border:1px solid transparent; border-radius:4px; color:var(--txt3); font-family:inherit; font-size:11px; font-weight:500; cursor:pointer; transition:all 0.15s; position:relative; }
         .period-tab:hover { color:var(--txt); background:var(--bg3); }
         .period-tab.active { background:var(--accent); color:white; }
-        .period-tab.has-edge::after { content:''; position:absolute; top:2px; right:2px; width:6px; height:6px; background:var(--profit); border-radius:50%; }
+        .period-tab.has-edge::after { content:''; position:absolute; top:1px; right:1px; width:5px; height:5px; background:var(--profit); border-radius:50%; }
         .period-tab:disabled { opacity:0.4; cursor:default; }
         
         /* Odds Section */
-        .odds-section { padding:16px; }
-        .odds-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
-        .odds-title { font-size:13px; font-weight:600; color:var(--txt2); }
-        .consensus-pills { display:flex; gap:16px; }
+        .odds-section { padding:10px 12px; }
+        .odds-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+        .odds-title { font-size:12px; font-weight:600; color:var(--txt2); }
+        .consensus-pills { display:flex; gap:12px; }
         .pill { text-align:center; }
-        .pill-label { font-size:10px; color:var(--txt3); text-transform:uppercase; }
-        .pill-value { font-size:14px; font-weight:600; color:var(--accent); }
+        .pill-label { font-size:9px; color:var(--txt3); text-transform:uppercase; }
+        .pill-value { font-size:13px; font-weight:600; color:var(--accent); }
         
         /* Odds Table */
         .odds-table { width:100%; border-collapse:collapse; }
-        .odds-table th { padding:8px 12px; text-align:left; font-size:10px; font-weight:600; color:var(--txt3); text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid var(--bdr); }
-        .odds-table td { padding:10px 12px; border-bottom:1px solid var(--bdr); font-size:13px; }
+        .odds-table th { padding:6px 8px; text-align:left; font-size:9px; font-weight:600; color:var(--txt3); text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid var(--bdr); }
+        .odds-table td { padding:6px 8px; border-bottom:1px solid var(--bdr); font-size:12px; }
         .odds-table tr:last-child td { border-bottom:none; }
         .odds-table tr:hover { background:rgba(255,255,255,0.02); }
         .odds-table .consensus-row { background:var(--bg3); }
         .odds-table .consensus-row td { border-top:2px solid var(--accent); font-weight:500; }
         
-        .book-cell { display:flex; align-items:center; gap:8px; }
-        .book-logo { width:24px; height:24px; background:var(--bg4); border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:var(--txt3); }
-        .book-name { font-weight:500; }
-        .book-badge { font-size:9px; padding:2px 6px; border-radius:3px; font-weight:600; }
+        .book-cell { display:flex; align-items:center; gap:6px; }
+        .book-logo { width:28px; height:18px; background:var(--bg4); border-radius:3px; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:700; color:#fff; }
+        .book-name { font-weight:500; font-size:12px; }
+        .book-badge { font-size:8px; padding:1px 4px; border-radius:2px; font-weight:600; }
         .book-badge.sharp { background:var(--profit-bg); color:var(--profit); }
         .book-badge.soft { background:rgba(59,130,246,0.1); color:var(--accent); }
         
         .odds-cell { text-align:center; }
-        .odds-value { display:inline-block; padding:4px 8px; border-radius:4px; font-weight:500; min-width:60px; }
-        .odds-value.best { background:var(--profit-bg); color:var(--profit); }
-        .odds-value.worst { background:var(--loss-bg); color:var(--loss); }
+        .odds-value { display:inline-block; padding:3px 6px; border-radius:3px; font-weight:500; min-width:50px; font-size:12px; color:var(--txt); }
+        .odds-value.best { background:rgba(96,165,250,0.15); color:#60a5fa; }
+        .odds-value.better { background:var(--profit-bg); color:var(--profit); }
         
         .ev-cell { text-align:center; }
-        .ev-value { display:inline-block; padding:4px 8px; border-radius:4px; font-weight:600; min-width:65px; }
+        .ev-value { display:inline-block; padding:3px 6px; border-radius:3px; font-weight:600; min-width:55px; font-size:11px; color:var(--txt); }
         .ev-value.positive { background:var(--profit-bg); color:var(--profit); }
         .ev-value.negative { color:var(--txt3); }
         
         .signal-cell { }
-        .edge-badge { display:inline-flex; align-items:center; gap:4px; padding:4px 8px; background:var(--profit); color:var(--bg); border-radius:4px; font-size:11px; font-weight:600; }
+        .edge-badge { display:inline-flex; align-items:center; gap:3px; padding:3px 6px; background:var(--profit); color:var(--bg); border-radius:3px; font-size:10px; font-weight:600; }
+        
+        /* Consensus row purple */
+        .odds-table .consensus-row { background:rgba(168,85,247,0.08); }
+        .odds-table .consensus-row td { border-top:2px solid #a855f7; font-weight:500; }
+        .odds-table .consensus-row .odds-value { color:#c084fc; background:rgba(168,85,247,0.15); }
+        .consensus-label { color:#a855f7; }
         
         /* Alerts */
         .alerts { position:fixed; top:16px; right:16px; width:280px; max-height:40vh; overflow-y:auto; display:flex; flex-direction:column; gap:6px; z-index:1000; }
@@ -517,10 +538,36 @@ function consensus(books, line) {
 function render() {
     const c = document.getElementById('games');
     if (!DATA.length) { c.innerHTML = '<div class="empty"><div class="empty-icon">🏒</div><h3>No Games</h3><p>Click Demo to preview</p></div>'; return; }
+    
+    // Save scroll position before re-render
+    const scrollY = window.scrollY;
+    
+    // Save which period tabs are active for each game
+    const activeTabs = {};
+    const seenGames = new Set();
+    document.querySelectorAll('.game').forEach(g => {
+        const id = g.id.replace('g-', '');
+        const activeTab = g.querySelector('.period-tab.active');
+        if (activeTab) activeTabs[id] = activeTab.dataset.p;
+        if (g.classList.contains('seen')) seenGames.add(id);
+    });
+    
     c.innerHTML = DATA.map(({game: g, pOdds}) => {
-        const edge = hasEdge(pOdds);
-        return `<div class="game${edge ? ' has-edge' : ''}" id="g-${g.eventID}">${gameHeader(g)}${periodTabs(g, pOdds)}${oddsSection(g, pOdds)}</div>`;
+        const edge = hasEdge(pOdds, g);
+        const savedPeriod = activeTabs[g.eventID];
+        const wasSeen = seenGames.has(g.eventID);
+        return `<div class="game${edge ? ' has-edge' : ''}${wasSeen ? ' seen' : ''}" id="g-${g.eventID}" onclick="markSeen('${g.eventID}')">${gameHeader(g)}${periodTabs(g, pOdds, savedPeriod)}${oddsSection(g, pOdds, savedPeriod)}</div>`;
     }).join('');
+    
+    // Restore scroll position after render
+    requestAnimationFrame(() => {
+        window.scrollTo(0, scrollY);
+    });
+}
+
+function markSeen(eventId) {
+    const game = document.getElementById('g-' + eventId);
+    if (game) game.classList.add('seen');
 }
 
 function gameHeader(g) {
@@ -586,17 +633,21 @@ function gameHeader(g) {
     </div>`;
 }
 
-function periodTabs(g, pOdds) {
+function periodTabs(g, pOdds, savedPeriod = null) {
     const st = g.status || {};
     const isLive = st.started && !st.completed;
     const cp = parseInt(st.currentPeriodID?.replace('p','') || st.period) || 1;
     
+    // Use saved period if available, otherwise default to current live period or P1
+    const activePeriod = savedPeriod || (isLive ? `${cp}p` : '1p');
+    
     return `<div class="period-tabs">${['1p','2p','3p'].map((p, i) => {
         const n = i + 1;
         const has = pOdds[p]?.books?.length > 0;
-        const edge = has && pEdge(pOdds[p]);
+        const edge = has && pEdge(pOdds[p], g, p);
         const isCurrent = isLive && n === cp;
-        return `<button class="period-tab${isCurrent ? ' active' : ''}${edge ? ' has-edge' : ''}" 
+        const isActive = p === activePeriod;
+        return `<button class="period-tab${isActive ? ' active' : ''}${edge ? ' has-edge' : ''}" 
             data-p="${p}" onclick="switchP(this,'${g.eventID}')" ${!has ? 'disabled' : ''}>
             P${n}${isCurrent ? ' (Live)' : ''}
         </button>`;
@@ -630,11 +681,13 @@ function oddsSection(g, pOdds, selP = null) {
                 <div class="pill"><div class="pill-label">Sharp#</div><div class="pill-value">${cons.cnt}</div></div>
             </div>` : ''}
         </div>
-        ${oddsTable(pd, cons, g)}
+        ${oddsTable(pd, cons, g, cp)}
     </div>`;
 }
 
-function oddsTable(pd, cons, g) {
+let viewingPeriod = '1p'; // Track which period tab is being viewed
+
+function oddsTable(pd, cons, g, periodId) {
     if (!pd.books.length) return '<div class="empty" style="padding:24px">No odds available</div>';
     
     const show = [...new Set([...CFG.sharpBooks, ...CFG.compareBooks])];
@@ -653,29 +706,42 @@ function oddsTable(pd, cons, g) {
         return aS - bS;
     });
     
-    return `<div class="table-scroll"><table class="odds-table">
+    // Get game state
+    const st = g.status || {};
+    const isLive = st.started && !st.completed;
+    const currentPeriod = (st.currentPeriodID || '1p').toLowerCase();
+    viewingPeriod = periodId; // Update global tracking
+    
+    // Check if EV calcs are enabled for this view
+    const evEnabled = isLive ? (currentPeriod === periodId) : (periodId === '1p');
+    const evNote = !evEnabled ? `<div style="color:var(--txt3);font-size:11px;margin-bottom:8px;">EV calculations disabled for non-live periods</div>` : '';
+    
+    return `${evNote}<div class="table-scroll"><table class="odds-table">
         <thead><tr><th>Book</th><th>Line</th><th style="text-align:center">Over</th><th style="text-align:center">Under</th><th style="text-align:center">O EV</th><th style="text-align:center">U EV</th><th>Signal</th></tr></thead>
         <tbody>
             ${cons ? `<tr class="consensus-row">
-                <td><span style="color:var(--accent);font-weight:600">⚡ Sharp Consensus (${cons.cnt})</span></td>
+                <td><span class="consensus-label" style="font-weight:600">⚡ Sharp Consensus (${cons.cnt})</span></td>
                 <td>${cons.line}</td>
                 <td class="odds-cell"><span class="odds-value">${fmt(cons.oFair)}</span></td>
                 <td class="odds-cell"><span class="odds-value">${fmt(cons.uFair)}</span></td>
-                <td>--</td><td>--</td><td style="color:var(--accent)">Fair Value</td>
+                <td>--</td><td>--</td><td class="consensus-label">Fair Value</td>
             </tr>` : ''}
-            ${sorted.map(b => oddsRow(b, cons, bo, bu, wo, wu, g, filtered.length)).join('')}
+            ${sorted.map(b => oddsRow(b, cons, bo, bu, wo, wu, g, filtered.length, currentPeriod, isLive)).join('')}
         </tbody>
     </table></div>`;
 }
 
-function oddsRow(b, cons, bo, bu, wo, wu, g, tot) {
+function oddsRow(b, cons, bo, bu, wo, wu, g, tot, currentPeriod, isLive) {
     const bk = (b.bk || '').toLowerCase();
     const bkd = BOOKS[bk] || {n: b.bk, a: bk.substring(0,3).toUpperCase(), c: '#666'};
     const isSharp = CFG.sharpBooks.includes(bk);
     const isCompare = CFG.compareBooks.includes(bk);
     
     let oEV = null, uEV = null;
-    if (cons && isCompare) {
+    // Only calculate EV if: game is live AND we're viewing the current period, OR it's P1 pregame
+    const canCalcEV = isLive ? (currentPeriod === viewingPeriod) : (viewingPeriod === '1p');
+    
+    if (cons && isCompare && canCalcEV) {
         if (b.overPrice) oEV = calcEV(b.overPrice, cons.oP);
         if (b.underPrice) uEV = calcEV(b.underPrice, cons.uP);
     }
@@ -688,14 +754,24 @@ function oddsRow(b, cons, bo, bu, wo, wu, g, tot) {
         if (!alerted.has(k)) { alerted.add(k); triggerAlert(g, bkd, b, oEV, uEV, oE, uE); }
     }
     
+    // Determine styling: green if better than fair, blue if best available
+    const oBetterThanFair = cons && b.overPrice && b.overPrice > cons.oFair;
+    const uBetterThanFair = cons && b.underPrice && b.underPrice > cons.uFair;
+    const oIsBest = b.overPrice === bo;
+    const uIsBest = b.underPrice === bu;
+    
+    // Class priority: best (blue) > better than fair (green) > default (white)
+    const oClass = oIsBest ? 'best' : (oBetterThanFair ? 'better' : '');
+    const uClass = uIsBest ? 'best' : (uBetterThanFair ? 'better' : '');
+    
     return `<tr>
         <td><div class="book-cell">
             <div class="book-logo" style="background:${bkd.c};color:#fff">${bkd.a}</div>
             <span class="book-name">${bkd.n}</span>
         </div></td>
         <td>${b.line || 1.5}</td>
-        <td class="odds-cell">${b.overPrice ? `<span class="odds-value${b.overPrice===bo?' best':''}${b.overPrice===wo&&tot>2?' worst':''}">${fmt(b.overPrice)}</span>` : '--'}</td>
-        <td class="odds-cell">${b.underPrice ? `<span class="odds-value${b.underPrice===bu?' best':''}${b.underPrice===wu&&tot>2?' worst':''}">${fmt(b.underPrice)}</span>` : '--'}</td>
+        <td class="odds-cell">${b.overPrice ? `<span class="odds-value ${oClass}">${fmt(b.overPrice)}</span>` : '--'}</td>
+        <td class="odds-cell">${b.underPrice ? `<span class="odds-value ${uClass}">${fmt(b.underPrice)}</span>` : '--'}</td>
         <td class="ev-cell">${oEV !== null ? `<span class="ev-value${oEV >= CFG.minEV ? ' positive' : ' negative'}">${oEV > 0 ? '+' : ''}${oEV.toFixed(1)}%</span>` : '--'}</td>
         <td class="ev-cell">${uEV !== null ? `<span class="ev-value${uEV >= CFG.minEV ? ' positive' : ' negative'}">${uEV > 0 ? '+' : ''}${uEV.toFixed(1)}%</span>` : '--'}</td>
         <td class="signal-cell">${oE ? `<span class="edge-badge">O+${oEV.toFixed(0)}%</span>` : ''}${uE ? `<span class="edge-badge">U+${uEV.toFixed(0)}%</span>` : ''}</td>
@@ -703,11 +779,31 @@ function oddsRow(b, cons, bo, bu, wo, wu, g, tot) {
 }
 
 const fmt = a => a == null ? '--' : (a > 0 ? '+' + a : String(a));
-const hasEdge = po => ['1p','2p','3p'].some(p => pEdge(po[p]));
-function pEdge(pd) {
+
+function hasEdge(po, g) {
+    const st = g?.status || {};
+    const isLive = st.started && !st.completed;
+    const currentPeriod = (st.currentPeriodID || '1p').toLowerCase();
+    
+    return ['1p','2p','3p'].some(p => {
+        // Only check edge for: current live period OR P1 if pregame
+        const canCheck = isLive ? (p === currentPeriod) : (p === '1p');
+        return canCheck && pEdge(po[p], g, p);
+    });
+}
+
+function pEdge(pd, g, periodId) {
     if (!pd?.books?.length) return false;
     const c = consensus(pd.books, pd.line);
     if (!c) return false;
+    
+    const st = g?.status || {};
+    const isLive = st.started && !st.completed;
+    const currentPeriod = (st.currentPeriodID || '1p').toLowerCase();
+    const canCalcEV = isLive ? (currentPeriod === periodId) : (periodId === '1p');
+    
+    if (!canCalcEV) return false;
+    
     return pd.books.some(b => {
         if (!CFG.compareBooks.includes(b.bk?.toLowerCase())) return false;
         return (b.overPrice && calcEV(b.overPrice, c.oP) >= CFG.minEV) || (b.underPrice && calcEV(b.underPrice, c.uP) >= CFG.minEV);
@@ -738,15 +834,25 @@ function updateStats() {
     document.getElementById('sGames').textContent = DATA.length + (liveCount ? ` (${liveCount} live)` : '');
     document.getElementById('sTime').textContent = new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
     let cnt = 0, best = 0;
-    DATA.forEach(({pOdds}) => ['1p','2p','3p'].forEach(p => {
-        const pd = pOdds[p]; if (!pd?.books?.length) return;
-        const c = consensus(pd.books, pd.line); if (!c) return;
-        pd.books.forEach(b => {
-            if (!CFG.compareBooks.includes(b.bk?.toLowerCase())) return;
-            if (b.overPrice) { const e = calcEV(b.overPrice, c.oP); if (e >= CFG.minEV) { cnt++; best = Math.max(best, e); } }
-            if (b.underPrice) { const e = calcEV(b.underPrice, c.uP); if (e >= CFG.minEV) { cnt++; best = Math.max(best, e); } }
+    DATA.forEach(({game: g, pOdds}) => {
+        const st = g.status || {};
+        const isLive = st.started && !st.completed;
+        const currentPeriod = (st.currentPeriodID || '1p').toLowerCase();
+        
+        ['1p','2p','3p'].forEach(p => {
+            // Only count EV for: current live period OR P1 if pregame
+            const canCalcEV = isLive ? (p === currentPeriod) : (p === '1p');
+            if (!canCalcEV) return;
+            
+            const pd = pOdds[p]; if (!pd?.books?.length) return;
+            const c = consensus(pd.books, pd.line); if (!c) return;
+            pd.books.forEach(b => {
+                if (!CFG.compareBooks.includes(b.bk?.toLowerCase())) return;
+                if (b.overPrice) { const e = calcEV(b.overPrice, c.oP); if (e >= CFG.minEV) { cnt++; best = Math.max(best, e); } }
+                if (b.underPrice) { const e = calcEV(b.underPrice, c.uP); if (e >= CFG.minEV) { cnt++; best = Math.max(best, e); } }
+            });
         });
-    }));
+    });
     document.getElementById('sEV').textContent = cnt;
     document.getElementById('sBest').textContent = best > 0 ? '+' + best.toFixed(1) + '%' : '--';
 }
