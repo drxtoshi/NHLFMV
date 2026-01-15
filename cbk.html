@@ -165,16 +165,16 @@
         .consensus-label { color:#a855f7; }
         
         /* Alerts - inline next to tabs */
-        .alerts-inline { display:flex; flex-wrap:wrap; gap:8px; flex:1; overflow:hidden; }
+        .alerts-inline { display:flex; flex-wrap:wrap; gap:4px; flex:1; overflow:hidden; }
         .alerts-inline:empty { display:none; }
-        .alert { padding:8px 12px; background:var(--bg2); border:1px solid var(--profit); border-radius:6px; cursor:pointer; transition:all 0.15s; max-width:350px; }
+        .alert { padding:4px 8px; background:var(--bg2); border:1px solid var(--profit); border-radius:4px; cursor:pointer; transition:all 0.15s; max-width:200px; font-size:9px; }
         .alert:hover { background:var(--bg3); }
-        .alert-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:2px; }
-        .alert-title { font-size:11px; font-weight:600; color:var(--profit); }
-        .alert-time { font-size:9px; color:var(--txt3); }
-        .alert-body { font-size:11px; color:var(--txt2); }
+        .alert-header { display:flex; justify-content:space-between; align-items:center; gap:6px; }
+        .alert-title { font-size:9px; font-weight:600; color:var(--profit); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .alert-time { font-size:8px; color:var(--txt3); flex-shrink:0; }
+        .alert-body { font-size:9px; color:var(--txt2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .alert-body strong { color:var(--txt); }
-        .alert-ev { display:inline-block; margin-left:6px; padding:2px 6px; background:var(--profit-bg); color:var(--profit); border-radius:3px; font-weight:600; font-size:10px; }
+        .alert-ev { display:inline-block; margin-left:4px; padding:1px 4px; background:var(--profit-bg); color:var(--profit); border-radius:2px; font-weight:600; font-size:8px; }
         
         /* Steam alerts - orange/yellow theme */
         .alert.steam-alert { border-color:var(--warn); background:rgba(245,158,11,0.08); }
@@ -197,30 +197,30 @@
         .game.collapsed .period-tabs,
         .game.collapsed .odds-section { display:none; }
         .game.collapsed .game-header { cursor:pointer; }
-        .collapsed-summary { display:none; padding:6px 12px; background:var(--bg); border-top:1px solid var(--bdr); font-size:11px; }
-        .game.collapsed .collapsed-summary { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
-        .collapsed-summary .cs-item { display:flex; align-items:center; gap:4px; padding:3px 6px; background:var(--bg3); border-radius:4px; }
-        .collapsed-summary .cs-label { color:var(--txt3); font-size:9px; font-weight:600; }
-        .collapsed-summary .cs-value { font-weight:600; color:var(--txt); font-size:11px; }
+        .collapsed-summary { display:none; padding:4px 10px; background:var(--bg); border-top:1px solid var(--bdr); font-size:10px; overflow-x:auto; }
+        .game.collapsed .collapsed-summary { display:flex; flex-wrap:nowrap; gap:6px; align-items:center; }
+        .collapsed-summary .cs-item { display:flex; align-items:center; gap:3px; padding:2px 4px; background:var(--bg3); border-radius:3px; flex-shrink:0; }
+        .collapsed-summary .cs-label { color:var(--txt3); font-size:8px; font-weight:600; }
+        .collapsed-summary .cs-value { font-weight:600; color:var(--txt); font-size:10px; }
         .collapsed-summary .cs-value.purple { color:#c084fc; }
         .collapsed-summary .cs-value.blue { color:var(--accent); }
-        .collapsed-summary .cs-fv-stack { display:flex; flex-direction:column; gap:1px; padding:2px 6px; background:var(--bg3); border-radius:4px; }
-        .collapsed-summary .cs-fv-item { display:flex; align-items:center; gap:4px; }
-        .collapsed-summary .cs-best-stack { display:flex; flex-direction:column; gap:2px; }
-        .collapsed-summary .cs-best-line { display:flex; align-items:center; gap:3px; }
-        .collapsed-summary .cs-best-line .cs-side { font-weight:700; color:var(--txt); font-size:10px; width:10px; }
-        .collapsed-summary .cs-best-line .book-logo { width:20px; height:13px; font-size:6px; border-radius:2px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; color:#fff; flex-shrink:0; }
-        .collapsed-summary .cs-best-line .cs-odds { color:var(--txt2); font-weight:500; font-size:10px; }
+        .collapsed-summary .cs-fv-stack { display:flex; flex-direction:column; gap:0px; padding:2px 4px; background:var(--bg3); border-radius:3px; flex-shrink:0; }
+        .collapsed-summary .cs-fv-item { display:flex; align-items:center; gap:2px; line-height:1.1; }
+        .collapsed-summary .cs-best-stack { display:flex; flex-direction:column; gap:1px; flex-shrink:0; }
+        .collapsed-summary .cs-best-line { display:flex; align-items:center; gap:2px; }
+        .collapsed-summary .cs-best-line .cs-side { font-weight:700; color:var(--txt); font-size:9px; width:8px; }
+        .collapsed-summary .cs-best-line .book-logo { width:18px; height:11px; font-size:5px; border-radius:2px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; color:#fff; flex-shrink:0; }
+        .collapsed-summary .cs-best-line .cs-odds { color:var(--txt2); font-weight:500; font-size:9px; white-space:nowrap; }
         
         /* Best bets bar (shown when expanded) */
-        .best-bets-bar { display:flex; flex-wrap:wrap; gap:8px; padding:6px 12px; background:var(--bg); border-bottom:1px solid var(--bdr); align-items:center; }
+        .best-bets-bar { display:flex; flex-wrap:nowrap; gap:6px; padding:4px 10px; background:var(--bg); border-bottom:1px solid var(--bdr); align-items:center; overflow-x:auto; }
         .best-bets-bar:empty { display:none; }
-        .best-bets-label { font-size:10px; color:var(--txt3); font-weight:600; text-transform:uppercase; margin-right:4px; }
-        .best-bets-stack { display:flex; flex-direction:column; gap:2px; }
-        .best-bet-chip { display:flex; align-items:center; gap:3px; font-size:10px; }
-        .best-bet-chip .bet-label { font-weight:700; color:var(--txt); width:10px; }
-        .best-bet-chip .book-logo { width:20px; height:13px; font-size:6px; border-radius:2px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; color:#fff; flex-shrink:0; }
-        .best-bet-chip .bet-odds { color:var(--txt2); font-weight:500; }
+        .best-bets-label { font-size:9px; color:var(--txt3); font-weight:600; text-transform:uppercase; flex-shrink:0; }
+        .best-bets-stack { display:flex; flex-direction:column; gap:1px; flex-shrink:0; }
+        .best-bet-chip { display:flex; align-items:center; gap:2px; font-size:9px; }
+        .best-bet-chip .bet-label { font-weight:700; color:var(--txt); width:8px; }
+        .best-bet-chip .book-logo { width:18px; height:11px; font-size:5px; border-radius:2px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; color:#fff; flex-shrink:0; }
+        .best-bet-chip .bet-odds { color:var(--txt2); font-weight:500; white-space:nowrap; }
         .game.collapsed .best-bets-bar { display:none; }
         
         /* Arbitrage bar */
@@ -417,12 +417,12 @@
         
         /* Alerts mobile */
         .mobile-mode .tabs-row { flex-direction:column; gap:8px; }
-        .mobile-mode .alerts-inline { width:100%; }
-        .mobile-mode .alert { padding:8px 10px; border-radius:4px; max-width:100%; flex:1; }
-        .mobile-mode .alert-title { font-size:11px; }
-        .mobile-mode .alert-time { font-size:9px; }
-        .mobile-mode .alert-body { font-size:11px; }
-        .mobile-mode .alert-ev { font-size:10px; padding:2px 5px; margin-left:4px; }
+        .mobile-mode .alerts-inline { width:100%; gap:4px; }
+        .mobile-mode .alert { padding:4px 6px; border-radius:3px; max-width:none; flex:1; min-width:140px; }
+        .mobile-mode .alert-title { font-size:8px; }
+        .mobile-mode .alert-time { font-size:7px; }
+        .mobile-mode .alert-body { font-size:8px; }
+        .mobile-mode .alert-ev { font-size:7px; padding:1px 3px; margin-left:2px; }
         
         .mobile-mode #mobileToggle { background:var(--accent); color:white; }
         
@@ -2568,13 +2568,13 @@ function mlRow(b, cons, bestAway, bestHome, g, period, canCalcEV) {
 function triggerAlertCBB(g, bkd, market, side, line, odds, ev) {
     const c = document.getElementById('alerts');
     const t = g.teams || {};
-    const aw = t.away?.names?.short || 'Away';
-    const hm = t.home?.names?.short || 'Home';
-    const sideLabel = market === 'spread' ? `${side.toUpperCase()} ${line > 0 ? '+' : ''}${line}` : `${side.toUpperCase()} ${line}`;
+    const aw = t.away?.names?.abbr || t.away?.names?.short || 'Away';
+    const hm = t.home?.names?.abbr || t.home?.names?.short || 'Home';
+    const sideLabel = market === 'ml' ? `${side.toUpperCase()} ML` : (market === 'spread' ? `${side.toUpperCase()} ${line > 0 ? '+' : ''}${line}` : `${side.toUpperCase()} ${line}`);
     const id = 'a' + Date.now();
     c.insertAdjacentHTML('afterbegin', `<div class="alert" id="${id}" onclick="dismissAlert('${id}')">
-        <div class="alert-header"><span class="alert-title">🏀 ${aw} @ ${hm}</span><span class="alert-time">${new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</span></div>
-        <div class="alert-body">${bkd.n}: <strong>${sideLabel}</strong> ${fmt(odds)}<span class="alert-ev">+${ev.toFixed(1)}%</span></div>
+        <div class="alert-header"><span class="alert-title">🏀 ${aw}@${hm}</span><span class="alert-time">${new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</span></div>
+        <div class="alert-body">${bkd.a}: <strong>${sideLabel}</strong> ${fmt(odds)}<span class="alert-ev">+${ev.toFixed(1)}%</span></div>
     </div>`);
     if (CFG.sound) beep();
     setTimeout(() => dismissAlert(id), 120000);
