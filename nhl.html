@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NHL Period Props | +EV Finder</title>
+    <title>NHL Periods | +EV Finder</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -158,6 +158,9 @@
         .debug { background:var(--bg2); border:1px solid var(--bdr); border-radius:6px; padding:12px; margin-top:16px; font-size:11px; font-family:monospace; max-height:180px; overflow-y:auto; display:none; }
         .debug pre { white-space:pre-wrap; word-break:break-all; color:var(--txt3); }
         
+        /* Table scroll wrapper */
+        .table-scroll { overflow-x:auto; }
+        
         /* Responsive */
         @media (max-width: 900px) {
             .config-grid { grid-template-columns:repeat(2, 1fr); }
@@ -166,55 +169,91 @@
             .stat { min-width:calc(50% - 6px); }
         }
         
-        /* Mobile Mode */
-        .mobile-mode .app { padding:8px; }
-        .mobile-mode .header { padding:8px 0 12px; flex-direction:column; gap:10px; }
-        .mobile-mode .logo h1 { font-size:16px; }
-        .mobile-mode .controls { width:100%; justify-content:space-between; }
-        .mobile-mode .controls .btn { padding:6px 10px; font-size:12px; }
-        .mobile-mode .status { padding:4px 8px; font-size:11px; }
-        .mobile-mode .stats { gap:6px; flex-wrap:wrap; }
-        .mobile-mode .stat { padding:8px 12px; min-width:calc(50% - 3px); flex:none; }
-        .mobile-mode .stat-label { font-size:9px; }
-        .mobile-mode .stat-value { font-size:16px; }
-        .mobile-mode .games { gap:8px; }
-        .mobile-mode .game-header { padding:10px 12px; flex-direction:column; gap:8px; }
-        .mobile-mode .matchup { gap:10px; }
-        .mobile-mode .team-name { font-size:13px; }
-        .mobile-mode .team-score { font-size:18px; }
-        .mobile-mode .team-abbr { font-size:10px; padding:3px 6px; }
-        .mobile-mode .game-info { text-align:center; width:100%; }
-        .mobile-mode .period-tabs { padding:6px 10px; gap:3px; overflow-x:auto; }
-        .mobile-mode .period-tab { padding:5px 10px; font-size:11px; white-space:nowrap; }
-        .mobile-mode .odds-section { padding:10px 12px; }
-        .mobile-mode .odds-header { flex-direction:column; gap:8px; align-items:flex-start; }
-        .mobile-mode .consensus-pills { gap:10px; }
-        .mobile-mode .pill-label { font-size:9px; }
-        .mobile-mode .pill-value { font-size:12px; }
-        .mobile-mode .odds-table { font-size:11px; min-width:600px; }
-        .mobile-mode .odds-table th { padding:6px 8px; font-size:9px; }
-        .mobile-mode .odds-table td { padding:8px; }
-        .mobile-mode .book-cell { gap:6px; }
-        .mobile-mode .book-logo { width:20px; height:20px; font-size:8px; }
-        .mobile-mode .book-name { font-size:11px; }
-        .mobile-mode .book-badge { font-size:8px; padding:1px 4px; }
-        .mobile-mode .odds-value { padding:3px 6px; min-width:50px; font-size:11px; }
-        .mobile-mode .ev-value { padding:3px 6px; min-width:55px; font-size:11px; }
-        .mobile-mode .edge-badge { padding:3px 6px; font-size:10px; }
-        .mobile-mode .config { padding:12px; }
-        .mobile-mode .config-grid { grid-template-columns:1fr 1fr; gap:10px; }
+        /* Mobile Mode - Fully compact, no horizontal scroll */
+        .mobile-mode .app { padding:6px; }
+        .mobile-mode .header { padding:6px 0 10px; flex-direction:column; gap:8px; }
+        .mobile-mode .logo { gap:6px; }
+        .mobile-mode .logo-icon { font-size:18px; }
+        .mobile-mode .logo h1 { font-size:14px; }
+        .mobile-mode .controls { width:100%; justify-content:center; gap:4px; flex-wrap:wrap; }
+        .mobile-mode .controls .btn { padding:5px 8px; font-size:11px; }
+        .mobile-mode .status { padding:4px 6px; font-size:10px; gap:4px; }
+        .mobile-mode .status .dot { width:5px; height:5px; }
+        
+        .mobile-mode .stats { gap:4px; margin-bottom:10px; }
+        .mobile-mode .stat { padding:6px 8px; min-width:calc(25% - 3px); flex:1; border-radius:6px; }
+        .mobile-mode .stat-label { font-size:8px; margin-bottom:2px; }
+        .mobile-mode .stat-value { font-size:13px; }
+        
+        .mobile-mode .games { gap:6px; }
+        .mobile-mode .game { border-radius:6px; }
+        .mobile-mode .game-header { padding:8px 10px; }
+        .mobile-mode .matchup { gap:6px; }
+        .mobile-mode .team { gap:4px; }
+        .mobile-mode .team-name { font-size:12px; }
+        .mobile-mode .team-score { font-size:16px; margin-left:4px; }
+        .mobile-mode .team-abbr { font-size:9px; padding:2px 4px; }
+        .mobile-mode .vs { font-size:10px; }
+        .mobile-mode .game-status { padding:3px 6px; font-size:10px; }
+        .mobile-mode .game-date { font-size:10px; }
+        
+        .mobile-mode .period-tabs { padding:4px 8px; gap:2px; }
+        .mobile-mode .period-tab { padding:4px 8px; font-size:10px; }
+        
+        .mobile-mode .odds-section { padding:8px; }
+        .mobile-mode .odds-header { margin-bottom:8px; flex-direction:column; gap:6px; align-items:stretch; }
+        .mobile-mode .odds-title { font-size:11px; }
+        .mobile-mode .consensus-pills { gap:8px; justify-content:space-between; }
+        .mobile-mode .pill-label { font-size:8px; }
+        .mobile-mode .pill-value { font-size:11px; }
+        
+        /* Mobile table - ultra compact */
+        .mobile-mode .table-scroll { overflow-x:visible; }
+        .mobile-mode .odds-table { min-width:auto; width:100%; table-layout:fixed; }
+        .mobile-mode .odds-table th { padding:4px 2px; font-size:8px; text-align:center; }
+        .mobile-mode .odds-table th:first-child { text-align:left; width:50px; }
+        .mobile-mode .odds-table td { padding:5px 2px; text-align:center; font-size:10px; }
+        .mobile-mode .odds-table td:first-child { text-align:left; }
+        
+        .mobile-mode .book-cell { gap:0; justify-content:flex-start; }
+        .mobile-mode .book-logo { width:28px; height:20px; font-size:7px; border-radius:3px; font-weight:700; }
+        .mobile-mode .book-name { display:none; }
+        .mobile-mode .book-badge { display:none; }
+        
+        .mobile-mode .odds-value { padding:2px 3px; min-width:auto; font-size:10px; border-radius:3px; }
+        .mobile-mode .ev-value { padding:2px 3px; min-width:auto; font-size:10px; border-radius:3px; }
+        .mobile-mode .edge-badge { padding:2px 4px; font-size:9px; border-radius:3px; }
+        .mobile-mode .signal-cell { font-size:9px; }
+        
+        .mobile-mode .consensus-row td:first-child { font-size:9px; }
+        .mobile-mode .consensus-row td:first-child span { font-size:9px !important; }
+        
+        /* Hide Line column on mobile */
+        .mobile-mode .odds-table th:nth-child(2),
+        .mobile-mode .odds-table td:nth-child(2) { display:none; }
+        
+        /* Config mobile */
+        .mobile-mode .config { padding:10px; }
+        .mobile-mode .config-grid { grid-template-columns:1fr 1fr; gap:8px; }
+        .mobile-mode .config-title { font-size:12px; }
+        .mobile-mode .field label { font-size:9px; }
+        .mobile-mode .field input, .mobile-mode .field select { padding:6px 8px; font-size:11px; }
         .mobile-mode .book-section { grid-column: span 2; }
-        .mobile-mode .book-selector { gap:4px; }
-        .mobile-mode .book-tag { padding:3px 8px; font-size:11px; }
-        .mobile-mode .alerts { width:240px; top:10px; right:10px; }
-        .mobile-mode .alert { padding:8px 10px; }
-        .mobile-mode .alert-title { font-size:11px; }
-        .mobile-mode .alert-body { font-size:11px; }
-        .mobile-mode .alert-ev { font-size:10px; padding:2px 5px; }
+        .mobile-mode .book-selector { gap:3px; }
+        .mobile-mode .book-tag { padding:3px 6px; font-size:10px; }
+        
+        /* Alerts mobile */
+        .mobile-mode .alerts { width:200px; top:8px; right:8px; gap:4px; }
+        .mobile-mode .alert { padding:6px 8px; border-radius:4px; }
+        .mobile-mode .alert-title { font-size:10px; }
+        .mobile-mode .alert-time { font-size:8px; }
+        .mobile-mode .alert-body { font-size:10px; }
+        .mobile-mode .alert-ev { font-size:9px; padding:1px 4px; margin-left:4px; }
+        
         .mobile-mode #mobileToggle { background:var(--accent); color:white; }
         
-        /* Table scroll wrapper for mobile */
-        .table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+        /* Debug mobile */
+        .mobile-mode .debug { font-size:9px; padding:8px; max-height:120px; }
     </style>
 </head>
 <body>
@@ -222,7 +261,7 @@
     <header class="header">
         <div class="logo">
             <span class="logo-icon">🏒</span>
-            <h1>Period Props Edge</h1>
+            <h1>NHL Periods</h1>
         </div>
         <div class="controls">
             <div class="status"><div class="dot off" id="dot"></div><span id="statusTxt">Disconnected</span></div>
@@ -295,20 +334,20 @@ const CFG = {
 };
 
 const BOOKS = {
-    pinnacle: {n:'Pinnacle', a:'PIN'},
-    circa: {n:'Circa', a:'CCA'},
-    bookmaker: {n:'Bookmaker', a:'BKM'},
-    betcris: {n:'BetCRIS', a:'CRS'},
-    betonline: {n:'BetOnline', a:'BOL'},
-    draftkings: {n:'DraftKings', a:'DK'},
-    fanduel: {n:'FanDuel', a:'FD'},
-    betmgm: {n:'BetMGM', a:'MGM'},
-    caesars: {n:'Caesars', a:'CZR'},
-    pointsbet: {n:'PointsBet', a:'PB'},
-    betrivers: {n:'BetRivers', a:'BR'},
-    bet365: {n:'Bet365', a:'365'},
-    espnbet: {n:'ESPN Bet', a:'ESPN'},
-    fanatics: {n:'Fanatics', a:'FAN'}
+    pinnacle: {n:'Pinnacle', a:'PIN', c:'#c41230'},
+    circa: {n:'Circa', a:'CCA', c:'#d4af37'},
+    bookmaker: {n:'Bookmaker', a:'BKM', c:'#1a4d1a'},
+    betcris: {n:'BetCRIS', a:'CRS', c:'#003366'},
+    betonline: {n:'BetOnline', a:'BOL', c:'#8b0000'},
+    draftkings: {n:'DraftKings', a:'DK', c:'#53d337'},
+    fanduel: {n:'FanDuel', a:'FD', c:'#1493ff'},
+    betmgm: {n:'BetMGM', a:'MGM', c:'#c9a227'},
+    caesars: {n:'Caesars', a:'CZR', c:'#0d4524'},
+    pointsbet: {n:'PointsBet', a:'PB', c:'#e44c23'},
+    betrivers: {n:'BetRivers', a:'BR', c:'#1275ba'},
+    bet365: {n:'Bet365', a:'365', c:'#027b5b'},
+    espnbet: {n:'ESPN Bet', a:'ESPN', c:'#d00'},
+    fanatics: {n:'Fanatics', a:'FAN', c:'#004687'}
 };
 
 const SHARP_LIST = ['pinnacle','circa','bookmaker','betcris','betonline'];
@@ -631,7 +670,7 @@ function oddsTable(pd, cons, g) {
 
 function oddsRow(b, cons, bo, bu, wo, wu, g, tot) {
     const bk = (b.bk || '').toLowerCase();
-    const bkd = BOOKS[bk] || {n: b.bk, a: bk.substring(0,3).toUpperCase()};
+    const bkd = BOOKS[bk] || {n: b.bk, a: bk.substring(0,3).toUpperCase(), c: '#666'};
     const isSharp = CFG.sharpBooks.includes(bk);
     const isCompare = CFG.compareBooks.includes(bk);
     
@@ -651,16 +690,15 @@ function oddsRow(b, cons, bo, bu, wo, wu, g, tot) {
     
     return `<tr>
         <td><div class="book-cell">
-            <div class="book-logo">${bkd.a}</div>
+            <div class="book-logo" style="background:${bkd.c};color:#fff">${bkd.a}</div>
             <span class="book-name">${bkd.n}</span>
-            <span class="book-badge ${isSharp ? 'sharp' : 'soft'}">${isSharp ? 'SHARP' : 'SOFT'}</span>
         </div></td>
         <td>${b.line || 1.5}</td>
         <td class="odds-cell">${b.overPrice ? `<span class="odds-value${b.overPrice===bo?' best':''}${b.overPrice===wo&&tot>2?' worst':''}">${fmt(b.overPrice)}</span>` : '--'}</td>
         <td class="odds-cell">${b.underPrice ? `<span class="odds-value${b.underPrice===bu?' best':''}${b.underPrice===wu&&tot>2?' worst':''}">${fmt(b.underPrice)}</span>` : '--'}</td>
         <td class="ev-cell">${oEV !== null ? `<span class="ev-value${oEV >= CFG.minEV ? ' positive' : ' negative'}">${oEV > 0 ? '+' : ''}${oEV.toFixed(1)}%</span>` : '--'}</td>
         <td class="ev-cell">${uEV !== null ? `<span class="ev-value${uEV >= CFG.minEV ? ' positive' : ' negative'}">${uEV > 0 ? '+' : ''}${uEV.toFixed(1)}%</span>` : '--'}</td>
-        <td class="signal-cell">${oE ? `<span class="edge-badge">🔥 O +${oEV.toFixed(1)}%</span>` : ''}${uE ? `<span class="edge-badge">🔥 U +${uEV.toFixed(1)}%</span>` : ''}${!oE && !uE ? '—' : ''}</td>
+        <td class="signal-cell">${oE ? `<span class="edge-badge">O+${oEV.toFixed(0)}%</span>` : ''}${uE ? `<span class="edge-badge">U+${uEV.toFixed(0)}%</span>` : ''}</td>
     </tr>`;
 }
 
