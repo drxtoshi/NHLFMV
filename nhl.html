@@ -214,8 +214,16 @@
         .bet-slip-book .book-logo { width:24px; height:16px; font-size:7px; }
         .bet-slip-field { margin-bottom:12px; }
         .bet-slip-field label { display:block; font-size:11px; color:var(--txt3); text-transform:uppercase; margin-bottom:4px; }
-        .bet-slip-field input { width:100%; padding:10px 12px; background:var(--bg); border:1px solid var(--bdr); border-radius:6px; color:var(--txt); font-size:14px; font-family:inherit; }
-        .bet-slip-field input:focus { outline:none; border-color:var(--accent); }
+        .bet-slip-field input, .bet-slip-field select { width:100%; padding:10px 12px; background:var(--bg); border:1px solid var(--bdr); border-radius:6px; color:var(--txt); font-size:14px; font-family:inherit; box-sizing:border-box; }
+        .bet-slip-field input:focus, .bet-slip-field select:focus { outline:none; border-color:var(--accent); }
+        .bet-slip-row { display:flex; gap:12px; }
+        .bet-slip-row .bet-slip-field { margin-bottom:12px; }
+        .book-input-row { display:flex; gap:8px; }
+        .book-input-row select { flex:1; }
+        .book-input-row input { flex:1; }
+        .save-default-row { margin-top:6px; }
+        .save-default-label { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--txt2); cursor:pointer; }
+        .save-default-label input { width:14px; height:14px; accent-color:var(--accent); }
         .bet-slip-ev { display:flex; justify-content:space-between; padding:8px 12px; background:var(--profit-bg); border-radius:6px; margin-bottom:16px; }
         .bet-slip-ev-label { font-size:11px; color:var(--profit); }
         .bet-slip-ev-value { font-weight:600; color:var(--profit); }
@@ -236,8 +244,8 @@
         .bet-log-table th { padding:8px 6px; text-align:left; font-size:10px; font-weight:600; color:var(--txt3); text-transform:uppercase; border-bottom:1px solid var(--bdr); position:sticky; top:0; background:var(--bg3); }
         .bet-log-table td { padding:8px 6px; border-bottom:1px solid var(--bdr); }
         .bet-log-table tr:hover { background:rgba(255,255,255,0.02); }
-        .bet-log-actions { display:flex; gap:8px; margin-top:12px; }
-        .bet-log-actions .btn { font-size:12px; padding:8px 12px; }
+        .bet-log-actions { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+        .bet-log-actions .btn { font-size:11px; padding:8px 10px; }
         .bet-result { padding:2px 6px; border-radius:3px; font-size:10px; font-weight:600; }
         .bet-result.pending { background:var(--bg); color:var(--txt3); }
         .bet-result.win { background:var(--profit-bg); color:var(--profit); }
@@ -245,6 +253,8 @@
         .bet-result.push { background:rgba(59,130,246,0.1); color:var(--accent); }
         .bet-delete { background:none; border:none; color:var(--txt3); cursor:pointer; font-size:14px; padding:2px; }
         .bet-delete:hover { color:var(--loss); }
+        .bet-checkbox { width:16px; height:16px; cursor:pointer; accent-color:var(--accent); }
+        .bet-log-table th:first-child, .bet-log-table td:first-child { width:30px; text-align:center; }
         
         /* Responsive */
         @media (max-width: 900px) {
@@ -412,12 +422,15 @@
     </div>
     
     <div class="tab-content" id="tab-betlog">
+        <div class="bet-log-actions">
+            <button class="btn btn-primary" onclick="copyAllBets()">📋 Copy All</button>
+            <button class="btn btn-secondary" onclick="copySelectedBets()">📋 Copy Selected</button>
+            <button class="btn btn-secondary" onclick="exportBetsCSV()">📥 Export CSV</button>
+            <button class="btn btn-secondary" onclick="clearSelectedBets()">🗑️ Clear Selected</button>
+            <button class="btn btn-secondary" onclick="clearBets()">🗑️ Clear All</button>
+        </div>
         <div class="bet-log" id="betLog">
             <div class="bet-log-empty">No bets logged yet. Click on any odds to log a bet.</div>
-        </div>
-        <div class="bet-log-actions">
-            <button class="btn btn-secondary" onclick="exportBetsCSV()">📥 Export CSV</button>
-            <button class="btn btn-secondary" onclick="clearBets()">🗑️ Clear All</button>
         </div>
     </div>
     
@@ -434,34 +447,66 @@
             <button class="bet-slip-close" onclick="closeBetSlip()">&times;</button>
         </div>
         <div class="bet-slip-body">
-            <div class="bet-slip-game">
-                <div>
-                    <div class="bet-slip-teams" id="bsTeams">--</div>
-                    <div class="bet-slip-period" id="bsPeriod">--</div>
+            <div class="bet-slip-field">
+                <label>Date</label>
+                <input type="text" id="bsDate" placeholder="1/14/2026">
+            </div>
+            <div class="bet-slip-field">
+                <label>Market</label>
+                <input type="text" id="bsMarket" placeholder="VGK @ LAK P1 OVER 1.5">
+            </div>
+            <div class="bet-slip-row">
+                <div class="bet-slip-field" style="flex:1">
+                    <label>Prop #</label>
+                    <input type="text" id="bsPropNum" placeholder="Optional">
+                </div>
+                <div class="bet-slip-field" style="flex:1">
+                    <label>Juice (Odds)</label>
+                    <input type="number" id="bsJuice" placeholder="-110">
                 </div>
             </div>
-            <div class="bet-slip-selection">
-                <div class="bet-slip-side" id="bsSide">--</div>
-                <div class="bet-slip-details">
-                    <div class="bet-slip-book">
-                        <div class="book-logo" id="bsBookLogo">--</div>
-                        <span id="bsBookName">--</span>
-                    </div>
-                    <div id="bsLine">Line: --</div>
-                    <div id="bsOdds">Odds: --</div>
+            <div class="bet-slip-row">
+                <div class="bet-slip-field" style="flex:1">
+                    <label>Risk ($)</label>
+                    <input type="number" id="bsRisk" placeholder="100" min="1" step="1">
+                </div>
+                <div class="bet-slip-field" style="flex:1">
+                    <label>To Win ($)</label>
+                    <input type="number" id="bsToWin" placeholder="Auto-calculated" step="0.01">
+                </div>
+            </div>
+            <div class="bet-slip-field">
+                <label>Book</label>
+                <div class="book-input-row">
+                    <select id="bsBook" onchange="onBookSelect()">
+                        <option value="">Select Book</option>
+                        <option value="draftkings">DraftKings</option>
+                        <option value="fanduel">FanDuel</option>
+                        <option value="betmgm">BetMGM</option>
+                        <option value="caesars">Caesars</option>
+                        <option value="pointsbet">PointsBet</option>
+                        <option value="betrivers">BetRivers</option>
+                        <option value="bet365">Bet365</option>
+                        <option value="espnbet">ESPN Bet</option>
+                        <option value="fanatics">Fanatics</option>
+                        <option value="pinnacle">Pinnacle</option>
+                        <option value="circa">Circa</option>
+                        <option value="bookmaker">Bookmaker</option>
+                        <option value="betcris">BetCRIS</option>
+                        <option value="betonline">BetOnline</option>
+                        <option value="_custom">-- Custom --</option>
+                    </select>
+                    <input type="text" id="bsBookCustom" placeholder="Custom book name" style="display:none">
+                </div>
+                <div class="save-default-row" id="saveDefaultRow" style="display:none">
+                    <label class="save-default-label">
+                        <input type="checkbox" id="bsSaveDefault"> Save as default for <span id="bsOriginalBook">--</span>
+                    </label>
                 </div>
             </div>
             <div class="bet-slip-ev" id="bsEV" style="display:none">
                 <span class="bet-slip-ev-label">Expected Value</span>
                 <span class="bet-slip-ev-value" id="bsEVValue">+0.0%</span>
-            </div>
-            <div class="bet-slip-field">
-                <label>Wager Amount ($)</label>
-                <input type="number" id="bsAmount" placeholder="100" min="1" step="1">
-            </div>
-            <div class="bet-slip-field">
-                <label>Notes (optional)</label>
-                <input type="text" id="bsNotes" placeholder="Any notes...">
             </div>
             <div class="bet-slip-actions">
                 <button class="btn btn-secondary" onclick="closeBetSlip()">Cancel</button>
@@ -505,6 +550,7 @@ let DATA = [], alerted = new Set(), timer = null, mobileMode = false;
 let lineHistory = {}; // Track line changes: {eventId-bookId-period-side: {price, timestamp}}
 let betLog = []; // Array of logged bets
 let currentBetSlip = null; // Current bet being created
+let bookAliases = {}; // Map of bookKey -> custom display name
 
 function log(m) { document.getElementById('log').textContent += `${new Date().toLocaleTimeString()} ${m}\n`; console.log(m); }
 
@@ -526,16 +572,32 @@ function openBetSlip(gameId, bookKey, period, side, line, odds, ev) {
     const away = game.teams?.away?.names?.short || game.teams?.away?.name || 'Away';
     const home = game.teams?.home?.names?.short || game.teams?.home?.name || 'Home';
     
-    currentBetSlip = { gameId, bookKey, period, side, line, odds, ev, away, home, timestamp: Date.now() };
+    currentBetSlip = { gameId, bookKey, period, side, line, odds, ev, away, home, timestamp: Date.now(), originalBookKey: bookKey };
     
-    document.getElementById('bsTeams').textContent = `${away} @ ${home}`;
-    document.getElementById('bsPeriod').textContent = `Period ${period.replace('p','')} Total`;
-    document.getElementById('bsSide').textContent = `${side.toUpperCase()} ${line}`;
-    document.getElementById('bsBookLogo').textContent = bkd.a;
-    document.getElementById('bsBookLogo').style.background = bkd.c;
-    document.getElementById('bsBookName').textContent = bkd.n;
-    document.getElementById('bsLine').textContent = `Line: ${line}`;
-    document.getElementById('bsOdds').textContent = `Odds: ${odds > 0 ? '+' : ''}${odds}`;
+    // Populate editable fields
+    document.getElementById('bsDate').value = new Date().toLocaleDateString('en-US');
+    document.getElementById('bsMarket').value = `${away} @ ${home} P${period.replace('p','')} ${side.toUpperCase()} ${line}`;
+    document.getElementById('bsPropNum').value = '';
+    document.getElementById('bsJuice').value = odds;
+    document.getElementById('bsRisk').value = '';
+    document.getElementById('bsToWin').value = '';
+    
+    // Check if there's a saved alias for this book
+    const savedAlias = bookAliases[bookKey];
+    if (savedAlias) {
+        document.getElementById('bsBook').value = '_custom';
+        document.getElementById('bsBookCustom').value = savedAlias;
+        document.getElementById('bsBookCustom').style.display = 'block';
+    } else {
+        document.getElementById('bsBook').value = bookKey;
+        document.getElementById('bsBookCustom').value = '';
+        document.getElementById('bsBookCustom').style.display = 'none';
+    }
+    
+    // Show save default option
+    document.getElementById('saveDefaultRow').style.display = 'flex';
+    document.getElementById('bsOriginalBook').textContent = bkd.n;
+    document.getElementById('bsSaveDefault').checked = false;
     
     if (ev !== null) {
         document.getElementById('bsEV').style.display = 'flex';
@@ -544,10 +606,33 @@ function openBetSlip(gameId, bookKey, period, side, line, odds, ev) {
         document.getElementById('bsEV').style.display = 'none';
     }
     
-    document.getElementById('bsAmount').value = '';
-    document.getElementById('bsNotes').value = '';
     document.getElementById('betSlipOverlay').classList.add('active');
-    document.getElementById('bsAmount').focus();
+    document.getElementById('bsRisk').focus();
+    
+    // Auto-calculate To Win when Risk or Juice changes
+    document.getElementById('bsRisk').oninput = calcToWin;
+    document.getElementById('bsJuice').oninput = calcToWin;
+}
+
+function onBookSelect() {
+    const select = document.getElementById('bsBook');
+    const customInput = document.getElementById('bsBookCustom');
+    if (select.value === '_custom') {
+        customInput.style.display = 'block';
+        customInput.focus();
+    } else {
+        customInput.style.display = 'none';
+        customInput.value = '';
+    }
+}
+
+function calcToWin() {
+    const risk = parseFloat(document.getElementById('bsRisk').value);
+    const juice = parseInt(document.getElementById('bsJuice').value);
+    if (risk && juice) {
+        const toWin = juice >= 100 ? risk * (juice / 100) : risk * (100 / Math.abs(juice));
+        document.getElementById('bsToWin').value = toWin.toFixed(2);
+    }
 }
 
 function closeBetSlip(event) {
@@ -556,35 +641,60 @@ function closeBetSlip(event) {
     currentBetSlip = null;
 }
 
-function submitBet() {
-    if (!currentBetSlip) return;
+function getBookNameForBet() {
+    const select = document.getElementById('bsBook');
+    const customInput = document.getElementById('bsBookCustom');
     
-    const amount = parseFloat(document.getElementById('bsAmount').value);
-    if (!amount || amount <= 0) {
-        alert('Please enter a valid wager amount');
+    if (select.value === '_custom' || customInput.style.display !== 'none') {
+        return customInput.value.trim() || 'Custom';
+    }
+    
+    const bkd = BOOKS[select.value];
+    return bkd ? bkd.n : select.value || 'Unknown';
+}
+
+function submitBet() {
+    const risk = parseFloat(document.getElementById('bsRisk').value);
+    if (!risk || risk <= 0) {
+        alert('Please enter a valid risk amount');
         return;
     }
     
-    // Calculate To Win based on odds
-    const odds = currentBetSlip.odds;
-    const toWin = odds >= 100 ? amount * (odds / 100) : amount * (100 / Math.abs(odds));
+    const juice = parseInt(document.getElementById('bsJuice').value);
+    if (!juice) {
+        alert('Please enter valid odds/juice');
+        return;
+    }
+    
+    // Get To Win - use entered value or calculate
+    let toWin = parseFloat(document.getElementById('bsToWin').value);
+    if (!toWin) {
+        toWin = juice >= 100 ? risk * (juice / 100) : risk * (100 / Math.abs(juice));
+    }
+    
+    const bookName = getBookNameForBet();
+    const bookKey = document.getElementById('bsBook').value;
+    
+    // Save as default if checked
+    if (document.getElementById('bsSaveDefault').checked && currentBetSlip?.originalBookKey) {
+        const customName = document.getElementById('bsBookCustom').value.trim();
+        if (customName || bookKey !== currentBetSlip.originalBookKey) {
+            bookAliases[currentBetSlip.originalBookKey] = customName || bookName;
+            saveBookAliases();
+        }
+    }
     
     const bet = {
         id: Date.now(),
-        date: new Date().toLocaleDateString('en-US'), // Format: 1/14/2026
-        market: `${currentBetSlip.away} @ ${currentBetSlip.home} P${currentBetSlip.period.replace('p','')} ${currentBetSlip.side.toUpperCase()} ${currentBetSlip.line}`,
-        propNum: '', // Leave blank as requested
-        juice: currentBetSlip.odds,
-        risk: amount,
-        book: currentBetSlip.bookKey,
+        date: document.getElementById('bsDate').value || new Date().toLocaleDateString('en-US'),
+        market: document.getElementById('bsMarket').value || '',
+        propNum: document.getElementById('bsPropNum').value || '',
+        juice: juice,
+        risk: risk,
+        book: bookKey === '_custom' ? '_custom' : bookKey,
+        bookName: bookName, // Store the display name
         toWin: toWin,
-        // Keep extra fields for internal use
-        gameId: currentBetSlip.gameId,
-        period: currentBetSlip.period,
-        side: currentBetSlip.side,
-        line: currentBetSlip.line,
-        ev: currentBetSlip.ev,
-        notes: document.getElementById('bsNotes').value || '',
+        ev: currentBetSlip?.ev || null,
         result: 'pending',
         timestamp: new Date().toISOString()
     };
@@ -594,8 +704,16 @@ function submitBet() {
     closeBetSlip();
     
     // Show confirmation
-    const bkd = BOOKS[bet.book] || {n: bet.book};
-    triggerAlert({teams: {away: {names: {short: currentBetSlip.away}}, home: {names: {short: currentBetSlip.home}}}}, bkd, {line: bet.line}, bet.ev, null, true, false, true);
+    triggerAlert({teams: {away: {names: {short: 'Bet'}}, home: {names: {short: 'Logged'}}}}, {n: bookName}, {line: ''}, bet.ev, null, true, false, true);
+}
+
+function saveBookAliases() {
+    localStorage.setItem('ppBookAliases', JSON.stringify(bookAliases));
+}
+
+function loadBookAliases() {
+    const saved = localStorage.getItem('ppBookAliases');
+    if (saved) bookAliases = JSON.parse(saved);
 }
 
 function saveBetLog() {
@@ -620,6 +738,7 @@ function renderBetLog() {
     container.innerHTML = `<table class="bet-log-table">
         <thead>
             <tr>
+                <th><input type="checkbox" class="bet-checkbox" id="selectAllBets" onchange="toggleAllBets(this.checked)"></th>
                 <th>Date</th>
                 <th>Market</th>
                 <th>Prop #</th>
@@ -628,19 +747,21 @@ function renderBetLog() {
                 <th>Book</th>
                 <th>To Win</th>
                 <th>Result</th>
-                <th></th>
             </tr>
         </thead>
         <tbody>
             ${sorted.map(bet => {
-                const bkd = BOOKS[bet.book] || {a: bet.book.substring(0,3).toUpperCase(), c: '#666', n: bet.book};
+                // Use bookName if available, otherwise fall back to BOOKS lookup
+                const displayName = bet.bookName || (BOOKS[bet.book] ? BOOKS[bet.book].n : bet.book || 'Unknown');
+                const bkd = BOOKS[bet.book] || {a: displayName.substring(0,3).toUpperCase(), c: '#666'};
                 return `<tr>
+                    <td><input type="checkbox" class="bet-checkbox" data-bet-id="${bet.id}"></td>
                     <td>${bet.date}</td>
-                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${bet.market}">${bet.market}</td>
+                    <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${bet.market}">${bet.market}</td>
                     <td>${bet.propNum || ''}</td>
                     <td>${bet.juice > 0 ? '+' : ''}${bet.juice}</td>
                     <td>$${bet.risk.toFixed(2)}</td>
-                    <td><span class="book-logo" style="background:${bkd.c};color:#fff;padding:2px 4px;border-radius:2px;font-size:8px">${bkd.a}</span> ${bkd.n}</td>
+                    <td title="${displayName}"><span class="book-logo" style="background:${bkd.c};color:#fff;padding:2px 4px;border-radius:2px;font-size:8px">${bkd.a}</span></td>
                     <td>$${bet.toWin.toFixed(2)}</td>
                     <td>
                         <select class="bet-result ${bet.result}" onchange="updateBetResult(${bet.id}, this.value)" style="background:transparent;border:none;color:inherit;font-size:11px;cursor:pointer">
@@ -650,11 +771,86 @@ function renderBetLog() {
                             <option value="push" ${bet.result === 'push' ? 'selected' : ''}>Push</option>
                         </select>
                     </td>
-                    <td><button class="bet-delete" onclick="deleteBet(${bet.id})" title="Delete">×</button></td>
                 </tr>`;
             }).join('')}
         </tbody>
     </table>`;
+}
+
+function toggleAllBets(checked) {
+    document.querySelectorAll('.bet-checkbox[data-bet-id]').forEach(cb => cb.checked = checked);
+}
+
+function getSelectedBetIds() {
+    return Array.from(document.querySelectorAll('.bet-checkbox[data-bet-id]:checked')).map(cb => parseInt(cb.dataset.betId));
+}
+
+function betsToClipboardText(bets) {
+    // Tab-separated format for pasting into sheets: Date, Market, Prop #, Juice, Risk, Book, To Win
+    return bets.map(bet => {
+        // Use bookName if available, otherwise fall back to BOOKS lookup
+        const displayName = bet.bookName || (BOOKS[bet.book] ? BOOKS[bet.book].n : bet.book || 'Unknown');
+        return [
+            bet.date,
+            bet.market,
+            bet.propNum || '',
+            bet.juice,
+            `$${bet.risk.toFixed(2)}`,
+            displayName,
+            `$${bet.toWin.toFixed(2)}`
+        ].join('\t');
+    }).join('\n');
+}
+
+function copyAllBets() {
+    if (!betLog.length) {
+        alert('No bets to copy');
+        return;
+    }
+    const text = betsToClipboardText(betLog);
+    navigator.clipboard.writeText(text).then(() => {
+        showCopyConfirmation(betLog.length);
+    }).catch(err => {
+        alert('Failed to copy: ' + err);
+    });
+}
+
+function copySelectedBets() {
+    const selectedIds = getSelectedBetIds();
+    if (!selectedIds.length) {
+        alert('No bets selected. Use checkboxes to select bets.');
+        return;
+    }
+    const selectedBets = betLog.filter(b => selectedIds.includes(b.id));
+    const text = betsToClipboardText(selectedBets);
+    navigator.clipboard.writeText(text).then(() => {
+        showCopyConfirmation(selectedBets.length);
+    }).catch(err => {
+        alert('Failed to copy: ' + err);
+    });
+}
+
+function showCopyConfirmation(count) {
+    const c = document.getElementById('alerts');
+    const id = 'copy' + Date.now();
+    c.insertAdjacentHTML('afterbegin', `<div class="alert" id="${id}" onclick="dismissAlert('${id}')" style="border-color:var(--accent)">
+        <div class="alert-header"><span class="alert-title">📋 Copied!</span></div>
+        <div class="alert-body">${count} bet${count > 1 ? 's' : ''} copied to clipboard</div>
+    </div>`);
+    setTimeout(() => dismissAlert(id), 3000);
+}
+
+function clearSelectedBets() {
+    const selectedIds = getSelectedBetIds();
+    if (!selectedIds.length) {
+        alert('No bets selected. Use checkboxes to select bets.');
+        return;
+    }
+    if (confirm(`Delete ${selectedIds.length} selected bet${selectedIds.length > 1 ? 's' : ''}?`)) {
+        betLog = betLog.filter(b => !selectedIds.includes(b.id));
+        saveBetLog();
+        renderBetLog();
+    }
 }
 
 function updateBetResult(betId, result) {
@@ -724,6 +920,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadCfg();
     renderBookSelectors();
     loadBetLog();
+    loadBookAliases();
     const k = localStorage.getItem('sgKey');
     if (k) { document.getElementById('apiKey').value = k; CFG.apiKey = k; }
     // Load mobile state
