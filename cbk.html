@@ -204,6 +204,8 @@
         .collapsed-summary .cs-value { font-weight:600; color:var(--txt); font-size:11px; }
         .collapsed-summary .cs-value.purple { color:#c084fc; }
         .collapsed-summary .cs-value.blue { color:var(--accent); }
+        .collapsed-summary .cs-fv-stack { display:flex; flex-direction:column; gap:1px; padding:2px 6px; background:var(--bg3); border-radius:4px; }
+        .collapsed-summary .cs-fv-item { display:flex; align-items:center; gap:4px; }
         .collapsed-summary .cs-best-stack { display:flex; flex-direction:column; gap:2px; }
         .collapsed-summary .cs-best-line { display:flex; align-items:center; gap:3px; }
         .collapsed-summary .cs-best-line .cs-side { font-weight:700; color:var(--txt); font-size:10px; width:10px; }
@@ -220,6 +222,17 @@
         .best-bet-chip .book-logo { width:20px; height:13px; font-size:6px; border-radius:2px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; color:#fff; flex-shrink:0; }
         .best-bet-chip .bet-odds { color:var(--txt2); font-weight:500; }
         .game.collapsed .best-bets-bar { display:none; }
+        
+        /* Arbitrage bar */
+        .arb-bar { display:flex; flex-wrap:wrap; gap:8px; padding:6px 12px; background:rgba(245,158,11,0.1); border-bottom:1px solid var(--warn); align-items:center; }
+        .arb-bar:empty { display:none; }
+        .arb-label { font-size:10px; color:var(--warn); font-weight:700; text-transform:uppercase; margin-right:4px; }
+        .arb-chip { display:flex; align-items:center; gap:4px; font-size:10px; padding:4px 8px; background:var(--bg3); border-radius:4px; color:var(--txt); }
+        .arb-chip .arb-type { font-weight:600; color:var(--txt3); font-size:9px; margin-right:2px; }
+        .arb-chip .book-logo { width:20px; height:13px; font-size:6px; border-radius:2px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; color:#fff; flex-shrink:0; }
+        .arb-chip .arb-vs { color:var(--txt3); font-size:9px; margin:0 2px; }
+        .arb-chip .arb-pct { color:var(--warn); font-weight:700; margin-left:4px; }
+        .game.collapsed .arb-bar { display:none; }
         
         /* Pin Button */
         .pin-btn { background:none; border:none; cursor:pointer; font-size:14px; padding:4px; opacity:0.4; transition:all 0.15s; position:relative; z-index:20; }
@@ -538,6 +551,27 @@
                 <label>Time Window (min)</label>
                 <input type="number" id="steamTimeWindow" value="3" min="1" max="30" step="1">
             </div>
+            <div class="field" style="grid-column: span 4; border-top: 1px solid var(--bdr); padding-top: 12px; margin-top: 8px;">
+                <label style="font-size:12px; color:var(--txt2);">💰 Arbitrage Alerts</label>
+            </div>
+            <div class="field">
+                <label>Arb Alerts</label>
+                <select id="arbEnabled">
+                    <option value="on">Enabled</option>
+                    <option value="off">Disabled</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Min Arb %</label>
+                <input type="number" id="minArb" value="0.5" min="0" max="10" step="0.1">
+            </div>
+            <div class="field">
+                <label>Arb Telegram</label>
+                <select id="arbTelegramEnabled">
+                    <option value="off">Disabled</option>
+                    <option value="on">Enabled</option>
+                </select>
+            </div>
         </div>
     </div>
     
@@ -545,6 +579,7 @@
         <div class="stat"><div class="stat-label">Games</div><div class="stat-value blue" id="sGames">0</div></div>
         <div class="stat"><div class="stat-label">+EV Opps</div><div class="stat-value green" id="sEV">0</div></div>
         <div class="stat"><div class="stat-label">Best Edge</div><div class="stat-value green" id="sBest">--</div></div>
+        <div class="stat"><div class="stat-label">Arbs</div><div class="stat-value" id="sArbs" style="color:var(--warn)">0</div></div>
         <div class="stat"><div class="stat-label">Updated</div><div class="stat-value" id="sTime" style="font-size:14px">--</div></div>
     </div>
     
@@ -672,9 +707,13 @@ const CFG = {
     compareBooks: ['draftkings', 'fanduel', 'betmgm', 'caesars'],
     // Steam alert settings
     steamEnabled: true,
-    steamSpreadMove: 1.0,    // Points of spread movement to trigger
-    steamTotalMove: 1.5,     // Points of total movement to trigger
-    steamTimeWindow: 3       // Minutes to detect movement within
+    steamSpreadMove: 1.0,
+    steamTotalMove: 1.5,
+    steamTimeWindow: 3,
+    // Arbitrage settings
+    arbEnabled: true,
+    minArb: 0.5,
+    arbTelegramEnabled: false
 };
 
 const BOOKS = {
@@ -1195,6 +1234,10 @@ function loadCfg() {
         document.getElementById('steamSpreadMove').value = CFG.steamSpreadMove || 1.0;
         document.getElementById('steamTotalMove').value = CFG.steamTotalMove || 1.5;
         document.getElementById('steamTimeWindow').value = CFG.steamTimeWindow || 3;
+        // Arb settings
+        document.getElementById('arbEnabled').value = CFG.arbEnabled !== false ? 'on' : 'off';
+        document.getElementById('minArb').value = CFG.minArb || 0.5;
+        document.getElementById('arbTelegramEnabled').value = CFG.arbTelegramEnabled ? 'on' : 'off';
     }
 }
 
@@ -1215,6 +1258,10 @@ function saveCfg() {
     CFG.steamSpreadMove = parseFloat(document.getElementById('steamSpreadMove').value);
     CFG.steamTotalMove = parseFloat(document.getElementById('steamTotalMove').value);
     CFG.steamTimeWindow = parseInt(document.getElementById('steamTimeWindow').value);
+    // Arb settings
+    CFG.arbEnabled = document.getElementById('arbEnabled').value === 'on';
+    CFG.minArb = parseFloat(document.getElementById('minArb').value);
+    CFG.arbTelegramEnabled = document.getElementById('arbTelegramEnabled').value === 'on';
     localStorage.setItem('sgKey', CFG.apiKey);
     localStorage.setItem('cbbCfg', JSON.stringify(CFG));
 }
@@ -1270,25 +1317,57 @@ async function fetchData() {
     }
     
     try {
-        // First try to get available leagues
-        const leagueUrl = `https://api.sportsgameodds.com/v2/leagues?apiKey=${CFG.apiKey}`;
-        const leagueRes = await fetch(leagueUrl);
-        if (leagueRes.ok) {
-            const leagueJson = await leagueRes.json();
-            const leagues = (leagueJson.data || []).filter(l => l.leagueID?.toLowerCase().includes('ncaa') || l.leagueID?.toLowerCase().includes('cbb'));
-            log('Basketball leagues: ' + leagues.map(l => l.leagueID).join(', '));
-        }
+        // Get today's date and tomorrow for date range
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const formatDate = (d) => d.toISOString().split('T')[0];
         
-        // Use NCAAB for college basketball
-        const url = `https://api.sportsgameodds.com/v2/events?apiKey=${CFG.apiKey}&leagueID=NCAAB&oddsAvailable=true&includeOpposingOdds=true`;
+        let allEvents = [];
+        
+        // Fetch all pages of NCAAB events
+        let page = 1;
+        let hasMore = true;
+        log('Basketball leagues: NCAAB, NCAAF');
         log('Fetching NCAAB...');
         
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('API Error ' + res.status);
+        while (hasMore && page <= 10) { // Safety limit of 10 pages
+            const url = `https://api.sportsgameodds.com/v2/events?apiKey=${CFG.apiKey}&leagueID=NCAAB&oddsAvailable=true&includeOpposingOdds=true&limit=100&page=${page}&startsAfter=${formatDate(today)}T00:00:00Z&startsBefore=${formatDate(tomorrow)}T23:59:59Z`;
+            
+            const res = await fetch(url);
+            if (!res.ok) {
+                log(`NCAAB page ${page} error: ${res.status}`);
+                break;
+            }
+            
+            const json = await res.json();
+            const events = json.data || [];
+            
+            if (events.length === 0) {
+                hasMore = false;
+            } else {
+                allEvents = [...allEvents, ...events];
+                log(`NCAAB page ${page}: ${events.length} events (total: ${allEvents.length})`);
+                page++;
+                
+                // Check if we got less than limit (meaning no more pages)
+                if (events.length < 100) {
+                    hasMore = false;
+                }
+            }
+        }
         
-        const json = await res.json();
-        let events = json.data || [];
-        log(`Got ${events.length} events`);
+        log(`Got ${allEvents.length} events`);
+        
+        // Dedupe by eventID
+        const seen = new Set();
+        let events = allEvents.filter(e => {
+            if (seen.has(e.eventID)) return false;
+            seen.add(e.eventID);
+            return true;
+        });
+        
+        log(`Total unique events: ${events.length}`);
         
         // Log first event's odds keys to debug
         if (events.length > 0 && events[0].odds) {
@@ -1335,8 +1414,8 @@ async function fetchData() {
             if (e.startTime || e.status?.startsAt) log(`Start: ${e.startTime || e.status?.startsAt}`);
         }
         
-        // Only show live and upcoming games
-        const toShow = [...live, ...upcoming.slice(0, 20 - live.length)];
+        // Show all live and upcoming games (no artificial limit)
+        const toShow = [...live, ...upcoming];
         
         DATA = toShow.map(e => ({ game: e, odds: extractOdds(e.odds || {}) }));
         
@@ -1362,13 +1441,13 @@ async function fetchData() {
 
 function extractOdds(odds) {
     const r = {
-        'game': { spread: { books: [] }, total: { line: 0, books: [] } },
-        '1h': { spread: { books: [] }, total: { line: 0, books: [] } }
+        'game': { spread: { books: [] }, total: { line: 0, books: [] }, ml: { books: [] } },
+        '1h': { spread: { books: [] }, total: { line: 0, books: [] }, ml: { books: [] } }
     };
     
     for (const [id, o] of Object.entries(odds)) {
         // Format: {statID}-{statEntityID}-{periodID}-{betTypeID}-{sideID}
-        // Examples: points-home-game-sp-home, points-all-game-ou-over
+        // Examples: points-home-game-sp-home, points-all-game-ou-over, points-home-game-ml-home
         const parts = id.split('-');
         if (parts.length < 5) continue;
         
@@ -1409,6 +1488,20 @@ function extractOdds(odds) {
                     if (!be) { be = { bk, line: bookLine }; r[period].total.books.push(be); }
                     if (sideID === 'over') be.overPrice = parseInt(bd.odds);
                     if (sideID === 'under') be.underPrice = parseInt(bd.odds);
+                }
+            }
+        }
+        
+        // Moneyline (ml)
+        if (betTypeID === 'ml' && (sideID === 'home' || sideID === 'away')) {
+            if (o.byBookmaker) {
+                for (const [bk, bd] of Object.entries(o.byBookmaker)) {
+                    if (!bd.available) continue;
+                    let be = r[period].ml.books.find(x => x.bk === bk);
+                    if (!be) { be = { bk }; r[period].ml.books.push(be); }
+                    const price = parseInt(bd.odds);
+                    if (sideID === 'home') be.homePrice = price;
+                    if (sideID === 'away') be.awayPrice = price;
                 }
             }
         }
@@ -1485,6 +1578,23 @@ function noVig(o, u) {
 const calcEV = (odds, fp) => ((fp * a2d(odds)) - 1) * 100;
 const fmt = o => o > 0 ? '+' + o : String(o);
 
+// Sound alert
+function beep() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.3);
+    } catch(e) { console.log('Beep error:', e); }
+}
+
 // Consensus for totals (over/under)
 function consensusTotal(books) {
     const sb = books.filter(b => CFG.sharpBooks.includes(b.bk?.toLowerCase()) && b.overPrice && b.underPrice);
@@ -1504,6 +1614,98 @@ function consensusSpread(books) {
     const homeLine = sb[0]?.homeLine || 0;
     const awayLine = sb[0]?.awayLine || 0;
     return { hP: th/sb.length, aP: ta/sb.length, hFair: p2a(th/sb.length), aFair: p2a(ta/sb.length), homeLine, awayLine, cnt: sb.length };
+}
+
+// Consensus for moneyline (home/away)
+function consensusML(books) {
+    const sb = books.filter(b => CFG.sharpBooks.includes(b.bk?.toLowerCase()) && b.homePrice && b.awayPrice);
+    if (!sb.length) return null;
+    let th=0, ta=0;
+    sb.forEach(b => { const nv = noVig(b.homePrice, b.awayPrice); th += nv.o; ta += nv.u; });
+    return { hP: th/sb.length, aP: ta/sb.length, hFair: p2a(th/sb.length), aFair: p2a(ta/sb.length), cnt: sb.length };
+}
+
+// Arbitrage calculation
+function calcArb(odds1, odds2) {
+    // Returns arb % if positive (profit), negative if no arb
+    const p1 = a2p(odds1);
+    const p2 = a2p(odds2);
+    const total = p1 + p2;
+    if (total >= 1) return null; // No arb
+    const arbPct = ((1 / total) - 1) * 100;
+    return arbPct;
+}
+
+function findArbitrageOpportunities(pd, g) {
+    const arbs = [];
+    
+    // Check spreads for arb (same line, opposite sides, different books)
+    const spreadBooks = pd.spread.books.filter(b => CFG.compareBooks.includes(b.bk?.toLowerCase()) && b.homePrice && b.awayPrice);
+    for (let i = 0; i < spreadBooks.length; i++) {
+        for (let j = i + 1; j < spreadBooks.length; j++) {
+            const b1 = spreadBooks[i], b2 = spreadBooks[j];
+            // Check home@b1 vs away@b2
+            if (b1.homeLine === b2.awayLine * -1 || Math.abs(b1.homeLine + b2.awayLine) < 0.01) {
+                const arb = calcArb(b1.homePrice, b2.awayPrice);
+                if (arb && arb >= CFG.minArb) {
+                    arbs.push({ type: 'spread', side1: 'H', book1: b1.bk, odds1: b1.homePrice, line1: b1.homeLine, 
+                               side2: 'A', book2: b2.bk, odds2: b2.awayPrice, line2: b2.awayLine, arb });
+                }
+            }
+            // Check away@b1 vs home@b2
+            if (b1.awayLine === b2.homeLine * -1 || Math.abs(b1.awayLine + b2.homeLine) < 0.01) {
+                const arb = calcArb(b1.awayPrice, b2.homePrice);
+                if (arb && arb >= CFG.minArb) {
+                    arbs.push({ type: 'spread', side1: 'A', book1: b1.bk, odds1: b1.awayPrice, line1: b1.awayLine,
+                               side2: 'H', book2: b2.bk, odds2: b2.homePrice, line2: b2.homeLine, arb });
+                }
+            }
+        }
+    }
+    
+    // Check totals for arb (same line, over vs under, different books)
+    const totalBooks = pd.total.books.filter(b => CFG.compareBooks.includes(b.bk?.toLowerCase()) && b.overPrice && b.underPrice);
+    for (let i = 0; i < totalBooks.length; i++) {
+        for (let j = i + 1; j < totalBooks.length; j++) {
+            const b1 = totalBooks[i], b2 = totalBooks[j];
+            if (b1.line === b2.line) {
+                // Over@b1 vs Under@b2
+                const arb1 = calcArb(b1.overPrice, b2.underPrice);
+                if (arb1 && arb1 >= CFG.minArb) {
+                    arbs.push({ type: 'total', side1: 'O', book1: b1.bk, odds1: b1.overPrice, line1: b1.line,
+                               side2: 'U', book2: b2.bk, odds2: b2.underPrice, line2: b2.line, arb: arb1 });
+                }
+                // Under@b1 vs Over@b2
+                const arb2 = calcArb(b1.underPrice, b2.overPrice);
+                if (arb2 && arb2 >= CFG.minArb) {
+                    arbs.push({ type: 'total', side1: 'U', book1: b1.bk, odds1: b1.underPrice, line1: b1.line,
+                               side2: 'O', book2: b2.bk, odds2: b2.overPrice, line2: b2.line, arb: arb2 });
+                }
+            }
+        }
+    }
+    
+    // Check moneyline for arb
+    const mlBooks = pd.ml.books.filter(b => CFG.compareBooks.includes(b.bk?.toLowerCase()) && b.homePrice && b.awayPrice);
+    for (let i = 0; i < mlBooks.length; i++) {
+        for (let j = i + 1; j < mlBooks.length; j++) {
+            const b1 = mlBooks[i], b2 = mlBooks[j];
+            // Home@b1 vs Away@b2
+            const arb1 = calcArb(b1.homePrice, b2.awayPrice);
+            if (arb1 && arb1 >= CFG.minArb) {
+                arbs.push({ type: 'ml', side1: 'H', book1: b1.bk, odds1: b1.homePrice, line1: null,
+                           side2: 'A', book2: b2.bk, odds2: b2.awayPrice, line2: null, arb: arb1 });
+            }
+            // Away@b1 vs Home@b2
+            const arb2 = calcArb(b1.awayPrice, b2.homePrice);
+            if (arb2 && arb2 >= CFG.minArb) {
+                arbs.push({ type: 'ml', side1: 'A', book1: b1.bk, odds1: b1.awayPrice, line1: null,
+                           side2: 'H', book2: b2.bk, odds2: b2.homePrice, line2: null, arb: arb2 });
+            }
+        }
+    }
+    
+    return arbs;
 }
 
 // Steam move detection
@@ -1912,21 +2114,28 @@ function collapsedSummary(g, odds) {
     }
     
     // Get fair value and best lines
-    const pd = odds['game'] || { spread: { books: [] }, total: { line: 0, books: [] } };
+    const pd = odds['game'] || { spread: { books: [] }, total: { line: 0, books: [] }, ml: { books: [] } };
     const spreadCons = consensusSpread(pd.spread.books);
     const totalCons = consensusTotal(pd.total.books);
+    const mlCons = consensusML(pd.ml?.books || []);
     
     // Find best lines for each side
-    const bestLines = findBestLines(pd, spreadCons, totalCons, isLive);
+    const bestLines = findBestLines(pd, spreadCons, totalCons, mlCons, isLive);
     
     return `<div class="collapsed-summary">
         ${isLive ? `<div class="cs-item"><span class="cs-value blue">${awS}-${hmS}</span></div>` : 
                    `<div class="cs-item"><span class="cs-value">${timeStr}</span></div>`}
-        ${spreadCons ? `<div class="cs-item"><span class="cs-label">FV</span><span class="cs-value purple">${spreadCons.homeLine > 0 ? '+' : ''}${spreadCons.homeLine}</span></div>` : ''}
-        ${totalCons ? `<div class="cs-item"><span class="cs-value purple">${totalCons.line}</span></div>` : ''}
+        ${(spreadCons || totalCons) ? `<div class="cs-fv-stack">
+            ${spreadCons ? `<div class="cs-fv-item"><span class="cs-label">FV</span><span class="cs-value purple">${spreadCons.homeLine > 0 ? '+' : ''}${spreadCons.homeLine}</span></div>` : ''}
+            ${totalCons ? `<div class="cs-fv-item"><span class="cs-value purple">${totalCons.line}</span></div>` : ''}
+        </div>` : ''}
         ${(bestLines.homeSpread || bestLines.awaySpread) ? `<div class="cs-best-stack">
             ${bestLines.homeSpread ? `<div class="cs-best-line"><span class="cs-side">H</span><div class="book-logo" style="background:${bestLines.homeSpread.color}">${bestLines.homeSpread.book}</div><span class="cs-odds">${bestLines.homeSpread.line > 0 ? '+' : ''}${bestLines.homeSpread.line} ${fmt(bestLines.homeSpread.price)}</span></div>` : ''}
             ${bestLines.awaySpread ? `<div class="cs-best-line"><span class="cs-side">A</span><div class="book-logo" style="background:${bestLines.awaySpread.color}">${bestLines.awaySpread.book}</div><span class="cs-odds">${bestLines.awaySpread.line > 0 ? '+' : ''}${bestLines.awaySpread.line} ${fmt(bestLines.awaySpread.price)}</span></div>` : ''}
+        </div>` : ''}
+        ${(bestLines.homeML || bestLines.awayML) ? `<div class="cs-best-stack">
+            ${bestLines.homeML ? `<div class="cs-best-line"><span class="cs-side">H</span><div class="book-logo" style="background:${bestLines.homeML.color}">${bestLines.homeML.book}</div><span class="cs-odds">ML ${fmt(bestLines.homeML.price)}</span></div>` : ''}
+            ${bestLines.awayML ? `<div class="cs-best-line"><span class="cs-side">A</span><div class="book-logo" style="background:${bestLines.awayML.color}">${bestLines.awayML.book}</div><span class="cs-odds">ML ${fmt(bestLines.awayML.price)}</span></div>` : ''}
         </div>` : ''}
         ${(bestLines.over || bestLines.under) ? `<div class="cs-best-stack">
             ${bestLines.over ? `<div class="cs-best-line"><span class="cs-side">O</span><div class="book-logo" style="background:${bestLines.over.color}">${bestLines.over.book}</div><span class="cs-odds">${bestLines.over.line} ${fmt(bestLines.over.price)}</span></div>` : ''}
@@ -1935,8 +2144,8 @@ function collapsedSummary(g, odds) {
     </div>`;
 }
 
-function findBestLines(pd, spreadCons, totalCons, isLive) {
-    const result = { awaySpread: null, homeSpread: null, over: null, under: null };
+function findBestLines(pd, spreadCons, totalCons, mlCons, isLive) {
+    const result = { awaySpread: null, homeSpread: null, over: null, under: null, homeML: null, awayML: null };
     
     // Find best away spread (highest price)
     let bestAwayPrice = -Infinity;
@@ -1982,6 +2191,30 @@ function findBestLines(pd, spreadCons, totalCons, isLive) {
         }
     });
     
+    // Find best home ML (highest price)
+    if (pd.ml && pd.ml.books) {
+        let bestHomeMLPrice = -Infinity;
+        pd.ml.books.forEach(b => {
+            if (!CFG.compareBooks.includes(b.bk?.toLowerCase())) return;
+            if (b.homePrice && b.homePrice > bestHomeMLPrice) {
+                bestHomeMLPrice = b.homePrice;
+                const bkd = BOOKS[b.bk?.toLowerCase()] || {a: (b.bk || '').substring(0,3).toUpperCase(), c: '#666'};
+                result.homeML = { book: bkd.a, price: b.homePrice, color: bkd.c };
+            }
+        });
+        
+        // Find best away ML (highest price)
+        let bestAwayMLPrice = -Infinity;
+        pd.ml.books.forEach(b => {
+            if (!CFG.compareBooks.includes(b.bk?.toLowerCase())) return;
+            if (b.awayPrice && b.awayPrice > bestAwayMLPrice) {
+                bestAwayMLPrice = b.awayPrice;
+                const bkd = BOOKS[b.bk?.toLowerCase()] || {a: (b.bk || '').substring(0,3).toUpperCase(), c: '#666'};
+                result.awayML = { book: bkd.a, price: b.awayPrice, color: bkd.c };
+            }
+        });
+    }
+    
     return result;
 }
 
@@ -2023,9 +2256,10 @@ function toggleCollapseAll() {
 }
 
 function oddsSection(g, odds, period) {
-    const pd = odds[period] || { spread: { books: [] }, total: { line: 0, books: [] } };
+    const pd = odds[period] || { spread: { books: [] }, total: { line: 0, books: [] }, ml: { books: [] } };
     const spreadCons = consensusSpread(pd.spread.books);
     const totalCons = consensusTotal(pd.total.books);
+    const mlCons = consensusML(pd.ml.books);
     
     const st = g.status || {};
     const isLive = st.started && !st.completed;
@@ -2034,10 +2268,15 @@ function oddsSection(g, odds, period) {
     const canCalcEV = !isLive;
     
     // Generate best lines bar for expanded view
-    const bestLines = findBestLines(pd, spreadCons, totalCons, isLive);
+    const bestLines = findBestLines(pd, spreadCons, totalCons, mlCons, isLive);
     const bestLinesHtml = getBestLinesBar(bestLines);
     
+    // Find arbitrage opportunities
+    const arbs = CFG.arbEnabled ? findArbitrageOpportunities(pd, g) : [];
+    const arbsHtml = arbs.length > 0 ? getArbsBar(arbs, g) : '';
+    
     return `<div class="odds-section">
+        ${arbsHtml}
         ${bestLinesHtml}
         <div class="market-section">
             <div class="market-header">📊 Spread</div>
@@ -2047,14 +2286,39 @@ function oddsSection(g, odds, period) {
             <div class="market-header">🎯 Total</div>
             ${totalTable(pd.total, totalCons, g, period, canCalcEV)}
         </div>
+        <div class="market-section">
+            <div class="market-header">💵 Moneyline</div>
+            ${mlTable(pd.ml, mlCons, g, period, canCalcEV)}
+        </div>
+    </div>`;
+}
+
+function getArbsBar(arbs, g) {
+    if (!arbs.length) return '';
+    
+    return `<div class="arb-bar">
+        <span class="arb-label">💰 ARB</span>
+        ${arbs.slice(0, 3).map(a => {
+            const bk1 = BOOKS[a.book1?.toLowerCase()] || {a: a.book1?.substring(0,3).toUpperCase(), c: '#666'};
+            const bk2 = BOOKS[a.book2?.toLowerCase()] || {a: a.book2?.substring(0,3).toUpperCase(), c: '#666'};
+            const lineStr = a.line1 !== null ? (a.line1 > 0 ? '+' + a.line1 : a.line1) : '';
+            return `<span class="arb-chip">
+                <span class="arb-type">${a.type.toUpperCase()}</span>
+                <div class="book-logo" style="background:${bk1.c}">${bk1.a}</div>${a.side1}${lineStr} ${fmt(a.odds1)}
+                <span class="arb-vs">vs</span>
+                <div class="book-logo" style="background:${bk2.c}">${bk2.a}</div>${a.side2} ${fmt(a.odds2)}
+                <span class="arb-pct">+${a.arb.toFixed(2)}%</span>
+            </span>`;
+        }).join('')}
     </div>`;
 }
 
 function getBestLinesBar(bestLines) {
     const hasSpread = bestLines.homeSpread || bestLines.awaySpread;
     const hasTotal = bestLines.over || bestLines.under;
+    const hasML = bestLines.homeML || bestLines.awayML;
     
-    if (!hasSpread && !hasTotal) return '';
+    if (!hasSpread && !hasTotal && !hasML) return '';
     
     let spreadStack = '';
     if (hasSpread) {
@@ -2072,9 +2336,18 @@ function getBestLinesBar(bestLines) {
         </div>`;
     }
     
+    let mlStack = '';
+    if (hasML) {
+        mlStack = `<div class="best-bets-stack">
+            ${bestLines.homeML ? `<span class="best-bet-chip"><span class="bet-label">H</span><div class="book-logo" style="background:${bestLines.homeML.color}">${bestLines.homeML.book}</div><span class="bet-odds">ML ${fmt(bestLines.homeML.price)}</span></span>` : ''}
+            ${bestLines.awayML ? `<span class="best-bet-chip"><span class="bet-label">A</span><div class="book-logo" style="background:${bestLines.awayML.color}">${bestLines.awayML.book}</div><span class="bet-odds">ML ${fmt(bestLines.awayML.price)}</span></span>` : ''}
+        </div>`;
+    }
+    
     return `<div class="best-bets-bar">
         <span class="best-bets-label">🔥 Best</span>
         ${spreadStack}
+        ${mlStack}
         ${totalStack}
     </div>`;
 }
@@ -2221,6 +2494,76 @@ function totalRow(b, cons, bestOver, bestUnder, g, period, canCalcEV) {
     </tr>`;
 }
 
+function mlTable(data, cons, g, period, canCalcEV) {
+    if (!data || !data.books || !data.books.length) return '<div class="empty" style="padding:12px;font-size:12px">No moneyline odds</div>';
+    
+    const show = [...new Set([...CFG.compareBooks])];
+    const filtered = data.books.filter(b => show.includes(b.bk?.toLowerCase()));
+    if (!filtered.length) return '<div class="empty" style="padding:12px;font-size:12px">No odds from selected books</div>';
+    
+    let bestHome = -Infinity, bestAway = -Infinity;
+    filtered.forEach(b => {
+        if (b.homePrice) bestHome = Math.max(bestHome, b.homePrice);
+        if (b.awayPrice) bestAway = Math.max(bestAway, b.awayPrice);
+    });
+    
+    return `<table class="odds-table">
+        <thead><tr><th>Book</th><th>Away</th><th>Home</th><th>A EV</th><th>H EV</th></tr></thead>
+        <tbody>
+            ${cons ? `<tr class="consensus-row">
+                <td><span class="consensus-label">⚡ Sharp (${cons.cnt})</span></td>
+                <td>${fmt(cons.aFair)}</td>
+                <td>${fmt(cons.hFair)}</td>
+                <td>--</td><td>--</td>
+            </tr>` : ''}
+            ${filtered.map(b => mlRow(b, cons, bestAway, bestHome, g, period, canCalcEV)).join('')}
+        </tbody>
+    </table>`;
+}
+
+function mlRow(b, cons, bestAway, bestHome, g, period, canCalcEV) {
+    const bk = (b.bk || '').toLowerCase();
+    const bkd = BOOKS[bk] || {n: b.bk, a: bk.substring(0,3).toUpperCase(), c: '#666'};
+    
+    let aEV = null, hEV = null;
+    if (cons && canCalcEV) {
+        if (b.awayPrice) aEV = calcEV(b.awayPrice, cons.aP);
+        if (b.homePrice) hEV = calcEV(b.homePrice, cons.hP);
+    }
+    
+    const aE = aEV && aEV >= CFG.minEV;
+    const hE = hEV && hEV >= CFG.minEV;
+    
+    if (aE || hE) {
+        const k = `${g.eventID}-${bk}-ml-${b.awayPrice}-${b.homePrice}`;
+        if (!alerted.has(k)) { 
+            alerted.add(k);
+            if (aE) {
+                triggerAlertCBB(g, bkd, 'ml', 'away', 'ML', b.awayPrice, aEV);
+                if (aEV >= CFG.telegramMinEV) sendTelegramCBB(g, bkd.n, 'ml', 'away', 'ML', b.awayPrice, aEV);
+            }
+            if (hE) {
+                triggerAlertCBB(g, bkd, 'ml', 'home', 'ML', b.homePrice, hEV);
+                if (hEV >= CFG.telegramMinEV) sendTelegramCBB(g, bkd.n, 'ml', 'home', 'ML', b.homePrice, hEV);
+            }
+        }
+    }
+    
+    const aClass = b.awayPrice === bestAway ? 'best' : '';
+    const hClass = b.homePrice === bestHome ? 'best' : '';
+    
+    const aClick = b.awayPrice ? `onclick="openBetSlip('${g.eventID}','${bk}','${period}','away ml','ML',${b.awayPrice},${aEV !== null ? aEV : 'null'}); event.stopPropagation();"` : '';
+    const hClick = b.homePrice ? `onclick="openBetSlip('${g.eventID}','${bk}','${period}','home ml','ML',${b.homePrice},${hEV !== null ? hEV : 'null'}); event.stopPropagation();"` : '';
+    
+    return `<tr>
+        <td><div class="book-cell"><div class="book-logo" style="background:${bkd.c};color:#fff">${bkd.a}</div><span class="book-name">${bkd.n}</span></div></td>
+        <td class="odds-cell">${b.awayPrice ? `<span class="odds-value clickable ${aClass}" ${aClick}>${fmt(b.awayPrice)}</span>` : '--'}</td>
+        <td class="odds-cell">${b.homePrice ? `<span class="odds-value clickable ${hClass}" ${hClick}>${fmt(b.homePrice)}</span>` : '--'}</td>
+        <td class="ev-cell">${aEV !== null ? `<span class="ev-value${aEV >= CFG.minEV ? ' positive' : ' negative'}">${aEV > 0 ? '+' : ''}${aEV.toFixed(1)}%</span>` : '--'}</td>
+        <td class="ev-cell">${hEV !== null ? `<span class="ev-value${hEV >= CFG.minEV ? ' positive' : ' negative'}">${hEV > 0 ? '+' : ''}${hEV.toFixed(1)}%</span>` : '--'}</td>
+    </tr>`;
+}
+
 function triggerAlertCBB(g, bkd, market, side, line, odds, ev) {
     const c = document.getElementById('alerts');
     const t = g.teams || {};
@@ -2307,7 +2650,7 @@ function updateStats() {
     const liveCount = DATA.filter(d => d.game.status?.started && !d.game.status?.completed).length;
     document.getElementById('sGames').textContent = DATA.length + (liveCount ? ` (${liveCount} live)` : '');
     document.getElementById('sTime').textContent = new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
-    let cnt = 0, best = 0;
+    let cnt = 0, best = 0, arbCnt = 0;
     DATA.forEach(({game: g, odds}) => {
         const st = g.status || {};
         const isLive = st.started && !st.completed;
@@ -2336,10 +2679,27 @@ function updateStats() {
                     if (b.underPrice) { const e = calcEV(b.underPrice, totalCons.uP); if (e >= CFG.minEV) { cnt++; best = Math.max(best, e); } }
                 });
             }
+            
+            // Check moneyline
+            const mlCons = consensusML(pd.ml?.books || []);
+            if (mlCons) {
+                (pd.ml?.books || []).forEach(b => {
+                    if (!CFG.compareBooks.includes(b.bk?.toLowerCase())) return;
+                    if (b.awayPrice) { const e = calcEV(b.awayPrice, mlCons.aP); if (e >= CFG.minEV) { cnt++; best = Math.max(best, e); } }
+                    if (b.homePrice) { const e = calcEV(b.homePrice, mlCons.hP); if (e >= CFG.minEV) { cnt++; best = Math.max(best, e); } }
+                });
+            }
+            
+            // Count arbitrage opportunities
+            if (CFG.arbEnabled) {
+                const arbs = findArbitrageOpportunities(pd, g);
+                arbCnt += arbs.length;
+            }
         });
     });
     document.getElementById('sEV').textContent = cnt;
     document.getElementById('sBest').textContent = best > 0 ? '+' + best.toFixed(1) + '%' : '--';
+    document.getElementById('sArbs').textContent = arbCnt || '0';
 }
 
 function loadDemo() {
