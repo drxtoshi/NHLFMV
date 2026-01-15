@@ -459,6 +459,15 @@
                 <input type="number" id="minEV" value="2" min="0" max="20" step="0.5">
             </div>
             <div class="field">
+                <label>Devig Method</label>
+                <select id="devigMethod">
+                    <option value="additive">Additive (Basic)</option>
+                    <option value="multiplicative">Multiplicative (Power)</option>
+                    <option value="shin">Shin</option>
+                    <option value="worstcase">Worst Case</option>
+                </select>
+            </div>
+            <div class="field">
                 <label>Refresh (sec)</label>
                 <input type="number" id="refreshInt" value="30" min="10">
             </div>
@@ -650,12 +659,13 @@
 const CFG = {
     apiKey: '',
     minEV: 2,
+    devigMethod: 'additive',
     refresh: 30,
     sound: true,
     webhookEnabled: true,
     webhookUrl: 'https://script.google.com/macros/s/AKfycbzd8TSUQvLubGQZX3oWIrsu6mx6TNiEFEmmOvfBMOHZ3EySOogJKPKqKhPJaJeR9b8/exec',
     telegramEnabled: false,
-    telegramToken: '8397486568:AAH2bJH09qFbjPuH6r6gM7Brqcyce7WV3eE',
+    telegramToken: '8397486568:AAH2bJH09qFbjPuH6bJH09qFbjPuH6r6gM7Brqcyce7WV3eE',
     telegramChatId: '1567501072',
     telegramMinEV: 5,
     sharpBooks: ['pinnacle', 'circa', 'bookmaker'],
@@ -1171,6 +1181,7 @@ function loadCfg() {
     if (s) {
         Object.assign(CFG, JSON.parse(s));
         document.getElementById('minEV').value = CFG.minEV;
+        document.getElementById('devigMethod').value = CFG.devigMethod || 'additive';
         document.getElementById('refreshInt').value = CFG.refresh;
         document.getElementById('alertSound').value = CFG.sound ? 'on' : 'off';
         document.getElementById('webhookEnabled').value = CFG.webhookEnabled ? 'on' : 'off';
@@ -1190,6 +1201,7 @@ function loadCfg() {
 function saveCfg() {
     CFG.apiKey = document.getElementById('apiKey').value;
     CFG.minEV = parseFloat(document.getElementById('minEV').value);
+    CFG.devigMethod = document.getElementById('devigMethod').value;
     CFG.refresh = parseInt(document.getElementById('refreshInt').value);
     CFG.sound = document.getElementById('alertSound').value === 'on';
     CFG.webhookEnabled = document.getElementById('webhookEnabled').value === 'on';
@@ -1408,8 +1420,68 @@ function extractOdds(odds) {
 // Math
 const a2d = a => a >= 100 ? (a/100)+1 : (100/Math.abs(a))+1;
 const a2p = a => a >= 100 ? 100/(a+100) : Math.abs(a)/(Math.abs(a)+100);
-const noVig = (o,u) => { const op=a2p(o), up=a2p(u), t=op+up; return {o:op/t, u:up/t}; };
 const p2a = p => p >= 0.5 ? Math.round(-100*p/(1-p)) : Math.round(100*(1-p)/p);
+
+// Devigging methods
+function noVigAdditive(o, u) {
+    // Basic/Proportional: divide each by total to normalize
+    const op = a2p(o), up = a2p(u), t = op + up;
+    return { o: op/t, u: up/t };
+}
+
+function noVigMultiplicative(o, u) {
+    // Power method: find k where op^k + up^k = 1
+    const op = a2p(o), up = a2p(u);
+    // Binary search for k
+    let lo = 0.5, hi = 1.5;
+    for (let i = 0; i < 50; i++) {
+        const mid = (lo + hi) / 2;
+        const sum = Math.pow(op, mid) + Math.pow(up, mid);
+        if (sum > 1) lo = mid;
+        else hi = mid;
+    }
+    const k = (lo + hi) / 2;
+    return { o: Math.pow(op, k), u: Math.pow(up, k) };
+}
+
+function noVigShin(o, u) {
+    // Shin method: accounts for informed bettors
+    const op = a2p(o), up = a2p(u);
+    const total = op + up;
+    const z = total - 1; // vig/margin
+    
+    // Shin formula: p_true = (sqrt(z^2 + 4(1-z)*p_implied^2) - z) / (2*(1-z))
+    const shinProb = (p) => {
+        if (z <= 0) return p / total;
+        const discriminant = z*z + 4*(1-z)*p*p;
+        return (Math.sqrt(discriminant) - z) / (2*(1-z));
+    };
+    
+    return { o: shinProb(op), u: shinProb(up) };
+}
+
+function noVigWorstCase(o, u) {
+    // Worst case: assume all vig on your side
+    const op = a2p(o), up = a2p(u);
+    const total = op + up;
+    const vig = total - 1;
+    
+    // Each side gets fair value by removing full vig from itself
+    return { 
+        o: Math.max(0.01, Math.min(0.99, op - vig)), 
+        u: Math.max(0.01, Math.min(0.99, up - vig))
+    };
+}
+
+function noVig(o, u) {
+    switch(CFG.devigMethod) {
+        case 'multiplicative': return noVigMultiplicative(o, u);
+        case 'shin': return noVigShin(o, u);
+        case 'worstcase': return noVigWorstCase(o, u);
+        case 'additive':
+        default: return noVigAdditive(o, u);
+    }
+}
 const calcEV = (odds, fp) => ((fp * a2d(odds)) - 1) * 100;
 const fmt = o => o > 0 ? '+' + o : String(o);
 
