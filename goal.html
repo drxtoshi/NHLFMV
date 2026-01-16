@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NHL Goal Alerts</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            min-height: 100vh;
+        }
+        
+        /* Top control bar */
+        .control-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 15px;
+            background: #111;
+            border-bottom: 1px solid #222;
+            font-size: 0.8rem;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .control-bar .left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .control-bar .right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .control-bar label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #888;
+            cursor: pointer;
+        }
+        .control-bar select {
+            padding: 4px 8px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 0.75rem;
+        }
+        .control-bar input[type="checkbox"] {
+            accent-color: #00ff00;
+        }
+        .btn-sm {
+            padding: 5px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-start {
+            background: #00ff00;
+            color: #000;
+        }
+        .btn-stop {
+            background: #ff4444;
+            color: #fff;
+        }
+        .btn-sound {
+            background: transparent;
+            border: 1px solid #333;
+            color: #666;
+        }
+        .btn-sound:hover {
+            border-color: #00ff00;
+            color: #00ff00;
+        }
+        .btn-settings {
+            background: transparent;
+            border: 1px solid #333;
+            color: #666;
+        }
+        .btn-settings:hover {
+            border-color: #00ff00;
+            color: #00ff00;
+        }
+        
+        /* Settings Panel */
+        .settings-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        .settings-overlay.open {
+            display: flex;
+        }
+        .settings-panel {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .settings-panel h2 {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .settings-panel .close-btn {
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        .settings-panel .close-btn:hover {
+            color: #fff;
+        }
+        .settings-group {
+            margin-bottom: 20px;
+        }
+        .settings-group label {
+            display: block;
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 6px;
+        }
+        .settings-group input[type="text"],
+        .settings-group input[type="password"],
+        .settings-group select {
+            width: 100%;
+            padding: 10px;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 0.9rem;
+        }
+        .settings-group input:focus,
+        .settings-group select:focus {
+            outline: none;
+            border-color: #00ff00;
+        }
+        .settings-group .range-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .settings-group input[type="range"] {
+            flex: 1;
+            accent-color: #00ff00;
+        }
+        .settings-group .range-value {
+            min-width: 40px;
+            text-align: right;
+            color: #00ff00;
+            font-size: 0.85rem;
+        }
+        .settings-group .test-btn {
+            margin-top: 8px;
+            padding: 6px 12px;
+            background: #333;
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        .settings-group .test-btn:hover {
+            background: #444;
+        }
+        .settings-divider {
+            border: none;
+            border-top: 1px solid #333;
+            margin: 20px 0;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #666;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #333;
+        }
+        .status-dot.active {
+            background: #00ff00;
+            box-shadow: 0 0 8px #00ff00;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .stats {
+            color: #444;
+            font-size: 0.7rem;
+        }
+        .stats span {
+            color: #666;
+        }
+
+        /* Alert container */
+        .alerts-container {
+            padding: 10px;
+            min-height: 100px;
+        }
+        
+        /* Giant goal alert */
+        .goal-alert {
+            background: linear-gradient(135deg, #ff0000, #cc0000);
+            border: 4px solid #ff0000;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 10px;
+            text-align: center;
+            cursor: pointer;
+            animation: alertPulse 0.5s ease-in-out infinite alternate;
+            position: relative;
+            box-shadow: 0 0 40px rgba(255, 0, 0, 0.6);
+        }
+        @keyframes alertPulse {
+            0% { transform: scale(1); filter: brightness(1); }
+            100% { transform: scale(1.01); filter: brightness(1.15); }
+        }
+        .goal-alert:hover {
+            opacity: 0.9;
+        }
+        .goal-alert .dismiss-hint {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.6);
+        }
+        .goal-alert .team-name {
+            font-size: 5rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 0;
+        }
+        .goal-alert .team-full-name {
+            font-size: 2.2rem;
+            font-weight: 600;
+            opacity: 0.9;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+        .goal-alert .goal-text {
+            font-size: 1.4rem;
+            font-weight: 700;
+            letter-spacing: 4px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 15px;
+            opacity: 0.85;
+        }
+        .goal-alert .score {
+            font-size: 1.4rem;
+            font-weight: 600;
+            opacity: 0.85;
+        }
+        .goal-alert .matchup {
+            font-size: 1rem;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        .goal-alert .time {
+            font-size: 0.8rem;
+            opacity: 0.6;
+            margin-top: 10px;
+        }
+
+        /* Games grid - compact */
+        .games-section {
+            padding: 15px;
+        }
+        .games-section h3 {
+            font-size: 0.75rem;
+            color: #444;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 8px;
+        }
+        .game-card {
+            background: #141414;
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-size: 0.8rem;
+        }
+        .game-card .game-status {
+            font-size: 0.6rem;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .game-card .game-status.live {
+            color: #00ff00;
+        }
+        .game-card .game-clock {
+            color: #888;
+            font-weight: 500;
+        }
+        .game-card .teams {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .game-card .team {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            position: relative;
+            overflow: visible;
+        }
+        .game-card .team-logo {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+        }
+        .game-card .team-abbr {
+            font-weight: 600;
+            color: #999;
+        }
+        .game-card .team-score {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #fff;
+        }
+        .game-card .at {
+            color: #333;
+            font-size: 0.7rem;
+        }
+        .game-card .team.scoring::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -12px;
+            right: -4px;
+            bottom: -10px;
+            background: rgba(255, 0, 0, 0.5);
+            border-radius: 4px;
+            animation: teamFlash 0.4s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+        @keyframes teamFlash {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+        .team-score.scored {
+            color: #00ff00 !important;
+            text-shadow: 0 0 10px #00ff00 !important;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .no-games {
+            color: #444;
+            text-align: center;
+            padding: 30px;
+            font-size: 0.85rem;
+        }
+        
+        .demo-banner {
+            background: #ff6b00;
+            color: #000;
+            text-align: center;
+            padding: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        /* Mobile */
+        @media (max-width: 600px) {
+            .goal-alert .team-name {
+                font-size: 3rem;
+            }
+            .goal-alert .goal-text {
+                font-size: 1.4rem;
+            }
+            .goal-alert .score {
+                font-size: 1.1rem;
+            }
+            .control-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            .hide-mobile {
+                display: none;
+            }
+        }
+
+        /* Mobile mode (toggle) */
+        body.mobile-mode .control-bar {
+            padding: 5px 10px;
+            font-size: 0.7rem;
+        }
+        body.mobile-mode .control-bar .left,
+        body.mobile-mode .control-bar .right {
+            gap: 8px;
+        }
+        body.mobile-mode .btn-sm {
+            padding: 4px 8px;
+            font-size: 0.7rem;
+        }
+        body.mobile-mode .stats {
+            display: none !important;
+        }
+        body.mobile-mode .goal-alert {
+            padding: 20px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            border-width: 3px;
+        }
+        body.mobile-mode .goal-alert .team-name {
+            font-size: 3.5rem;
+            letter-spacing: 2px;
+        }
+        body.mobile-mode .goal-alert .team-full-name {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+        body.mobile-mode .goal-alert .goal-text {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+        body.mobile-mode .goal-alert .score {
+            font-size: 1.1rem;
+        }
+        body.mobile-mode .goal-alert .time {
+            font-size: 0.7rem;
+            margin-top: 8px;
+        }
+        body.mobile-mode .goal-alert .dismiss-hint {
+            font-size: 0.6rem;
+        }
+        body.mobile-mode .games-section {
+            padding: 10px;
+        }
+        body.mobile-mode .games-section h3 {
+            font-size: 0.65rem;
+            margin-bottom: 8px;
+        }
+        body.mobile-mode .games-grid {
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 6px;
+        }
+        body.mobile-mode .game-card {
+            padding: 8px 10px;
+            border-radius: 4px;
+        }
+        body.mobile-mode .game-card .game-status {
+            font-size: 0.55rem;
+            margin-bottom: 4px;
+        }
+        body.mobile-mode .game-card .team-abbr {
+            font-size: 0.7rem;
+        }
+        body.mobile-mode .game-card .team-score {
+            font-size: 0.95rem;
+        }
+        body.mobile-mode .game-card .at {
+            font-size: 0.6rem;
+        }
+        body.mobile-mode .alerts-container {
+            padding: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="control-bar">
+        <div class="left">
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Stopped</span>
+            </div>
+            <label>
+                <input type="checkbox" id="demoMode">
+                Demo
+            </label>
+            <label>
+                <input type="checkbox" id="mobileMode">
+                Mobile
+            </label>
+            <label class="hide-mobile">
+                Poll:
+                <select id="pollRate">
+                    <option value="500">500ms</option>
+                    <option value="1000" selected>1s</option>
+                    <option value="2000">2s</option>
+                </select>
+            </label>
+        </div>
+        <div class="right">
+            <div class="stats" id="statsDisplay" style="display: none;">
+                <span id="pollCount">0</span> polls · <span id="goalCount">0</span> goals · <span id="latency">--</span>ms
+            </div>
+            <button class="btn-sm btn-settings" id="settingsBtn">⚙️</button>
+            <button class="btn-sm btn-sound" id="testSound">🔊</button>
+            <button class="btn-sm btn-start" id="startBtn">▶ Start</button>
+            <button class="btn-sm btn-stop" id="stopBtn" style="display: none;">■ Stop</button>
+        </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div class="settings-overlay" id="settingsOverlay">
+        <div class="settings-panel">
+            <h2>
+                Settings
+                <button class="close-btn" id="closeSettings">&times;</button>
+            </h2>
+            
+            <div class="settings-group">
+                <label>Sportradar API Key</label>
+                <input type="password" id="apiKeyInput" placeholder="Enter your API key">
+            </div>
+            
+            <hr class="settings-divider">
+            
+            <div class="settings-group">
+                <label>Alert Sound Type</label>
+                <select id="soundType">
+                    <option value="speech-city">Voice: City Name</option>
+                    <option value="speech-city-goal">Voice: City + Goal</option>
+                    <option value="speech-team">Voice: Team Name</option>
+                    <option value="beep">Beep</option>
+                    <option value="horn">Air Horn</option>
+                    <option value="buzzer">Buzzer</option>
+                    <option value="chime">Chime</option>
+                    <option value="none">None (Visual Only)</option>
+                </select>
+                <button class="test-btn" id="testSoundBtn">Test Sound</button>
+            </div>
+            
+            <div class="settings-group" id="speechSpeedGroup">
+                <label>Speech Speed</label>
+                <div class="range-container">
+                    <input type="range" id="speechSpeed" min="0.5" max="2" step="0.1" value="1.25">
+                    <span class="range-value" id="speechSpeedValue">1.25x</span>
+                </div>
+            </div>
+            
+            <div class="settings-group">
+                <label>Repeat Interval (ms)</label>
+                <div class="range-container">
+                    <input type="range" id="repeatInterval" min="500" max="3000" step="100" value="800">
+                    <span class="range-value" id="repeatIntervalValue">800ms</span>
+                </div>
+            </div>
+            
+            <div class="settings-group" id="toneGroup" style="display: none;">
+                <label>Tone Frequency (Hz)</label>
+                <div class="range-container">
+                    <input type="range" id="toneFreq" min="200" max="2000" step="50" value="800">
+                    <span class="range-value" id="toneFreqValue">800Hz</span>
+                </div>
+            </div>
+            
+            <hr class="settings-divider">
+            
+            <div class="settings-group">
+                <label>Volume</label>
+                <div class="range-container">
+                    <input type="range" id="volume" min="0" max="1" step="0.1" value="1">
+                    <span class="range-value" id="volumeValue">100%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="alerts-container" id="alertsContainer">
+        <!-- Goal alerts appear here -->
+    </div>
+
+    <div class="games-section">
+        <h3>Games</h3>
+        <div class="games-grid" id="gamesGrid">
+            <div class="no-games">Click Start to monitor games</div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+        
+        // Settings
+        let settings = {
+            apiKey: localStorage.getItem('sportradar_api_key') || '',
+            soundType: localStorage.getItem('soundType') || 'speech-city',
+            speechSpeed: parseFloat(localStorage.getItem('speechSpeed')) || 1.25,
+            repeatInterval: parseInt(localStorage.getItem('repeatInterval')) || 800,
+            toneFreq: parseInt(localStorage.getItem('toneFreq')) || 800,
+            volume: parseFloat(localStorage.getItem('volume')) || 1
+        };
+        
+        function saveSettings() {
+            localStorage.setItem('sportradar_api_key', settings.apiKey);
+            localStorage.setItem('soundType', settings.soundType);
+            localStorage.setItem('speechSpeed', settings.speechSpeed);
+            localStorage.setItem('repeatInterval', settings.repeatInterval);
+            localStorage.setItem('toneFreq', settings.toneFreq);
+            localStorage.setItem('volume', settings.volume);
+        }
+        
+        // NHL team colors
+        const teamColors = {
+            'ANA': { primary: '#F47A38', secondary: '#B9975B' },
+            'ARI': { primary: '#8C2633', secondary: '#E2D6B5' },
+            'BOS': { primary: '#FFB81C', secondary: '#000000' },
+            'BUF': { primary: '#002654', secondary: '#FCB514' },
+            'CGY': { primary: '#D2001C', secondary: '#FAAF19' },
+            'CAR': { primary: '#CC0000', secondary: '#000000' },
+            'CHI': { primary: '#CF0A2C', secondary: '#000000' },
+            'COL': { primary: '#6F263D', secondary: '#236192' },
+            'CBJ': { primary: '#002654', secondary: '#CE1126' },
+            'DAL': { primary: '#006847', secondary: '#8F8F8C' },
+            'DET': { primary: '#CE1126', secondary: '#FFFFFF' },
+            'EDM': { primary: '#041E42', secondary: '#FF4C00' },
+            'FLA': { primary: '#041E42', secondary: '#C8102E' },
+            'LAK': { primary: '#111111', secondary: '#A2AAAD' },
+            'MIN': { primary: '#154734', secondary: '#A6192E' },
+            'MTL': { primary: '#AF1E2D', secondary: '#192168' },
+            'NSH': { primary: '#FFB81C', secondary: '#041E42' },
+            'NJD': { primary: '#CE1126', secondary: '#000000' },
+            'NYI': { primary: '#00539B', secondary: '#F47D30' },
+            'NYR': { primary: '#0038A8', secondary: '#CE1126' },
+            'OTT': { primary: '#C52032', secondary: '#C2912C' },
+            'PHI': { primary: '#F74902', secondary: '#000000' },
+            'PIT': { primary: '#FCB514', secondary: '#000000' },
+            'SJS': { primary: '#006D75', secondary: '#000000' },
+            'SEA': { primary: '#001628', secondary: '#99D9D9' },
+            'STL': { primary: '#002F87', secondary: '#FCB514' },
+            'TBL': { primary: '#002868', secondary: '#FFFFFF' },
+            'TOR': { primary: '#00205B', secondary: '#FFFFFF' },
+            'UTA': { primary: '#71AFE5', secondary: '#000000' },
+            'VAN': { primary: '#00205B', secondary: '#00843D' },
+            'VGK': { primary: '#B4975A', secondary: '#333F42' },
+            'WSH': { primary: '#C8102E', secondary: '#041E42' },
+            'WPG': { primary: '#041E42', secondary: '#004C97' }
+        };
+        
+        const teamNames = {
+            'ANA': 'Anaheim Ducks',
+            'ARI': 'Arizona Coyotes',
+            'BOS': 'Boston Bruins',
+            'BUF': 'Buffalo Sabres',
+            'CGY': 'Calgary Flames',
+            'CAR': 'Carolina Hurricanes',
+            'CHI': 'Chicago Blackhawks',
+            'COL': 'Colorado Avalanche',
+            'CBJ': 'Columbus Blue Jackets',
+            'DAL': 'Dallas Stars',
+            'DET': 'Detroit Red Wings',
+            'EDM': 'Edmonton Oilers',
+            'FLA': 'Florida Panthers',
+            'LAK': 'Los Angeles Kings',
+            'MIN': 'Minnesota Wild',
+            'MTL': 'Montreal Canadiens',
+            'NSH': 'Nashville Predators',
+            'NJD': 'New Jersey Devils',
+            'NYI': 'New York Islanders',
+            'NYR': 'New York Rangers',
+            'OTT': 'Ottawa Senators',
+            'PHI': 'Philadelphia Flyers',
+            'PIT': 'Pittsburgh Penguins',
+            'SJS': 'San Jose Sharks',
+            'SEA': 'Seattle Kraken',
+            'STL': 'St. Louis Blues',
+            'TBL': 'Tampa Bay Lightning',
+            'TOR': 'Toronto Maple Leafs',
+            'UTA': 'Utah Hockey Club',
+            'VAN': 'Vancouver Canucks',
+            'VGK': 'Vegas Golden Knights',
+            'WSH': 'Washington Capitals',
+            'WPG': 'Winnipeg Jets'
+        };
+        
+        function getTeamColor(alias) {
+            return teamColors[alias]?.primary || '#ff0000';
+        }
+        
+        function getTeamName(alias) {
+            return teamNames[alias] || alias;
+        }
+        
+        // Team cities for speech
+        const teamCities = {
+            'ANA': 'Anaheim', 'ARI': 'Arizona', 'BOS': 'Boston', 'BUF': 'Buffalo',
+            'CGY': 'Calgary', 'CAR': 'Carolina', 'CHI': 'Chicago', 'COL': 'Colorado',
+            'CBJ': 'Columbus', 'DAL': 'Dallas', 'DET': 'Detroit', 'EDM': 'Edmonton',
+            'FLA': 'Florida', 'LAK': 'Los Angeles', 'MIN': 'Minnesota', 'MTL': 'Montreal',
+            'NSH': 'Nashville', 'NJD': 'New Jersey', 'NYI': 'New York Islanders', 'NYR': 'New York Rangers',
+            'OTT': 'Ottawa', 'PHI': 'Philadelphia', 'PIT': 'Pittsburgh', 'SJS': 'San Jose',
+            'SEA': 'Seattle', 'STL': 'St. Louis', 'TBL': 'Tampa Bay', 'TOR': 'Toronto',
+            'UTA': 'Utah', 'VAN': 'Vancouver', 'VGK': 'Vegas', 'WSH': 'Washington',
+            'WPG': 'Winnipeg'
+        };
+        
+        function speakGoal(teamAlias) {
+            if (settings.soundType === 'none') return;
+            
+            if (settings.soundType.startsWith('speech')) {
+                if ('speechSynthesis' in window) {
+                    speechSynthesis.cancel();
+                    
+                    let text = '';
+                    if (settings.soundType === 'speech-city') {
+                        text = teamCities[teamAlias] || teamAlias;
+                    } else if (settings.soundType === 'speech-city-goal') {
+                        text = (teamCities[teamAlias] || teamAlias) + ' Goal!';
+                    } else if (settings.soundType === 'speech-team') {
+                        text = teamNames[teamAlias] || teamAlias;
+                    }
+                    
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.rate = settings.speechSpeed;
+                    utterance.pitch = 1.0;
+                    utterance.volume = settings.volume;
+                    
+                    const voices = speechSynthesis.getVoices();
+                    const englishVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Male')) 
+                        || voices.find(v => v.lang.startsWith('en-US'))
+                        || voices.find(v => v.lang.startsWith('en'));
+                    if (englishVoice) {
+                        utterance.voice = englishVoice;
+                    }
+                    
+                    speechSynthesis.speak(utterance);
+                }
+            } else {
+                // Play tone sounds
+                playTone(settings.soundType);
+            }
+        }
+        
+        function playTone(type) {
+            if (!audioContext) return;
+            if (audioContext.state === 'suspended') audioContext.resume();
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            gainNode.gain.value = settings.volume * 0.5;
+            
+            if (type === 'beep') {
+                oscillator.type = 'sine';
+                oscillator.frequency.value = settings.toneFreq;
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.3);
+            } else if (type === 'horn') {
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.value = 220;
+                oscillator.frequency.exponentialRampToValueAtTime(440, audioContext.currentTime + 0.1);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.8);
+            } else if (type === 'buzzer') {
+                oscillator.type = 'square';
+                oscillator.frequency.value = 150;
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } else if (type === 'chime') {
+                oscillator.type = 'sine';
+                oscillator.frequency.value = 880;
+                oscillator.frequency.exponentialRampToValueAtTime(1760, audioContext.currentTime + 0.1);
+                oscillator.frequency.exponentialRampToValueAtTime(880, audioContext.currentTime + 0.2);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.4);
+            }
+        }
+        
+        let audioContext, alertBuffer;
+        let isRunning = false;
+        let isDemoMode = false;
+        let pollInterval = null;
+        let gameScores = {};
+        let games = [];
+        let pollCount = 0;
+        let goalCount = 0;
+        let activeAlerts = [];
+
+        // Demo data
+        const demoGames = [
+            { id: 'demo-1', status: 'inprogress', scheduled: new Date().toISOString(),
+              home: { alias: 'VGK', name: 'Vegas Golden Knights' },
+              away: { alias: 'COL', name: 'Colorado Avalanche' },
+              home_points: 2, away_points: 1, period: 2, clock: '14:32' },
+            { id: 'demo-2', status: 'inprogress', scheduled: new Date().toISOString(),
+              home: { alias: 'TOR', name: 'Toronto Maple Leafs' },
+              away: { alias: 'BOS', name: 'Boston Bruins' },
+              home_points: 3, away_points: 3, period: 3, clock: '8:05' },
+            { id: 'demo-3', status: 'scheduled', scheduled: new Date(Date.now() + 3600000).toISOString(),
+              home: { alias: 'EDM', name: 'Edmonton Oilers' },
+              away: { alias: 'LAK', name: 'Los Angeles Kings' },
+              home_points: 0, away_points: 0, period: 0, clock: '' }
+        ];
+        let demoScores = {};
+        let demoClocks = {};
+
+        // DOM
+        const pollRateSelect = document.getElementById('pollRate');
+        const demoModeCheckbox = document.getElementById('demoMode');
+        const mobileModeCheckbox = document.getElementById('mobileMode');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const gamesGrid = document.getElementById('gamesGrid');
+        const alertsContainer = document.getElementById('alertsContainer');
+        const statsDisplay = document.getElementById('statsDisplay');
+        const latencySpan = document.getElementById('latency');
+        const pollCountSpan = document.getElementById('pollCount');
+        const goalCountSpan = document.getElementById('goalCount');
+
+        // Mobile mode toggle
+        mobileModeCheckbox.addEventListener('change', () => {
+            document.body.classList.toggle('mobile-mode', mobileModeCheckbox.checked);
+            localStorage.setItem('mobileMode', mobileModeCheckbox.checked);
+        });
+        
+        // Load saved mobile preference
+        if (localStorage.getItem('mobileMode') === 'true') {
+            mobileModeCheckbox.checked = true;
+            document.body.classList.add('mobile-mode');
+        }
+
+        // Audio
+        async function initAudio() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const sampleRate = audioContext.sampleRate;
+            const duration = 0.5;
+            const buffer = audioContext.createBuffer(1, sampleRate * duration, sampleRate);
+            const data = buffer.getChannelData(0);
+            
+            for (let i = 0; i < buffer.length; i++) {
+                const t = i / sampleRate;
+                const freq = t < 0.25 ? 1200 : 1600;
+                data[i] = Math.sin(2 * Math.PI * freq * t) * Math.exp(-t * 2) * 0.7;
+            }
+            alertBuffer = buffer;
+        }
+
+        function playAlert() {
+            if (!audioContext || !alertBuffer) return;
+            if (audioContext.state === 'suspended') audioContext.resume();
+            const source = audioContext.createBufferSource();
+            source.buffer = alertBuffer;
+            source.connect(audioContext.destination);
+            source.start(0);
+        }
+
+        document.getElementById('testSound').addEventListener('click', async () => {
+            if (!audioContext) await initAudio();
+            playAlert();
+        });
+
+        // Helpers
+        function formatTime(dateStr) {
+            return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        }
+        function formatNow() {
+            return new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+        }
+
+        // API calls
+        async function fetchSchedule() {
+            const res = await fetch(`${API_BASE}/api/schedule`);
+            if (!res.ok) throw new Error(`Schedule error: ${res.status}`);
+            const data = await res.json();
+            return data.games || [];
+        }
+
+        async function fetchBoxscore(gameId) {
+            const start = performance.now();
+            const res = await fetch(`${API_BASE}/api/games/${gameId}/boxscore`);
+            latencySpan.textContent = Math.round(performance.now() - start);
+            if (!res.ok) throw new Error(`Boxscore error: ${res.status}`);
+            return res.json();
+        }
+
+        // Demo
+        function initDemoScores() {
+            demoGames.forEach(g => {
+                demoScores[g.id] = { home: g.home_points, away: g.away_points };
+                demoClocks[g.id] = { period: g.period, clock: g.clock };
+            });
+        }
+
+        function simulateDemoGoal() {
+            const liveGames = demoGames.filter(g => g.status === 'inprogress');
+            if (liveGames.length === 0) return null;
+            
+            // Tick clocks down
+            liveGames.forEach(game => {
+                const c = demoClocks[game.id];
+                if (c && c.clock) {
+                    const parts = c.clock.split(':');
+                    let mins = parseInt(parts[0]) || 0;
+                    let secs = parseInt(parts[1]) || 0;
+                    secs -= 1;
+                    if (secs < 0) {
+                        secs = 59;
+                        mins -= 1;
+                    }
+                    if (mins < 0) {
+                        c.period++;
+                        mins = 20;
+                        secs = 0;
+                    }
+                    c.clock = `${mins}:${String(secs).padStart(2, '0')}`;
+                }
+            });
+            
+            // ~12% chance of goal
+            if (Math.random() > 0.12) return null;
+            
+            const game = liveGames[Math.floor(Math.random() * liveGames.length)];
+            const isHome = Math.random() > 0.5;
+            
+            if (isHome) demoScores[game.id].home++;
+            else demoScores[game.id].away++;
+            
+            return {
+                gameId: game.id,
+                team: isHome ? 'home' : 'away',
+                teamName: isHome ? game.home.alias : game.away.alias,
+                opponentName: isHome ? game.away.alias : game.home.alias,
+                homeTeam: game.home.alias,
+                awayTeam: game.away.alias,
+                homeScore: demoScores[game.id].home,
+                awayScore: demoScores[game.id].away
+            };
+        }
+
+        // Create giant alert
+        function createGoalAlert(teamName, opponentName, homeTeam, awayTeam, homeScore, awayScore, gameId, scoringTeamSide) {
+            goalCount++;
+            goalCountSpan.textContent = goalCount;
+            
+            // Speak the team city
+            speakGoal(teamName);
+            
+            // Highlight the scoring team in game card
+            if (gameId && scoringTeamSide) {
+                highlightScoringTeam(gameId, scoringTeamSide);
+            }
+
+            const teamColor = getTeamColor(teamName);
+            const fullTeamName = getTeamName(teamName);
+            const alertId = Date.now();
+            const alertEl = document.createElement('div');
+            alertEl.className = 'goal-alert';
+            alertEl.dataset.id = alertId;
+            alertEl.style.background = `linear-gradient(135deg, ${teamColor}, ${adjustColor(teamColor, -30)})`;
+            alertEl.style.borderColor = teamColor;
+            alertEl.style.boxShadow = `0 0 40px ${teamColor}80`;
+            alertEl.innerHTML = `
+                <div class="dismiss-hint">click to dismiss</div>
+                <div class="team-name">${teamName}</div>
+                <div class="team-full-name">${fullTeamName}</div>
+                <div class="goal-text">GOAL!</div>
+                <div class="score">${awayTeam} ${awayScore} - ${homeScore} ${homeTeam}</div>
+                <div class="time">${formatNow()}</div>
+            `;
+            
+            alertEl.addEventListener('click', () => {
+                alertEl.remove();
+                activeAlerts = activeAlerts.filter(a => a !== alertId);
+            });
+            
+            alertEl.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                alertEl.remove();
+                activeAlerts = activeAlerts.filter(a => a !== alertId);
+            });
+
+            alertsContainer.insertBefore(alertEl, alertsContainer.firstChild);
+            activeAlerts.push(alertId);
+
+            // Keep speaking while alert is active
+            const soundInterval = setInterval(() => {
+                if (!activeAlerts.includes(alertId)) {
+                    clearInterval(soundInterval);
+                    return;
+                }
+                speakGoal(teamName);
+            }, settings.repeatInterval);
+        }
+        
+        // Darken/lighten color helper
+        function adjustColor(hex, amount) {
+            hex = hex.replace('#', '');
+            const num = parseInt(hex, 16);
+            let r = (num >> 16) + amount;
+            let g = ((num >> 8) & 0x00FF) + amount;
+            let b = (num & 0x0000FF) + amount;
+            r = Math.max(0, Math.min(255, r));
+            g = Math.max(0, Math.min(255, g));
+            b = Math.max(0, Math.min(255, b));
+            return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+        }
+        
+        // Highlight scoring team in game card
+        let activeHighlights = {};
+        
+        function highlightScoringTeam(gameId, team) {
+            const highlightKey = `${gameId}-${team}`;
+            
+            // Clear any existing highlight for this team
+            if (activeHighlights[highlightKey]) {
+                clearTimeout(activeHighlights[highlightKey]);
+            }
+            
+            function applyHighlight() {
+                const gameCard = document.getElementById(`game-${gameId}`);
+                if (!gameCard) return;
+                
+                const teamEls = gameCard.querySelectorAll('.team');
+                const teamEl = team === 'away' ? teamEls[0] : teamEls[1];
+                const scoreEl = document.getElementById(`${team}-${gameId}`);
+                
+                if (teamEl) teamEl.classList.add('scoring');
+                if (scoreEl) scoreEl.classList.add('scored');
+            }
+            
+            function removeHighlight() {
+                const gameCard = document.getElementById(`game-${gameId}`);
+                if (!gameCard) return;
+                
+                const teamEls = gameCard.querySelectorAll('.team');
+                const teamEl = team === 'away' ? teamEls[0] : teamEls[1];
+                const scoreEl = document.getElementById(`${team}-${gameId}`);
+                
+                if (teamEl) teamEl.classList.remove('scoring');
+                if (scoreEl) scoreEl.classList.remove('scored');
+                delete activeHighlights[highlightKey];
+            }
+            
+            // Apply immediately
+            applyHighlight();
+            
+            // Store timeout and reapply function
+            activeHighlights[highlightKey] = setTimeout(removeHighlight, 10000);
+            activeHighlights[highlightKey + '_apply'] = applyHighlight;
+            activeHighlights[highlightKey + '_remove'] = removeHighlight;
+            
+            // Add click handler to game card
+            const gameCard = document.getElementById(`game-${gameId}`);
+            if (gameCard) {
+                const clickHandler = (e) => {
+                    e.stopPropagation();
+                    removeHighlight();
+                    clearTimeout(activeHighlights[highlightKey]);
+                    gameCard.removeEventListener('click', clickHandler);
+                };
+                gameCard.addEventListener('click', clickHandler);
+            }
+        }
+        
+        // Reapply highlights after re-render
+        function reapplyHighlights() {
+            Object.keys(activeHighlights).forEach(key => {
+                if (key.endsWith('_apply')) {
+                    const applyFn = activeHighlights[key];
+                    if (typeof applyFn === 'function') {
+                        applyFn();
+                    }
+                }
+            });
+        }
+
+        // Render games
+        function renderGames(gamesData) {
+            // Only show live games
+            const liveGames = (gamesData || []).filter(g => g.status === 'inprogress');
+            
+            if (liveGames.length === 0) {
+                gamesGrid.innerHTML = '<div class="no-games">No live games</div>';
+                return;
+            }
+
+            gamesGrid.innerHTML = liveGames.map(game => {
+                const home = game.home || {};
+                const away = game.away || {};
+                const homeScore = isDemoMode ? (demoScores[game.id]?.home ?? game.home_points) : (game.home_points ?? '-');
+                const awayScore = isDemoMode ? (demoScores[game.id]?.away ?? game.away_points) : (game.away_points ?? '-');
+
+                let clockDisplay = '';
+                const period = isDemoMode ? demoClocks[game.id]?.period : game.period;
+                const clock = isDemoMode ? demoClocks[game.id]?.clock : game.clock;
+                if (period && clock) {
+                    const periodLabel = period === 1 ? '1st' : period === 2 ? '2nd' : period === 3 ? '3rd' : `OT${period > 4 ? period - 3 : ''}`;
+                    clockDisplay = `<span class="game-clock">${periodLabel} ${clock}</span>`;
+                }
+
+                return `
+                    <div class="game-card" id="game-${game.id}">
+                        <div class="game-status live">
+                            <span>LIVE</span>
+                            ${clockDisplay}
+                        </div>
+                        <div class="teams">
+                            <div class="team">
+                                <span class="team-abbr">${away.alias || 'AWY'}</span>
+                                <span class="team-score" id="away-${game.id}">${awayScore}</span>
+                            </div>
+                            <span class="at">@</span>
+                            <div class="team">
+                                <span class="team-score" id="home-${game.id}">${homeScore}</span>
+                                <span class="team-abbr">${home.alias || 'HME'}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Check for goals (live mode)
+        function checkForGoals(game, boxscore) {
+            const gameId = game.id;
+            const home = boxscore.home || {};
+            const away = boxscore.away || {};
+            const homeTeam = home.alias || home.name || 'Home';
+            const awayTeam = away.alias || away.name || 'Away';
+            const homeScore = home.points ?? 0;
+            const awayScore = away.points ?? 0;
+
+            if (!gameScores[gameId]) {
+                gameScores[gameId] = { home: homeScore, away: awayScore };
+                return;
+            }
+
+            const prev = gameScores[gameId];
+
+            if (homeScore > prev.home) {
+                createGoalAlert(homeTeam, awayTeam, homeTeam, awayTeam, homeScore, awayScore, gameId, 'home');
+            }
+            if (awayScore > prev.away) {
+                createGoalAlert(awayTeam, homeTeam, homeTeam, awayTeam, homeScore, awayScore, gameId, 'away');
+            }
+
+            gameScores[gameId] = { home: homeScore, away: awayScore };
+        }
+
+        function updateGameDisplay(game, boxscore) {
+            const homeEl = document.getElementById(`home-${game.id}`);
+            const awayEl = document.getElementById(`away-${game.id}`);
+            if (homeEl) homeEl.textContent = boxscore.home?.points ?? '-';
+            if (awayEl) awayEl.textContent = boxscore.away?.points ?? '-';
+        }
+
+        // Poll
+        async function poll() {
+            pollCount++;
+            pollCountSpan.textContent = pollCount;
+
+            if (isDemoMode) {
+                const start = performance.now();
+                const goalEvent = simulateDemoGoal();
+                latencySpan.textContent = Math.round(performance.now() - start);
+
+                // Re-render to update clocks
+                renderGames(games);
+                reapplyHighlights();
+
+                if (goalEvent) {
+                    createGoalAlert(
+                        goalEvent.teamName,
+                        goalEvent.opponentName,
+                        goalEvent.homeTeam,
+                        goalEvent.awayTeam,
+                        goalEvent.homeScore,
+                        goalEvent.awayScore,
+                        goalEvent.gameId,
+                        goalEvent.team
+                    );
+                }
+                return;
+            }
+
+            const liveGames = games.filter(g => g.status === 'inprogress');
+            await Promise.all(liveGames.map(async game => {
+                try {
+                    const boxscore = await fetchBoxscore(game.id);
+                    checkForGoals(game, boxscore);
+                    updateGameDisplay(game, boxscore);
+                } catch (err) {
+                    console.error(`Poll error ${game.id}:`, err);
+                }
+            }));
+        }
+
+        async function refreshGames() {
+            try {
+                games = await fetchSchedule();
+                renderGames(games);
+            } catch (err) {
+                console.error('Refresh error:', err);
+            }
+        }
+
+        // Start/Stop
+        async function start() {
+            isDemoMode = demoModeCheckbox.checked;
+
+            try {
+                statusText.textContent = 'Starting...';
+                statusDot.className = 'status-dot';
+
+                // Init audio on user gesture (required for mobile)
+                try {
+                    if (!audioContext) await initAudio();
+                    if (audioContext.state === 'suspended') await audioContext.resume();
+                } catch (audioErr) {
+                    console.warn('Audio init failed:', audioErr);
+                    // Continue anyway - alerts will still show visually
+                }
+
+                if (isDemoMode) {
+                    initDemoScores();
+                    games = demoGames;
+                    renderGames(games);
+                    
+                    let banner = document.querySelector('.demo-banner');
+                    if (!banner) {
+                        banner = document.createElement('div');
+                        banner.className = 'demo-banner';
+                        banner.textContent = '🎮 DEMO MODE';
+                        document.body.insertBefore(banner, document.body.firstChild.nextSibling);
+                    }
+
+                    games.forEach(g => {
+                        gameScores[g.id] = { 
+                            home: demoScores[g.id]?.home ?? g.home_points,
+                            away: demoScores[g.id]?.away ?? g.away_points
+                        };
+                    });
+                } else {
+                    const banner = document.querySelector('.demo-banner');
+                    if (banner) banner.remove();
+
+                    games = await fetchSchedule();
+                    renderGames(games);
+
+                    for (const game of games.filter(g => g.status === 'inprogress')) {
+                        try {
+                            const boxscore = await fetchBoxscore(game.id);
+                            gameScores[game.id] = {
+                                home: boxscore.home?.points ?? 0,
+                                away: boxscore.away?.points ?? 0
+                            };
+                            updateGameDisplay(game, boxscore);
+                        } catch (err) {
+                            console.error(`Init error ${game.id}:`, err);
+                        }
+                    }
+                }
+
+                isRunning = true;
+                statusDot.className = 'status-dot active';
+                statusText.textContent = isDemoMode ? 'Demo' : 'Live';
+                statsDisplay.style.display = 'block';
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-block';
+                demoModeCheckbox.disabled = true;
+                mobileModeCheckbox.disabled = true;
+
+                pollInterval = setInterval(poll, parseInt(pollRateSelect.value));
+                if (!isDemoMode) setInterval(refreshGames, 5 * 60 * 1000);
+
+            } catch (err) {
+                console.error('Start error:', err);
+                statusDot.className = 'status-dot';
+                statusText.textContent = 'Error';
+                alert('Start failed: ' + err.message);
+            }
+        }
+
+        function stop() {
+            isRunning = false;
+            if (pollInterval) clearInterval(pollInterval);
+            pollInterval = null;
+
+            statusDot.className = 'status-dot';
+            statusText.textContent = 'Stopped';
+            startBtn.style.display = 'inline-block';
+            stopBtn.style.display = 'none';
+            demoModeCheckbox.disabled = false;
+            mobileModeCheckbox.disabled = false;
+
+            const banner = document.querySelector('.demo-banner');
+            if (banner) banner.remove();
+        }
+
+        startBtn.addEventListener('click', start);
+        startBtn.addEventListener('touchend', (e) => { e.preventDefault(); start(); });
+        stopBtn.addEventListener('click', stop);
+        stopBtn.addEventListener('touchend', (e) => { e.preventDefault(); stop(); });
+        
+        // Settings panel
+        const settingsOverlay = document.getElementById('settingsOverlay');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const closeSettings = document.getElementById('closeSettings');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const soundTypeSelect = document.getElementById('soundType');
+        const speechSpeedInput = document.getElementById('speechSpeed');
+        const speechSpeedValue = document.getElementById('speechSpeedValue');
+        const repeatIntervalInput = document.getElementById('repeatInterval');
+        const repeatIntervalValue = document.getElementById('repeatIntervalValue');
+        const toneFreqInput = document.getElementById('toneFreq');
+        const toneFreqValue = document.getElementById('toneFreqValue');
+        const volumeInput = document.getElementById('volume');
+        const volumeValue = document.getElementById('volumeValue');
+        const speechSpeedGroup = document.getElementById('speechSpeedGroup');
+        const toneGroup = document.getElementById('toneGroup');
+        const testSoundBtn = document.getElementById('testSoundBtn');
+        
+        // Load settings into UI
+        apiKeyInput.value = settings.apiKey;
+        soundTypeSelect.value = settings.soundType;
+        speechSpeedInput.value = settings.speechSpeed;
+        speechSpeedValue.textContent = settings.speechSpeed + 'x';
+        repeatIntervalInput.value = settings.repeatInterval;
+        repeatIntervalValue.textContent = settings.repeatInterval + 'ms';
+        toneFreqInput.value = settings.toneFreq;
+        toneFreqValue.textContent = settings.toneFreq + 'Hz';
+        volumeInput.value = settings.volume;
+        volumeValue.textContent = Math.round(settings.volume * 100) + '%';
+        
+        function updateSoundTypeUI() {
+            const isSpeech = settings.soundType.startsWith('speech');
+            speechSpeedGroup.style.display = isSpeech ? 'block' : 'none';
+            toneGroup.style.display = (settings.soundType === 'beep') ? 'block' : 'none';
+        }
+        updateSoundTypeUI();
+        
+        settingsBtn.addEventListener('click', () => {
+            settingsOverlay.classList.add('open');
+        });
+        
+        closeSettings.addEventListener('click', () => {
+            settingsOverlay.classList.remove('open');
+        });
+        
+        settingsOverlay.addEventListener('click', (e) => {
+            if (e.target === settingsOverlay) {
+                settingsOverlay.classList.remove('open');
+            }
+        });
+        
+        apiKeyInput.addEventListener('change', () => {
+            settings.apiKey = apiKeyInput.value;
+            saveSettings();
+        });
+        
+        soundTypeSelect.addEventListener('change', () => {
+            settings.soundType = soundTypeSelect.value;
+            saveSettings();
+            updateSoundTypeUI();
+        });
+        
+        speechSpeedInput.addEventListener('input', () => {
+            settings.speechSpeed = parseFloat(speechSpeedInput.value);
+            speechSpeedValue.textContent = settings.speechSpeed + 'x';
+            saveSettings();
+        });
+        
+        repeatIntervalInput.addEventListener('input', () => {
+            settings.repeatInterval = parseInt(repeatIntervalInput.value);
+            repeatIntervalValue.textContent = settings.repeatInterval + 'ms';
+            saveSettings();
+        });
+        
+        toneFreqInput.addEventListener('input', () => {
+            settings.toneFreq = parseInt(toneFreqInput.value);
+            toneFreqValue.textContent = settings.toneFreq + 'Hz';
+            saveSettings();
+        });
+        
+        volumeInput.addEventListener('input', () => {
+            settings.volume = parseFloat(volumeInput.value);
+            volumeValue.textContent = Math.round(settings.volume * 100) + '%';
+            saveSettings();
+        });
+        
+        testSoundBtn.addEventListener('click', async () => {
+            if (!audioContext) await initAudio();
+            speakGoal('VGK'); // Test with Vegas
+        });
+        
+        document.getElementById('testSound').addEventListener('click', async () => {
+            if (!audioContext) await initAudio();
+            speakGoal('VGK');
+        });
+        
+        // Preload voices for speech synthesis
+        if ('speechSynthesis' in window) {
+            speechSynthesis.getVoices();
+            speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+        }
+    </script>
+</body>
+</html>
