@@ -545,7 +545,26 @@
             
             <div class="settings-group">
                 <label>Sportradar API Key</label>
-                <input type="password" id="apiKeyInput" placeholder="Enter your API key">
+                <input type="password" id="apiKeyInput" placeholder="Enter your Sportradar API key">
+            </div>
+            
+            <div class="settings-group">
+                <label>SportsGameOdds API Key</label>
+                <input type="password" id="sportsOddsApiKey" placeholder="Enter your SportsGameOdds API key">
+            </div>
+            
+            <div class="settings-group">
+                <label>The Odds API Key</label>
+                <input type="password" id="theOddsApiKey" placeholder="Enter your The Odds API key">
+            </div>
+            
+            <div class="settings-group">
+                <label>Data Source</label>
+                <select id="dataSource">
+                    <option value="sportradar">Sportradar</option>
+                    <option value="sportsgameodds">SportsGameOdds</option>
+                    <option value="theoddsapi">The Odds API</option>
+                </select>
             </div>
             
             <hr class="settings-divider">
@@ -618,6 +637,9 @@
         // Settings
         let settings = {
             apiKey: localStorage.getItem('sportradar_api_key') || '',
+            sportsGameOddsKey: localStorage.getItem('sportsgameodds_api_key') || '',
+            theOddsApiKey: localStorage.getItem('theoddsapi_key') || '',
+            dataSource: localStorage.getItem('dataSource') || 'sportradar',
             soundType: localStorage.getItem('soundType') || 'speech-city',
             speechSpeed: parseFloat(localStorage.getItem('speechSpeed')) || 1.25,
             repeatInterval: parseInt(localStorage.getItem('repeatInterval')) || 800,
@@ -627,6 +649,9 @@
         
         function saveSettings() {
             localStorage.setItem('sportradar_api_key', settings.apiKey);
+            localStorage.setItem('sportsgameodds_api_key', settings.sportsGameOddsKey);
+            localStorage.setItem('theoddsapi_key', settings.theOddsApiKey);
+            localStorage.setItem('dataSource', settings.dataSource);
             localStorage.setItem('soundType', settings.soundType);
             localStorage.setItem('speechSpeed', settings.speechSpeed);
             localStorage.setItem('repeatInterval', settings.repeatInterval);
@@ -1340,6 +1365,9 @@
         const settingsBtn = document.getElementById('settingsBtn');
         const closeSettings = document.getElementById('closeSettings');
         const apiKeyInput = document.getElementById('apiKeyInput');
+        const sportsOddsApiKeyInput = document.getElementById('sportsOddsApiKey');
+        const theOddsApiKeyInput = document.getElementById('theOddsApiKey');
+        const dataSourceSelect = document.getElementById('dataSource');
         const soundTypeSelect = document.getElementById('soundType');
         const speechSpeedInput = document.getElementById('speechSpeed');
         const speechSpeedValue = document.getElementById('speechSpeedValue');
@@ -1355,6 +1383,9 @@
         
         // Load settings into UI
         apiKeyInput.value = settings.apiKey;
+        sportsOddsApiKeyInput.value = settings.sportsGameOddsKey;
+        theOddsApiKeyInput.value = settings.theOddsApiKey;
+        dataSourceSelect.value = settings.dataSource;
         soundTypeSelect.value = settings.soundType;
         speechSpeedInput.value = settings.speechSpeed;
         speechSpeedValue.textContent = settings.speechSpeed + 'x';
@@ -1388,6 +1419,21 @@
         
         apiKeyInput.addEventListener('change', () => {
             settings.apiKey = apiKeyInput.value;
+            saveSettings();
+        });
+        
+        sportsOddsApiKeyInput.addEventListener('change', () => {
+            settings.sportsGameOddsKey = sportsOddsApiKeyInput.value;
+            saveSettings();
+        });
+        
+        theOddsApiKeyInput.addEventListener('change', () => {
+            settings.theOddsApiKey = theOddsApiKeyInput.value;
+            saveSettings();
+        });
+        
+        dataSourceSelect.addEventListener('change', () => {
+            settings.dataSource = dataSourceSelect.value;
             saveSettings();
         });
         
