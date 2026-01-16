@@ -53,13 +53,32 @@
         .field input, .field select { padding:8px 10px; background:var(--bg); border:1px solid var(--bdr); border-radius:6px; color:var(--txt); font-family:inherit; font-size:13px; }
         .field input:focus, .field select:focus { outline:none; border-color:var(--accent); }
         
-        /* Book Selector */
+        /* Book Selector Dropdown */
         .book-section { grid-column: span 2; }
-        .book-selector { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
-        .book-tag { padding:4px 10px; background:var(--bg); border:1px solid var(--bdr); border-radius:4px; font-size:12px; cursor:pointer; transition:all 0.15s; user-select:none; }
-        .book-tag:hover { border-color:var(--txt3); }
-        .book-tag.selected { background:var(--accent); border-color:var(--accent); color:white; }
-        .book-tag.selected.sharp { background:var(--profit); border-color:var(--profit); }
+        .dropdown-container { position:relative; }
+        .dropdown-btn { width:100%; padding:8px 12px; background:var(--bg); border:1px solid var(--bdr); border-radius:6px; color:var(--txt); font-size:13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; text-align:left; }
+        .dropdown-btn:hover { border-color:var(--txt3); }
+        .dropdown-btn::after { content:'▼'; font-size:10px; color:var(--txt3); }
+        .dropdown-btn.open::after { content:'▲'; }
+        .dropdown-menu { position:absolute; top:100%; left:0; right:0; background:var(--bg2); border:1px solid var(--bdr); border-radius:6px; margin-top:4px; max-height:200px; overflow-y:auto; z-index:100; display:none; }
+        .dropdown-menu.show { display:block; }
+        .dropdown-item { padding:8px 12px; display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12px; }
+        .dropdown-item:hover { background:var(--bg3); }
+        .dropdown-item input[type="checkbox"] { accent-color:var(--profit); width:14px; height:14px; }
+        .dropdown-item .book-logo { width:24px; height:16px; font-size:7px; }
+        .dropdown-item label { cursor:pointer; flex:1; display:flex; align-items:center; gap:8px; }
+        .selected-books { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; min-height:24px; }
+        .selected-tag { padding:2px 8px; background:var(--profit); color:white; border-radius:3px; font-size:10px; font-weight:500; display:flex; align-items:center; gap:4px; }
+        .selected-tag.compare { background:var(--accent); }
+        .selected-tag .remove { cursor:pointer; opacity:0.7; }
+        .selected-tag .remove:hover { opacity:1; }
+        
+        /* Settings Sections */
+        .config-section { margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--bdr); }
+        .config-section:last-child { border-bottom:none; margin-bottom:0; padding-bottom:0; }
+        .config-section-title { font-size:12px; font-weight:600; color:var(--txt2); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+        .config-section-title::before { content:''; flex:0 0 3px; height:14px; background:var(--accent); border-radius:2px; }
+        .config-section-title.live::before { background:var(--profit); }
         
         /* Stats Bar */
         .stats { display:flex; gap:8px; margin-bottom:12px; }
@@ -157,16 +176,16 @@
         .odds-table .consensus-row .odds-value { color:#c084fc; background:rgba(168,85,247,0.15); }
         .consensus-label { color:#a855f7; }
         
-        /* Alerts */
-        .alerts { position:fixed; top:16px; right:16px; width:280px; max-height:40vh; overflow-y:auto; display:flex; flex-direction:column; gap:6px; z-index:1000; }
-        .alert { padding:10px 12px; background:var(--bg2); border:1px solid var(--profit); border-radius:6px; cursor:pointer; transition:all 0.15s; }
-        .alert:hover { transform:translateX(-2px); background:var(--bg3); }
-        .alert-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
-        .alert-title { font-size:12px; font-weight:600; color:var(--profit); }
-        .alert-time { font-size:10px; color:var(--txt3); }
-        .alert-body { font-size:12px; color:var(--txt2); }
-        .alert-body strong { color:var(--txt); }
-        .alert-ev { display:inline-block; margin-left:6px; padding:2px 6px; background:var(--profit-bg); color:var(--profit); border-radius:3px; font-weight:600; font-size:11px; }
+        /* Alerts - inline compact style */
+        .alerts-row { display:flex; gap:6px; align-items:center; margin-left:auto; flex-wrap:wrap; max-width:60%; }
+        .alert { padding:6px 10px; background:var(--bg2); border:1px solid var(--profit); border-radius:6px; cursor:pointer; transition:all 0.15s; display:flex; align-items:center; gap:8px; white-space:nowrap; }
+        .alert:hover { background:var(--bg3); }
+        .alert-game { font-size:11px; font-weight:600; color:var(--profit); }
+        .alert-detail { font-size:11px; color:var(--txt2); }
+        .alert-detail strong { color:var(--txt); }
+        .alert-ev { padding:2px 5px; background:var(--profit-bg); color:var(--profit); border-radius:3px; font-weight:600; font-size:10px; }
+        .alert-close { color:var(--txt3); font-size:14px; margin-left:4px; line-height:1; }
+        .alert-close:hover { color:var(--txt); }
         
         /* Empty/Loading States */
         .empty { text-align:center; padding:48px 20px; color:var(--txt3); }
@@ -339,12 +358,11 @@
         .mobile-mode .book-tag { padding:3px 6px; font-size:10px; }
         
         /* Alerts mobile */
-        .mobile-mode .alerts { width:200px; top:8px; right:8px; gap:4px; }
-        .mobile-mode .alert { padding:6px 8px; border-radius:4px; }
-        .mobile-mode .alert-title { font-size:10px; }
-        .mobile-mode .alert-time { font-size:8px; }
-        .mobile-mode .alert-body { font-size:10px; }
-        .mobile-mode .alert-ev { font-size:9px; padding:1px 4px; margin-left:4px; }
+        .mobile-mode .alerts-row { max-width:100%; margin-left:0; margin-top:6px; }
+        .mobile-mode .alert { padding:4px 6px; font-size:10px; }
+        .mobile-mode .alert-game { font-size:9px; }
+        .mobile-mode .alert-detail { font-size:9px; }
+        .mobile-mode .alert-ev { font-size:8px; padding:1px 3px; }
         
         .mobile-mode #mobileToggle { background:var(--accent); color:white; }
         
@@ -372,63 +390,115 @@
         <div class="config-header">
             <span class="config-title">Settings</span>
         </div>
-        <div class="config-grid">
-            <div class="field">
-                <label>API Key</label>
-                <input type="password" id="apiKey" placeholder="SportsGameOdds API Key">
+        
+        <!-- General Settings -->
+        <div class="config-section">
+            <div class="config-section-title">General</div>
+            <div class="config-grid">
+                <div class="field">
+                    <label>API Key</label>
+                    <input type="password" id="apiKey" placeholder="SportsGameOdds API Key">
+                </div>
+                <div class="field">
+                    <label>Refresh (sec)</label>
+                    <input type="number" id="refreshInt" value="30" min="10">
+                </div>
+                <div class="field">
+                    <label>Sound Alerts</label>
+                    <select id="alertSound">
+                        <option value="on">Enabled</option>
+                        <option value="off">Disabled</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Auto-Send to Sheet</label>
+                    <select id="webhookEnabled">
+                        <option value="on">Enabled</option>
+                        <option value="off">Disabled</option>
+                    </select>
+                </div>
+                <div class="field" style="grid-column: span 2">
+                    <label>Webhook URL</label>
+                    <input type="text" id="webhookUrl" placeholder="https://script.google.com/macros/s/...">
+                </div>
+                <div class="field book-section">
+                    <label>Compare Books (Check for +EV)</label>
+                    <div class="dropdown-container">
+                        <button type="button" class="dropdown-btn" onclick="toggleDropdown('compareDropdown')">
+                            <span id="compareDropdownText">Select books...</span>
+                        </button>
+                        <div class="dropdown-menu" id="compareDropdown"></div>
+                    </div>
+                    <div class="selected-books" id="compareSelected"></div>
+                </div>
             </div>
-            <div class="field">
-                <label>Min EV %</label>
-                <input type="number" id="minEV" value="2" min="0" max="20" step="0.5">
+        </div>
+        
+        <!-- Pregame Settings -->
+        <div class="config-section">
+            <div class="config-section-title">Pregame</div>
+            <div class="config-grid">
+                <div class="field">
+                    <label>Min EV %</label>
+                    <input type="number" id="pregameMinEV" value="2" min="0" max="20" step="0.5">
+                </div>
+                <div class="field book-section" style="grid-column: span 3">
+                    <label>Sharp Books (Fair Value)</label>
+                    <div class="dropdown-container">
+                        <button type="button" class="dropdown-btn" onclick="toggleDropdown('pregameSharpDropdown')">
+                            <span id="pregameSharpDropdownText">Select books...</span>
+                        </button>
+                        <div class="dropdown-menu" id="pregameSharpDropdown"></div>
+                    </div>
+                    <div class="selected-books" id="pregameSharpSelected"></div>
+                </div>
             </div>
-            <div class="field">
-                <label>Refresh (sec)</label>
-                <input type="number" id="refreshInt" value="30" min="10">
+        </div>
+        
+        <!-- Live Settings -->
+        <div class="config-section">
+            <div class="config-section-title live">Live</div>
+            <div class="config-grid">
+                <div class="field">
+                    <label>Min EV %</label>
+                    <input type="number" id="liveMinEV" value="3" min="0" max="20" step="0.5">
+                </div>
+                <div class="field book-section" style="grid-column: span 3">
+                    <label>Sharp Books (Fair Value)</label>
+                    <div class="dropdown-container">
+                        <button type="button" class="dropdown-btn" onclick="toggleDropdown('liveSharpDropdown')">
+                            <span id="liveSharpDropdownText">Select books...</span>
+                        </button>
+                        <div class="dropdown-menu" id="liveSharpDropdown"></div>
+                    </div>
+                    <div class="selected-books" id="liveSharpSelected"></div>
+                </div>
             </div>
-            <div class="field">
-                <label>Sound Alerts</label>
-                <select id="alertSound">
-                    <option value="on">Enabled</option>
-                    <option value="off">Disabled</option>
-                </select>
-            </div>
-            <div class="field">
-                <label>Auto-Send to Sheet</label>
-                <select id="webhookEnabled">
-                    <option value="on">Enabled</option>
-                    <option value="off">Disabled</option>
-                </select>
-            </div>
-            <div class="field" style="grid-column: span 2">
-                <label>Webhook URL</label>
-                <input type="text" id="webhookUrl" placeholder="https://script.google.com/macros/s/...">
-            </div>
-            <div class="field">
-                <label>Telegram Alerts</label>
-                <select id="telegramEnabled">
-                    <option value="on">Enabled</option>
-                    <option value="off">Disabled</option>
-                </select>
-            </div>
-            <div class="field">
-                <label>Telegram Min EV %</label>
-                <input type="number" id="telegramMinEV" value="5" min="0" max="50" step="0.5">
-            </div>
-            <div class="field">
-                <label>Telegram Bot Token</label>
-                <input type="text" id="telegramToken" placeholder="123456:ABC...">
-            </div>
-            <div class="field">
-                <label>Telegram Chat ID</label>
-                <input type="text" id="telegramChatId" placeholder="1234567890">
-            </div>
-            <div class="field book-section">
-                <label>Sharp Books (Fair Value Source)</label>
-                <div class="book-selector" id="sharpSelector"></div>
-            </div>
-            <div class="field book-section">
-                <label>Compare Books (Check for +EV)</label>
-                <div class="book-selector" id="compareSelector"></div>
+        </div>
+        
+        <!-- Telegram Settings -->
+        <div class="config-section">
+            <div class="config-section-title">Telegram Alerts</div>
+            <div class="config-grid">
+                <div class="field">
+                    <label>Telegram Alerts</label>
+                    <select id="telegramEnabled">
+                        <option value="off">Disabled</option>
+                        <option value="on">Enabled</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Telegram Min EV %</label>
+                    <input type="number" id="telegramMinEV" value="5" min="0" max="50" step="0.5">
+                </div>
+                <div class="field">
+                    <label>Telegram Bot Token</label>
+                    <input type="text" id="telegramToken" placeholder="123456:ABC...">
+                </div>
+                <div class="field">
+                    <label>Telegram Chat ID</label>
+                    <input type="text" id="telegramChatId" placeholder="1234567890">
+                </div>
             </div>
         </div>
     </div>
@@ -440,14 +510,22 @@
         <div class="stat"><div class="stat-label">Updated</div><div class="stat-value" id="sTime" style="font-size:14px">--</div></div>
     </div>
     
-    <div class="tabs-container">
+    <div class="tabs-container" style="display:flex; align-items:center; gap:4px; margin-bottom:12px;">
         <button class="tab-btn active" onclick="switchTab('games')">Games</button>
+        <button class="tab-btn" onclick="switchTab('live')">Live</button>
         <button class="tab-btn" onclick="switchTab('betlog')">Bet Log</button>
+        <div class="alerts-row" id="alerts"></div>
     </div>
     
     <div class="tab-content active" id="tab-games">
         <div class="games" id="games">
             <div class="loading"><div class="spinner"></div><div style="color:var(--txt3)">Enter API key and refresh, or click Demo</div></div>
+        </div>
+    </div>
+    
+    <div class="tab-content" id="tab-live">
+        <div class="games" id="liveGames">
+            <div class="empty"><div class="empty-icon">🏒</div><h3>No Live Games</h3><p>Live games will appear here</p></div>
         </div>
     </div>
     
@@ -466,8 +544,6 @@
     
     <div class="debug" id="debug"><pre id="log"></pre></div>
 </div>
-
-<div class="alerts" id="alerts"></div>
 
 <!-- Bet Slip Popup -->
 <div class="bet-slip-overlay" id="betSlipOverlay" onclick="closeBetSlip(event)">
@@ -549,7 +625,6 @@
 <script>
 const CFG = {
     apiKey: '',
-    minEV: 2,
     refresh: 30,
     sound: true,
     webhookEnabled: true,
@@ -558,7 +633,13 @@ const CFG = {
     telegramToken: '8397486568:AAH2bJH09qFbjPuH6r6gM7Brqcyce7WV3eE',
     telegramChatId: '1567501072',
     telegramMinEV: 5,
-    sharpBooks: ['pinnacle', 'circa', 'bookmaker'],
+    // Pregame settings
+    pregameMinEV: 2,
+    pregameSharpBooks: ['pinnacle', 'circa', 'bookmaker'],
+    // Live settings  
+    liveMinEV: 3,
+    liveSharpBooks: ['pinnacle', 'circa'],
+    // Compare books (same for both)
     compareBooks: ['draftkings', 'fanduel', 'betmgm', 'caesars']
 };
 
@@ -580,6 +661,7 @@ const BOOKS = {
 };
 
 const SHARP_LIST = ['pinnacle','circa','bookmaker','betcris','betonline'];
+const LIVE_SHARP_LIST = ['pinnacle','circa','bookmaker','betcris','betonline','draftkings','fanduel'];
 const SOFT_LIST = ['draftkings','fanduel','betmgm','caesars','pointsbet','betrivers','bet365','espnbet','fanatics'];
 
 let DATA = [], alerted = new Set(), timer = null, mobileMode = false;
@@ -597,6 +679,109 @@ function switchTab(tab) {
     document.querySelector(`.tab-btn[onclick="switchTab('${tab}')"]`).classList.add('active');
     document.getElementById('tab-' + tab).classList.add('active');
     if (tab === 'betlog') renderBetLog();
+    if (tab === 'live') renderLiveGames();
+}
+
+// Render live games only
+function renderLiveGames() {
+    const c = document.getElementById('liveGames');
+    const liveData = DATA.filter(d => {
+        const st = d.game.status || {};
+        return st.started && !st.completed;
+    });
+    
+    if (!liveData.length) { 
+        c.innerHTML = '<div class="empty"><div class="empty-icon">🏒</div><h3>No Live Games</h3><p>Live games will appear here when in progress</p></div>'; 
+        return; 
+    }
+    
+    // Save which period tabs are active for each game
+    const activeTabs = {};
+    const seenGames = new Set();
+    document.querySelectorAll('#liveGames .game').forEach(g => {
+        const id = g.id.replace('gl-', '');
+        const activeTab = g.querySelector('.period-tab.active');
+        if (activeTab) activeTabs[id] = activeTab.dataset.p;
+        if (g.classList.contains('seen')) seenGames.add(id);
+    });
+    
+    c.innerHTML = liveData.map(({game: g, pOdds}) => {
+        const edge = hasEdge(pOdds, g);
+        const savedPeriod = activeTabs[g.eventID];
+        const wasSeen = seenGames.has(g.eventID);
+        return `<div class="game${edge ? ' has-edge' : ''}${wasSeen ? ' seen' : ''}" id="gl-${g.eventID}" onclick="markSeenLive('${g.eventID}')">${gameHeader(g)}${periodTabsLive(g, pOdds, savedPeriod)}${oddsSectionLive(g, pOdds, savedPeriod)}</div>`;
+    }).join('');
+}
+
+function markSeenLive(eventId) {
+    const game = document.getElementById('gl-' + eventId);
+    if (game) game.classList.add('seen');
+}
+
+function periodTabsLive(g, pOdds, savedPeriod = null) {
+    const st = g.status || {};
+    const isLive = st.started && !st.completed;
+    const cp = parseInt(st.currentPeriodID?.replace('p','') || st.period) || 1;
+    
+    const activePeriod = savedPeriod || (isLive ? `${cp}p` : '1p');
+    
+    return `<div class="period-tabs">${['1p','2p','3p'].map((p, i) => {
+        const n = i + 1;
+        const has = pOdds[p]?.books?.length > 0;
+        const edge = has && pEdge(pOdds[p], g, p);
+        const isCurrent = isLive && n === cp;
+        const isActive = p === activePeriod;
+        return `<button class="period-tab${isActive ? ' active' : ''}${edge ? ' has-edge' : ''}" 
+            data-p="${p}" onclick="switchPLive(this,'${g.eventID}')" ${!has ? 'disabled' : ''}>
+            P${n}${isCurrent ? ' (Live)' : ''}
+        </button>`;
+    }).join('')}</div>`;
+}
+
+function switchPLive(btn, gid) {
+    btn.parentElement.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    const gd = DATA.find(d => d.game.eventID === gid);
+    if (gd) {
+        const sec = document.querySelector('#gl-' + gid + ' .odds-section');
+        if (sec) sec.outerHTML = oddsSectionLive(gd.game, gd.pOdds, btn.dataset.p);
+    }
+}
+
+function oddsSectionLive(g, pOdds, selP = null) {
+    const st = g.status || {};
+    const isLive = st.started && !st.completed;
+    const cp = selP || (isLive ? (st.currentPeriodID || '1p') : '1p');
+    const pd = pOdds[cp] || {line: 1.5, books: []};
+    const cons = consensus(pd.books, pd.line, isLive);
+    
+    let bestOver = null, bestUnder = null, bestOverPrice = -Infinity, bestUnderPrice = -Infinity;
+    const show = [...new Set([...CFG.compareBooks])];
+    pd.books.filter(b => show.includes(b.bk?.toLowerCase())).forEach(b => {
+        if (b.overPrice && b.overPrice > bestOverPrice) { bestOverPrice = b.overPrice; bestOver = b.bk; }
+        if (b.underPrice && b.underPrice > bestUnderPrice) { bestUnderPrice = b.underPrice; bestUnder = b.bk; }
+    });
+    
+    const bestOverBook = BOOKS[bestOver?.toLowerCase()] || {a: '--', c: '#666'};
+    const bestUnderBook = BOOKS[bestUnder?.toLowerCase()] || {a: '--', c: '#666'};
+    const periodLabel = `P${cp.replace('p','')}`;
+    
+    return `<div class="odds-section">
+        <div class="odds-header">
+            <span class="odds-title">${periodLabel} · ${cons ? cons.line : '1.5'}</span>
+            ${cons ? `<div class="consensus-pills">
+                <div class="pill-group">
+                    <div class="pill"><div class="pill-label">Fair O</div><div class="pill-value" style="color:#c084fc">${fmt(cons.oFair)}</div></div>
+                    <div class="pill"><div class="pill-label">Best O</div><div class="pill-value" style="display:flex;align-items:center;gap:4px;color:#60a5fa"><span class="mini-book" style="background:${bestOverBook.c};color:#fff;padding:2px 4px;border-radius:2px;font-size:8px;font-weight:700">${bestOverBook.a}</span>${fmt(bestOverPrice)}</div></div>
+                </div>
+                <div class="pill-group">
+                    <div class="pill"><div class="pill-label">Fair U</div><div class="pill-value" style="color:#c084fc">${fmt(cons.uFair)}</div></div>
+                    <div class="pill"><div class="pill-label">Best U</div><div class="pill-value" style="display:flex;align-items:center;gap:4px;color:#60a5fa"><span class="mini-book" style="background:${bestUnderBook.c};color:#fff;padding:2px 4px;border-radius:2px;font-size:8px;font-weight:700">${bestUnderBook.a}</span>${fmt(bestUnderPrice)}</div></div>
+                </div>
+            </div>` : ''}
+        </div>
+        ${oddsTable(pd, cons, g, cp)}
+    </div>`;
 }
 
 // Bet Slip functions
@@ -1054,24 +1239,38 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function loadCfg() {
-    const s = localStorage.getItem('ppCfg2');
+    const s = localStorage.getItem('ppCfg3');
     if (s) {
         Object.assign(CFG, JSON.parse(s));
-        document.getElementById('minEV').value = CFG.minEV;
-        document.getElementById('refreshInt').value = CFG.refresh;
-        document.getElementById('alertSound').value = CFG.sound ? 'on' : 'off';
-        document.getElementById('webhookEnabled').value = CFG.webhookEnabled ? 'on' : 'off';
-        document.getElementById('webhookUrl').value = CFG.webhookUrl || '';
-        document.getElementById('telegramEnabled').value = CFG.telegramEnabled ? 'on' : 'off';
-        document.getElementById('telegramToken').value = CFG.telegramToken || '';
-        document.getElementById('telegramChatId').value = CFG.telegramChatId || '';
-        document.getElementById('telegramMinEV').value = CFG.telegramMinEV || 5;
     }
+    // Also try loading old config for backward compatibility
+    const oldCfg = localStorage.getItem('ppCfg2');
+    if (oldCfg && !s) {
+        const old = JSON.parse(oldCfg);
+        CFG.apiKey = old.apiKey || '';
+        CFG.pregameMinEV = old.minEV || 2;
+        CFG.liveMinEV = old.minEV || 3;
+        CFG.pregameSharpBooks = old.sharpBooks || ['pinnacle', 'circa', 'bookmaker'];
+        CFG.liveSharpBooks = old.sharpBooks?.slice(0, 2) || ['pinnacle', 'circa'];
+        CFG.compareBooks = old.compareBooks || ['draftkings', 'fanduel', 'betmgm', 'caesars'];
+    }
+    
+    document.getElementById('pregameMinEV').value = CFG.pregameMinEV;
+    document.getElementById('liveMinEV').value = CFG.liveMinEV;
+    document.getElementById('refreshInt').value = CFG.refresh;
+    document.getElementById('alertSound').value = CFG.sound ? 'on' : 'off';
+    document.getElementById('webhookEnabled').value = CFG.webhookEnabled ? 'on' : 'off';
+    document.getElementById('webhookUrl').value = CFG.webhookUrl || '';
+    document.getElementById('telegramEnabled').value = CFG.telegramEnabled ? 'on' : 'off';
+    document.getElementById('telegramToken').value = CFG.telegramToken || '';
+    document.getElementById('telegramChatId').value = CFG.telegramChatId || '';
+    document.getElementById('telegramMinEV').value = CFG.telegramMinEV || 5;
 }
 
 function saveCfg() {
     CFG.apiKey = document.getElementById('apiKey').value;
-    CFG.minEV = parseFloat(document.getElementById('minEV').value);
+    CFG.pregameMinEV = parseFloat(document.getElementById('pregameMinEV').value);
+    CFG.liveMinEV = parseFloat(document.getElementById('liveMinEV').value);
     CFG.refresh = parseInt(document.getElementById('refreshInt').value);
     CFG.sound = document.getElementById('alertSound').value === 'on';
     CFG.webhookEnabled = document.getElementById('webhookEnabled').value === 'on';
@@ -1081,38 +1280,104 @@ function saveCfg() {
     CFG.telegramChatId = document.getElementById('telegramChatId').value;
     CFG.telegramMinEV = parseFloat(document.getElementById('telegramMinEV').value);
     localStorage.setItem('sgKey', CFG.apiKey);
-    localStorage.setItem('ppCfg2', JSON.stringify(CFG));
+    localStorage.setItem('ppCfg3', JSON.stringify(CFG));
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.dropdown-container')) {
+        document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show'));
+        document.querySelectorAll('.dropdown-btn').forEach(b => b.classList.remove('open'));
+    }
+});
+
+function toggleDropdown(id) {
+    const menu = document.getElementById(id);
+    const btn = menu.previousElementSibling;
+    const wasOpen = menu.classList.contains('show');
+    
+    // Close all dropdowns first
+    document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show'));
+    document.querySelectorAll('.dropdown-btn').forEach(b => b.classList.remove('open'));
+    
+    if (!wasOpen) {
+        menu.classList.add('show');
+        btn.classList.add('open');
+    }
+}
+
+function toggleBook(type, bookKey) {
+    let arr;
+    if (type === 'pregameSharp') arr = CFG.pregameSharpBooks;
+    else if (type === 'liveSharp') arr = CFG.liveSharpBooks;
+    else if (type === 'compare') arr = CFG.compareBooks;
+    
+    const i = arr.indexOf(bookKey);
+    if (i > -1) arr.splice(i, 1);
+    else arr.push(bookKey);
+    
+    renderBookSelectors();
+    saveCfg();
+    if (DATA.length) render();
 }
 
 function renderBookSelectors() {
-    const sharpEl = document.getElementById('sharpSelector');
-    const compareEl = document.getElementById('compareSelector');
+    // Pregame Sharp Books dropdown
+    const pregameSharpMenu = document.getElementById('pregameSharpDropdown');
+    pregameSharpMenu.innerHTML = SHARP_LIST.map(k => {
+        const bk = BOOKS[k];
+        const checked = CFG.pregameSharpBooks.includes(k) ? 'checked' : '';
+        return `<div class="dropdown-item" onclick="toggleBook('pregameSharp', '${k}'); event.stopPropagation();">
+            <input type="checkbox" ${checked} id="ps-${k}">
+            <label for="ps-${k}"><div class="book-logo" style="background:${bk.c}">${bk.a}</div>${bk.n}</label>
+        </div>`;
+    }).join('');
     
-    sharpEl.innerHTML = SHARP_LIST.map(k => 
-        `<div class="book-tag ${CFG.sharpBooks.includes(k) ? 'selected sharp' : ''}" onclick="toggleSharp('${k}')">${BOOKS[k].n}</div>`
-    ).join('');
+    // Pregame sharp selected tags
+    const pregameSharpSel = document.getElementById('pregameSharpSelected');
+    pregameSharpSel.innerHTML = CFG.pregameSharpBooks.map(k => {
+        const bk = BOOKS[k];
+        return `<span class="selected-tag">${bk.a} <span class="remove" onclick="toggleBook('pregameSharp', '${k}')">&times;</span></span>`;
+    }).join('');
+    document.getElementById('pregameSharpDropdownText').textContent = CFG.pregameSharpBooks.length ? `${CFG.pregameSharpBooks.length} selected` : 'Select books...';
     
-    compareEl.innerHTML = [...SOFT_LIST, ...SHARP_LIST].map(k => 
-        `<div class="book-tag ${CFG.compareBooks.includes(k) ? 'selected' : ''}" onclick="toggleCompare('${k}')">${BOOKS[k].n}</div>`
-    ).join('');
-}
-
-function toggleSharp(k) {
-    const i = CFG.sharpBooks.indexOf(k);
-    if (i > -1) CFG.sharpBooks.splice(i, 1);
-    else CFG.sharpBooks.push(k);
-    renderBookSelectors();
-    saveCfg();
-    if (DATA.length) render();
-}
-
-function toggleCompare(k) {
-    const i = CFG.compareBooks.indexOf(k);
-    if (i > -1) CFG.compareBooks.splice(i, 1);
-    else CFG.compareBooks.push(k);
-    renderBookSelectors();
-    saveCfg();
-    if (DATA.length) render();
+    // Live Sharp Books dropdown - includes DK and FD as options
+    const liveSharpMenu = document.getElementById('liveSharpDropdown');
+    liveSharpMenu.innerHTML = LIVE_SHARP_LIST.map(k => {
+        const bk = BOOKS[k];
+        const checked = CFG.liveSharpBooks.includes(k) ? 'checked' : '';
+        return `<div class="dropdown-item" onclick="toggleBook('liveSharp', '${k}'); event.stopPropagation();">
+            <input type="checkbox" ${checked} id="ls-${k}">
+            <label for="ls-${k}"><div class="book-logo" style="background:${bk.c}">${bk.a}</div>${bk.n}</label>
+        </div>`;
+    }).join('');
+    
+    // Live sharp selected tags
+    const liveSharpSel = document.getElementById('liveSharpSelected');
+    liveSharpSel.innerHTML = CFG.liveSharpBooks.map(k => {
+        const bk = BOOKS[k];
+        return `<span class="selected-tag">${bk.a} <span class="remove" onclick="toggleBook('liveSharp', '${k}')">&times;</span></span>`;
+    }).join('');
+    document.getElementById('liveSharpDropdownText').textContent = CFG.liveSharpBooks.length ? `${CFG.liveSharpBooks.length} selected` : 'Select books...';
+    
+    // Compare Books dropdown
+    const compareMenu = document.getElementById('compareDropdown');
+    compareMenu.innerHTML = [...SOFT_LIST, ...SHARP_LIST].map(k => {
+        const bk = BOOKS[k];
+        const checked = CFG.compareBooks.includes(k) ? 'checked' : '';
+        return `<div class="dropdown-item" onclick="toggleBook('compare', '${k}'); event.stopPropagation();">
+            <input type="checkbox" ${checked} id="cmp-${k}">
+            <label for="cmp-${k}"><div class="book-logo" style="background:${bk.c}">${bk.a}</div>${bk.n}</label>
+        </div>`;
+    }).join('');
+    
+    // Compare selected tags
+    const compareSel = document.getElementById('compareSelected');
+    compareSel.innerHTML = CFG.compareBooks.map(k => {
+        const bk = BOOKS[k];
+        return `<span class="selected-tag compare">${bk.a} <span class="remove" onclick="toggleBook('compare', '${k}')">&times;</span></span>`;
+    }).join('');
+    document.getElementById('compareDropdownText').textContent = CFG.compareBooks.length ? `${CFG.compareBooks.length} selected` : 'Select books...';
 }
 
 function toggleConfig() { document.getElementById('config').classList.toggle('show'); }
@@ -1136,10 +1401,17 @@ async function fetchData() {
     
     try {
         const oddIDs = ['points-all-1p-ou-over','points-all-1p-ou-under','points-all-2p-ou-over','points-all-2p-ou-under','points-all-3p-ou-over','points-all-3p-ou-under'].join(',');
-        const url = `https://api.sportsgameodds.com/v2/events?apiKey=${CFG.apiKey}&leagueID=NHL&oddsAvailable=true&includeOpposingOdds=true&oddIDs=${oddIDs}`;
+        const ts = Date.now();
+        const fetchOpts = {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+        };
+        
+        // Fetch all games (live + upcoming)
+        const url = `https://api.sportsgameodds.com/v2/events?apiKey=${CFG.apiKey}&leagueID=NHL&oddsAvailable=true&includeOpposingOdds=true&oddIDs=${oddIDs}&_t=${ts}`;
         log('Fetching...');
         
-        const res = await fetch(url);
+        const res = await fetch(url, fetchOpts);
         if (!res.ok) throw new Error('API Error ' + res.status);
         
         const json = await res.json();
@@ -1158,11 +1430,37 @@ async function fetchData() {
             const st = e.status || {};
             return !st.started && !st.completed && !st.cancelled;
         });
+        log(`Upcoming: ${upcoming.length}`);
         
-        const toShow = [...live, ...upcoming.slice(0, 10 - live.length)];
+        const toShow = [...live, ...upcoming.slice(0, 12 - live.length)];
         DATA = toShow.map(e => ({ game: e, pOdds: extractOdds(e.odds || {}) }));
         
-        log(`Showing ${DATA.length} games (${live.length} live, ${DATA.length - live.length} upcoming)`);
+        log(`Showing ${DATA.length} games (${live.length} live, ${toShow.length - live.length} upcoming)`);
+        
+        // Debug: Log odds freshness for live games
+        if (live.length > 0) {
+            const g = live[0];
+            const team = g.teams?.away?.names?.abbr || 'UNK';
+            
+            // Check odds timestamps for each bookmaker
+            if (g.odds) {
+                const oddKey = Object.keys(g.odds).find(k => k.includes('2p') || k.includes('1p'));
+                if (oddKey && g.odds[oddKey]?.byBookmaker) {
+                    const bks = g.odds[oddKey].byBookmaker;
+                    const now = new Date();
+                    log(`[${team}] Odds timestamps (${oddKey}):`);
+                    for (const [bkName, bkData] of Object.entries(bks).slice(0, 4)) {
+                        if (bkData.updatedAt) {
+                            const updated = new Date(bkData.updatedAt);
+                            const ageSec = Math.round((now - updated) / 1000);
+                            log(`  ${bkName}: ${bkData.odds} (${ageSec}s ago)`);
+                        } else {
+                            log(`  ${bkName}: ${bkData.odds} (no timestamp)`);
+                        }
+                    }
+                }
+            }
+        }
         
         render(!isFirstLoad); // Pass true for refresh after first load
         updateStats();
@@ -1170,8 +1468,14 @@ async function fetchData() {
         
         isFirstLoad = false;
         
+        // Use faster refresh (15s) when live games exist, otherwise use configured refresh
+        const refreshMs = live.length > 0 ? Math.min(CFG.refresh, 15) * 1000 : CFG.refresh * 1000;
         if (timer) clearInterval(timer);
-        timer = setInterval(fetchData, CFG.refresh * 1000);
+        timer = setInterval(fetchData, refreshMs);
+        
+        if (live.length > 0) {
+            log(`Auto-refresh set to ${refreshMs/1000}s (live mode)`);
+        }
     } catch (err) {
         log('Error: ' + err.message);
         setStatus(false, 'Error');
@@ -1209,8 +1513,17 @@ const noVig = (o,u) => { const op=a2p(o), up=a2p(u), t=op+up; return {o:op/t, u:
 const p2a = p => p >= 0.5 ? Math.round(-100*p/(1-p)) : Math.round(100*(1-p)/p);
 const calcEV = (odds, fp) => ((fp * a2d(odds)) - 1) * 100;
 
-function consensus(books, line) {
-    const sb = books.filter(b => CFG.sharpBooks.includes(b.bk?.toLowerCase()) && b.overPrice && b.underPrice);
+// Get config based on live/pregame
+function getSharpBooks(isLive) {
+    return isLive ? CFG.liveSharpBooks : CFG.pregameSharpBooks;
+}
+function getMinEV(isLive) {
+    return isLive ? CFG.liveMinEV : CFG.pregameMinEV;
+}
+
+function consensus(books, line, isLive = false) {
+    const sharpBooks = getSharpBooks(isLive);
+    const sb = books.filter(b => sharpBooks.includes(b.bk?.toLowerCase()) && b.overPrice && b.underPrice);
     if (!sb.length) return null;
     let to=0, tu=0;
     sb.forEach(b => { const nv = noVig(b.overPrice, b.underPrice); to += nv.o; tu += nv.u; });
@@ -1219,7 +1532,21 @@ function consensus(books, line) {
 
 function render(isRefresh = false) {
     const c = document.getElementById('games');
-    if (!DATA.length) { c.innerHTML = '<div class="empty"><div class="empty-icon">🏒</div><h3>No Games</h3><p>Click Demo to preview</p></div>'; return; }
+    
+    // Filter to only show pregame (non-live) games in the Games tab
+    const pregameData = DATA.filter(d => {
+        const st = d.game.status || {};
+        return !st.started || st.completed;
+    });
+    
+    if (!pregameData.length) { 
+        c.innerHTML = '<div class="empty"><div class="empty-icon">🏒</div><h3>No Upcoming Games</h3><p>Check the Live tab for in-progress games</p></div>'; 
+        // Still refresh live tab
+        if (document.getElementById('tab-live')?.classList.contains('active')) {
+            renderLiveGames();
+        }
+        return; 
+    }
     
     // Save scroll position before re-render
     const scrollY = window.scrollY;
@@ -1227,7 +1554,7 @@ function render(isRefresh = false) {
     // Save which period tabs are active for each game
     const activeTabs = {};
     const seenGames = new Set();
-    document.querySelectorAll('.game').forEach(g => {
+    document.querySelectorAll('#games .game').forEach(g => {
         const id = g.id.replace('g-', '');
         const activeTab = g.querySelector('.period-tab.active');
         if (activeTab) activeTabs[id] = activeTab.dataset.p;
@@ -1235,8 +1562,8 @@ function render(isRefresh = false) {
     });
     
     // If this is a refresh and we have existing games, do incremental update
-    if (isRefresh && c.children.length > 0) {
-        DATA.forEach(({game: g, pOdds}) => {
+    if (isRefresh && c.children.length > 0 && !c.querySelector('.empty')) {
+        pregameData.forEach(({game: g, pOdds}) => {
             const existingGame = document.getElementById('g-' + g.eventID);
             const savedPeriod = activeTabs[g.eventID];
             const edge = hasEdge(pOdds, g);
@@ -1258,14 +1585,14 @@ function render(isRefresh = false) {
             }
         });
         
-        // Remove games that no longer exist
-        const currentIds = new Set(DATA.map(d => 'g-' + d.game.eventID));
+        // Remove games that are now live or no longer exist
+        const currentIds = new Set(pregameData.map(d => 'g-' + d.game.eventID));
         Array.from(c.children).forEach(child => {
-            if (!currentIds.has(child.id)) child.remove();
+            if (child.classList.contains('game') && !currentIds.has(child.id)) child.remove();
         });
     } else {
         // Full render
-        c.innerHTML = DATA.map(({game: g, pOdds}) => {
+        c.innerHTML = pregameData.map(({game: g, pOdds}) => {
             const edge = hasEdge(pOdds, g);
             const savedPeriod = activeTabs[g.eventID];
             const wasSeen = seenGames.has(g.eventID);
@@ -1277,6 +1604,11 @@ function render(isRefresh = false) {
     requestAnimationFrame(() => {
         window.scrollTo(0, scrollY);
     });
+    
+    // Also refresh Live tab if it's currently active
+    if (document.getElementById('tab-live')?.classList.contains('active')) {
+        renderLiveGames();
+    }
 }
 
 function markSeen(eventId) {
@@ -1292,15 +1624,53 @@ function gameHeader(g) {
     const awN = aw.names?.short || aw.names?.long || awA;
     const hmN = hm.names?.short || hm.names?.long || hmA;
     
-    // Score from results or score object
+    // Score extraction - check multiple possible locations in API response
     let awS = 0, hmS = 0;
+    
+    // Helper to extract numeric score from various formats
+    const extractNum = (val) => {
+        if (val === null || val === undefined) return 0;
+        if (typeof val === 'number') return val;
+        if (typeof val === 'object') {
+            // Try common keys for nested score objects
+            return val.total ?? val.goals ?? val.score ?? val.points ?? 0;
+        }
+        return parseInt(val) || 0;
+    };
+    
+    // Check results object (main score location in SportsGameOdds API)
     if (g.results) {
-        const pts = Object.values(g.results).find(r => r.away !== undefined && r.home !== undefined);
-        if (pts) { awS = pts.away || 0; hmS = pts.home || 0; }
+        // Try specific keys first
+        const scoreKeys = ['points', 'goals', 'score', 'total', 'points-all', 'goals-all'];
+        for (const key of scoreKeys) {
+            if (g.results[key]?.away !== undefined) {
+                awS = extractNum(g.results[key].away);
+                hmS = extractNum(g.results[key].home);
+                break;
+            }
+        }
+        // Fallback: find any result with away/home
+        if (awS === 0 && hmS === 0) {
+            for (const [key, val] of Object.entries(g.results)) {
+                if (val && typeof val === 'object' && 'away' in val && 'home' in val) {
+                    awS = extractNum(val.away);
+                    hmS = extractNum(val.home);
+                    if (awS > 0 || hmS > 0) break;
+                }
+            }
+        }
     }
-    if (g.score) {
-        awS = g.score.away?.total ?? g.score.away ?? awS;
-        hmS = g.score.home?.total ?? g.score.home ?? hmS;
+    
+    // Check score object (alternative location)
+    if ((awS === 0 && hmS === 0) && g.score) {
+        awS = extractNum(g.score.away);
+        hmS = extractNum(g.score.home);
+    }
+    
+    // Check teams for score (some APIs put it there)
+    if ((awS === 0 && hmS === 0)) {
+        awS = extractNum(aw.score) || extractNum(aw.points) || extractNum(aw.goals);
+        hmS = extractNum(hm.score) || extractNum(hm.points) || extractNum(hm.goals);
     }
     
     // Status
@@ -1383,7 +1753,7 @@ function oddsSection(g, pOdds, selP = null) {
     const isLive = st.started && !st.completed;
     const cp = selP || (isLive ? (st.currentPeriodID || '1p') : '1p');
     const pd = pOdds[cp] || {line: 1.5, books: []};
-    const cons = consensus(pd.books, pd.line);
+    const cons = consensus(pd.books, pd.line, isLive);
     
     // Find best over and under books (only from compare books)
     let bestOver = null, bestUnder = null, bestOverPrice = -Infinity, bestUnderPrice = -Infinity;
@@ -1433,15 +1803,17 @@ function oddsTable(pd, cons, g, periodId) {
         if (b.underPrice) { bu = Math.max(bu, b.underPrice); wu = Math.min(wu, b.underPrice); }
     });
     
-    const sorted = [...filtered].sort((a,b) => {
-        const aS = CFG.sharpBooks.includes(a.bk?.toLowerCase()) ? 0 : 1;
-        const bS = CFG.sharpBooks.includes(b.bk?.toLowerCase()) ? 0 : 1;
-        return aS - bS;
-    });
-    
     // Get game state
     const st = g.status || {};
     const isLive = st.started && !st.completed;
+    const sharpBooks = getSharpBooks(isLive);
+    
+    const sorted = [...filtered].sort((a,b) => {
+        const aS = sharpBooks.includes(a.bk?.toLowerCase()) ? 0 : 1;
+        const bS = sharpBooks.includes(b.bk?.toLowerCase()) ? 0 : 1;
+        return aS - bS;
+    });
+    
     const currentPeriod = (st.currentPeriodID || '1p').toLowerCase();
     viewingPeriod = periodId; // Update global tracking
     
@@ -1467,7 +1839,9 @@ function oddsTable(pd, cons, g, periodId) {
 function oddsRow(b, cons, bo, bu, wo, wu, g, tot, currentPeriod, isLive) {
     const bk = (b.bk || '').toLowerCase();
     const bkd = BOOKS[bk] || {n: b.bk, a: bk.substring(0,3).toUpperCase(), c: '#666'};
-    const isSharp = CFG.sharpBooks.includes(bk);
+    const sharpBooks = getSharpBooks(isLive);
+    const minEV = getMinEV(isLive);
+    const isSharp = sharpBooks.includes(bk);
     const isCompare = CFG.compareBooks.includes(bk);
     
     let oEV = null, uEV = null;
@@ -1478,8 +1852,8 @@ function oddsRow(b, cons, bo, bu, wo, wu, g, tot, currentPeriod, isLive) {
         if (b.underPrice) uEV = calcEV(b.underPrice, cons.uP);
     }
     
-    const oE = oEV && oEV >= CFG.minEV;
-    const uE = uEV && uEV >= CFG.minEV;
+    const oE = oEV && oEV >= minEV;
+    const uE = uEV && uEV >= minEV;
     
     if (oE || uE) {
         const k = `${g.eventID}-${bk}-${b.line}-${b.overPrice}-${b.underPrice}`;
@@ -1527,8 +1901,8 @@ function oddsRow(b, cons, bo, bu, wo, wu, g, tot, currentPeriod, isLive) {
         <td>${line}</td>
         <td class="odds-cell">${b.overPrice ? `<span class="odds-value clickable ${oClass} ${oChange.class}" ${oClick}>${fmt(b.overPrice)}${oChange.arrow}</span>` : '--'}</td>
         <td class="odds-cell">${b.underPrice ? `<span class="odds-value clickable ${uClass} ${uChange.class}" ${uClick}>${fmt(b.underPrice)}${uChange.arrow}</span>` : '--'}</td>
-        <td class="ev-cell">${oEV !== null ? `<span class="ev-value${oEV >= CFG.minEV ? ' positive' : ' negative'}">${oEV > 0 ? '+' : ''}${oEV.toFixed(1)}%</span>` : '--'}</td>
-        <td class="ev-cell">${uEV !== null ? `<span class="ev-value${uEV >= CFG.minEV ? ' positive' : ' negative'}">${uEV > 0 ? '+' : ''}${uEV.toFixed(1)}%</span>` : '--'}</td>
+        <td class="ev-cell">${oEV !== null ? `<span class="ev-value${oEV >= minEV ? ' positive' : ' negative'}">${oEV > 0 ? '+' : ''}${oEV.toFixed(1)}%</span>` : '--'}</td>
+        <td class="ev-cell">${uEV !== null ? `<span class="ev-value${uEV >= minEV ? ' positive' : ' negative'}">${uEV > 0 ? '+' : ''}${uEV.toFixed(1)}%</span>` : '--'}</td>
         <td class="signal-cell">${oE ? `<span class="edge-badge">O+${oEV.toFixed(0)}%</span>` : ''}${uE ? `<span class="edge-badge">U+${uEV.toFixed(0)}%</span>` : ''}</td>
     </tr>`;
 }
@@ -1592,8 +1966,6 @@ function hasEdge(po, g) {
 
 function pEdge(pd, g, periodId) {
     if (!pd?.books?.length) return false;
-    const c = consensus(pd.books, pd.line);
-    if (!c) return false;
     
     const st = g?.status || {};
     const isLive = st.started && !st.completed;
@@ -1602,9 +1974,14 @@ function pEdge(pd, g, periodId) {
     
     if (!canCalcEV) return false;
     
+    const c = consensus(pd.books, pd.line, isLive);
+    if (!c) return false;
+    
+    const minEV = getMinEV(isLive);
+    
     return pd.books.some(b => {
         if (!CFG.compareBooks.includes(b.bk?.toLowerCase())) return false;
-        return (b.overPrice && calcEV(b.overPrice, c.oP) >= CFG.minEV) || (b.underPrice && calcEV(b.underPrice, c.uP) >= CFG.minEV);
+        return (b.overPrice && calcEV(b.overPrice, c.oP) >= minEV) || (b.underPrice && calcEV(b.underPrice, c.uP) >= minEV);
     });
 }
 
@@ -1613,21 +1990,29 @@ function triggerAlert(g, bkd, b, oEV, uEV, oE, uE, isBetLogged = false) {
     const t = g.teams || {};
     const aw = t.away?.names?.abbr || t.away?.names?.short || 'AWY';
     const hm = t.home?.names?.abbr || t.home?.names?.short || 'HME';
-    const side = oE && (!uE || oEV > uEV) ? `O ${b.line}` : `U ${b.line}`;
+    const side = oE && (!uE || oEV > uEV) ? `O${b.line}` : `U${b.line}`;
     const ev = oE && (!uE || oEV > uEV) ? oEV : uEV;
     const pr = oE && (!uE || oEV > uEV) ? b.overPrice : b.underPrice;
     const id = 'a' + Date.now();
     
+    // Limit to 5 alerts max
+    while (c.children.length >= 5) {
+        c.lastChild.remove();
+    }
+    
     if (isBetLogged) {
         c.insertAdjacentHTML('afterbegin', `<div class="alert" id="${id}" onclick="dismissAlert('${id}')" style="border-color:var(--accent)">
-            <div class="alert-header"><span class="alert-title">✅ Bet Logged</span><span class="alert-time">${new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</span></div>
-            <div class="alert-body">${aw} @ ${hm}: ${bkd.n}</div>
+            <span class="alert-game">✅ ${aw}@${hm}</span>
+            <span class="alert-detail">${bkd.n}</span>
+            <span class="alert-close">&times;</span>
         </div>`);
         setTimeout(() => dismissAlert(id), 5000);
     } else {
         c.insertAdjacentHTML('afterbegin', `<div class="alert" id="${id}" onclick="dismissAlert('${id}')">
-            <div class="alert-header"><span class="alert-title">🔥 ${aw} @ ${hm}</span><span class="alert-time">${new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</span></div>
-            <div class="alert-body">${bkd.n}: <strong>${side}</strong> ${fmt(pr)}<span class="alert-ev">+${ev.toFixed(1)}%</span></div>
+            <span class="alert-game">🔥 ${aw}@${hm}</span>
+            <span class="alert-detail">${bkd.a} <strong>${side}</strong> ${fmt(pr)}</span>
+            <span class="alert-ev">+${ev.toFixed(0)}%</span>
+            <span class="alert-close">&times;</span>
         </div>`);
         if (CFG.sound) beep();
         setTimeout(() => dismissAlert(id), 120000);
@@ -1639,13 +2024,28 @@ function beep() { try { const x = new AudioContext(), o = x.createOscillator(), 
 
 function updateStats() {
     const liveCount = DATA.filter(d => d.game.status?.started && !d.game.status?.completed).length;
-    document.getElementById('sGames').textContent = DATA.length + (liveCount ? ` (${liveCount} live)` : '');
+    const pregameCount = DATA.length - liveCount;
+    document.getElementById('sGames').textContent = `${pregameCount} upcoming, ${liveCount} live`;
     document.getElementById('sTime').textContent = new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+    
+    // Update Live tab badge
+    const liveTabBtn = document.querySelector('.tab-btn[onclick="switchTab(\'live\')"]');
+    if (liveTabBtn) {
+        liveTabBtn.innerHTML = liveCount > 0 ? `Live <span style="background:var(--profit);color:var(--bg);padding:1px 5px;border-radius:3px;font-size:10px;margin-left:4px">${liveCount}</span>` : 'Live';
+    }
+    
+    // Update Games tab with pregame count
+    const gamesTabBtn = document.querySelector('.tab-btn[onclick="switchTab(\'games\')"]');
+    if (gamesTabBtn) {
+        gamesTabBtn.innerHTML = pregameCount > 0 ? `Games <span style="background:var(--accent);color:white;padding:1px 5px;border-radius:3px;font-size:10px;margin-left:4px">${pregameCount}</span>` : 'Games';
+    }
+    
     let cnt = 0, best = 0;
     DATA.forEach(({game: g, pOdds}) => {
         const st = g.status || {};
         const isLive = st.started && !st.completed;
         const currentPeriod = (st.currentPeriodID || '1p').toLowerCase();
+        const minEV = getMinEV(isLive);
         
         ['1p','2p','3p'].forEach(p => {
             // Only count EV for: current live period OR P1 if pregame
@@ -1653,11 +2053,11 @@ function updateStats() {
             if (!canCalcEV) return;
             
             const pd = pOdds[p]; if (!pd?.books?.length) return;
-            const c = consensus(pd.books, pd.line); if (!c) return;
+            const c = consensus(pd.books, pd.line, isLive); if (!c) return;
             pd.books.forEach(b => {
                 if (!CFG.compareBooks.includes(b.bk?.toLowerCase())) return;
-                if (b.overPrice) { const e = calcEV(b.overPrice, c.oP); if (e >= CFG.minEV) { cnt++; best = Math.max(best, e); } }
-                if (b.underPrice) { const e = calcEV(b.underPrice, c.uP); if (e >= CFG.minEV) { cnt++; best = Math.max(best, e); } }
+                if (b.overPrice) { const e = calcEV(b.overPrice, c.oP); if (e >= minEV) { cnt++; best = Math.max(best, e); } }
+                if (b.underPrice) { const e = calcEV(b.underPrice, c.uP); if (e >= minEV) { cnt++; best = Math.max(best, e); } }
             });
         });
     });
