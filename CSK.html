@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Kalshi NHL Mobile</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { overflow-x: hidden; width: 100%; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d0d0d; color: #fff; min-height: 100vh; }
+        
+        .header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #0d0d0d; border-bottom: 1px solid #1a1a1a; position: sticky; top: 0; z-index: 100; }
+        .header-left { display: flex; align-items: center; gap: 10px; }
+        .status-indicator { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #555; }
+        .status-dot.connected { background: #22c55e; }
+        .latency { font-size: 0.65rem; color: #666; }
+        
+        .header-controls { display: flex; gap: 8px; }
+        .header-btn { padding: 6px 12px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 6px; color: #888; font-size: 0.75rem; cursor: pointer; }
+        .header-btn.active { background: #3b82f622; border-color: #3b82f6; color: #3b82f6; }
+        
+        .game-select-wrapper { padding: 12px 16px; background: #0d0d0d; border-bottom: 1px solid #1a1a1a; }
+        .game-select { width: 100%; padding: 10px 12px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; color: #fff; font-size: 0.9rem; }
+        
+        .main-content { padding: 10px; padding-bottom: 180px; }
+        
+        .game-status { text-align: center; margin-bottom: 10px; }
+        .live-badge { display: inline-block; background: #22c55e22; color: #22c55e; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-right: 8px; }
+        .game-clock { display: inline; font-size: 0.9rem; color: #888; }
+        .pregame-time { font-size: 0.85rem; color: #3b82f6; }
+        
+        .game-cards-row { display: flex; gap: 8px; }
+        .team-card { flex: 1; background: #111; border-radius: 10px; padding: 10px; border: 1px solid #1a1a1a; }
+        .team-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .team-info { display: flex; flex-direction: column; }
+        .team-abbrev { font-size: 1.1rem; font-weight: 700; color: #fff; }
+        .team-name { font-size: 0.6rem; color: #666; }
+        .team-score { font-size: 1.5rem; font-weight: 700; color: #fff; }
+        
+        .stats-row { display: flex; gap: 4px; margin-bottom: 8px; }
+        .stat-box { flex: 1; border-radius: 6px; padding: 6px 4px; text-align: center; }
+        .stat-box.fmv-box { background: rgba(96, 165, 250, 0.5); }
+        .stat-box.goal-box { background: rgba(52, 211, 153, 0.5); }
+        .stat-box.kalshi-box { background: rgba(196, 181, 253, 0.5); }
+        .stat-box.clickable { cursor: pointer; transition: all 0.15s; border: 1px solid transparent; }
+        .stat-box.clickable:hover { border-color: #fff; }
+        .stat-box.clickable:active { opacity: 0.8; }
+        .stat-label { font-size: 0.55rem; color: #fff; text-transform: uppercase; margin-bottom: 1px; opacity: 0.8; }
+        .stat-value { font-size: 0.9rem; font-weight: 600; color: #fff; }
+        .stat-odds { font-size: 0.55rem; color: #fff; margin-top: 1px; opacity: 0.7; }
+        
+        .orderbook-section { border-top: 1px solid #1a1a1a; padding-top: 6px; margin-top: 6px; }
+        .orderbook-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .orderbook-title { font-size: 0.6rem; color: #666; }
+        .orderbook-spread-line { text-align: center; font-size: 0.55rem; color: #666; padding: 3px 0; border-top: 1px solid #222; border-bottom: 1px solid #222; margin: 2px 0; }
+        
+        .price-chart-section { margin-top: 10px; padding: 10px; background: #0d0d0d; border-radius: 8px; border: 1px solid #1a1a1a; }
+        .price-chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .price-chart-title { font-size: 0.65rem; color: #666; text-transform: uppercase; }
+        .price-chart-legend { display: flex; gap: 10px; font-size: 0.6rem; }
+        .legend-item { display: flex; align-items: center; gap: 4px; }
+        .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .legend-dot.kalshi { background: #22c55e; }
+        .legend-dot.fmv { background: #3b82f6; }
+        .price-chart-canvas { width: 100%; height: 80px; position: relative; }
+        .price-chart-labels { display: flex; justify-content: space-between; margin-top: 4px; }
+        .price-chart-label { font-size: 0.5rem; color: #555; }
+        .price-chart-values { position: absolute; right: 0; top: 0; bottom: 0; display: flex; flex-direction: column; justify-content: space-between; font-size: 0.5rem; color: #555; padding: 2px 0; }
+        .price-chart-current { display: flex; justify-content: flex-end; gap: 12px; margin-top: 6px; }
+        .current-price { font-size: 0.75rem; font-weight: 600; }
+        .current-price.kalshi { color: #22c55e; }
+        .current-price.fmv { color: #3b82f6; }
+        .orderbook-row { display: flex; align-items: center; margin-bottom: 2px; font-size: 0.65rem; }
+        .orderbook-bar { height: 16px; border-radius: 2px; display: flex; align-items: center; }
+        .orderbook-bar.ask { background: rgba(239, 68, 68, 0.4); justify-content: flex-end; padding-right: 4px; }
+        .orderbook-bar.bid { background: rgba(34, 197, 94, 0.4); justify-content: flex-start; padding-left: 4px; }
+        .orderbook-price { color: #fff; font-weight: 600; min-width: 28px; }
+        .orderbook-price.ask { color: #ef4444; }
+        .orderbook-price.bid { color: #22c55e; }
+        .orderbook-qty { color: #888; font-size: 0.6rem; min-width: 40px; text-align: right; }
+        .orderbook-asks { margin-bottom: 2px; }
+        .orderbook-bids { margin-top: 2px; }
+        
+        .orders-section { margin-top: 8px; padding-top: 8px; border-top: 1px solid #1a1a1a; }
+        .orders-title { font-size: 0.6rem; color: #555; text-transform: uppercase; margin-bottom: 4px; }
+        .order-item { display: flex; justify-content: space-between; align-items: center; padding: 4px 6px; background: #0d0d0d; border-radius: 4px; margin-bottom: 3px; }
+        .order-info { display: flex; align-items: center; gap: 4px; }
+        .order-side { font-size: 0.6rem; font-weight: 600; padding: 1px 4px; border-radius: 2px; }
+        .order-side.yes { background: #3b82f622; color: #3b82f6; }
+        .order-side.no { background: #8b5cf622; color: #8b5cf6; }
+        .order-details { font-size: 0.7rem; color: #888; }
+        .order-cancel { background: none; border: none; color: #555; font-size: 0.8rem; cursor: pointer; padding: 2px 4px; }
+        
+        .positions-section { margin-top: 8px; padding-top: 8px; border-top: 1px solid #1a1a1a; }
+        .positions-title { font-size: 0.6rem; color: #555; text-transform: uppercase; margin-bottom: 4px; }
+        .position-item { display: flex; justify-content: space-between; align-items: center; padding: 6px; background: #0d0d0d; border-radius: 4px; cursor: pointer; }
+        .position-info { display: flex; flex-direction: column; gap: 1px; }
+        .position-contracts { font-size: 0.7rem; font-weight: 600; color: #fff; }
+        .position-avg { font-size: 0.6rem; color: #666; }
+        .position-pnl { font-size: 0.75rem; font-weight: 600; }
+        .position-pnl.profit { color: #22c55e; }
+        .position-pnl.loss { color: #ef4444; }
+        
+        .fixed-order-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #0d0d0d; border-top: 1px solid #1a1a1a; padding: 20px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); width: 100%; box-sizing: border-box; }
+        
+        .order-sections-row { display: flex; gap: 20px; width: 100%; }
+        .team-order-section { flex: 1; min-width: 0; padding: 12px; background: #111; border-radius: 8px; border: 2px solid #2a2a2a; }
+        .team-order-header { margin-bottom: 10px; }
+        .team-order-label { font-size: 0.75rem; font-weight: 600; color: #fff; }
+        .team-order-row { display: flex; gap: 6px; align-items: center; margin-bottom: 12px; }
+        .order-input { flex: 1; min-width: 0; padding: 10px 4px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 4px; color: #fff; font-size: 0.8rem; text-align: center; }
+        .order-input::placeholder { color: #444; font-size: 0.7rem; }
+        .qty-btn { flex-shrink: 0; padding: 10px 10px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 4px; color: #888; font-size: 0.7rem; font-weight: 600; cursor: pointer; }
+        .qty-btn:active { background: #2a2a2a; }
+        
+        .submit-btn { width: 100%; padding: 18px 8px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; cursor: pointer; border: 2px solid; margin-top: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .submit-btn:active { opacity: 0.8; transform: scale(0.98); }
+        
+        .settings-panel { display: none; position: fixed; top: 60px; right: 16px; background: #111; border: 1px solid #2a2a2a; border-radius: 12px; padding: 16px; z-index: 200; min-width: 220px; }
+        .settings-panel.show { display: block; }
+        .settings-section { margin-bottom: 16px; }
+        .settings-label { font-size: 0.65rem; color: #555; text-transform: uppercase; margin-bottom: 8px; }
+        .settings-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+        .settings-btn { padding: 6px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; border-radius: 4px; color: #888; font-size: 0.75rem; cursor: pointer; }
+        .settings-btn.active { background: #3b82f622; border-color: #3b82f6; color: #3b82f6; }
+        .settings-input { width: 70px; padding: 6px; background: #0d0d0d; border: 1px solid #2a2a2a; border-radius: 4px; color: #fff; font-size: 0.8rem; text-align: center; }
+        .settings-select { padding: 6px 8px; background: #0d0d0d; border: 1px solid #2a2a2a; border-radius: 4px; color: #fff; font-size: 0.75rem; }
+        .settings-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .settings-row-label { font-size: 0.75rem; color: #888; flex: 1; }
+        
+        .popup-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 300; align-items: center; justify-content: center; }
+        .popup-overlay.show { display: flex; }
+        .popup { background: #111; border: 1px solid #2a2a2a; border-radius: 16px; padding: 20px; width: 90%; max-width: 340px; }
+        .popup-header { margin-bottom: 16px; }
+        .popup-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .popup-title { font-size: 1.1rem; font-weight: 600; color: #fff; }
+        .popup-subtitle { font-size: 0.8rem; color: #888; }
+        .market-sell-btn { padding: 8px 12px; background: #ef4444; border: none; border-radius: 6px; color: #fff; font-size: 0.75rem; font-weight: 600; cursor: pointer; }
+        .market-sell-btn:active { background: #dc2626; }
+        .popup-inputs { display: flex; gap: 12px; margin-bottom: 12px; }
+        .popup-input-group { flex: 1; }
+        .popup-input-label { display: block; font-size: 0.65rem; color: #666; text-transform: uppercase; margin-bottom: 4px; }
+        .popup-input { width: 100%; padding: 14px 12px; background: #0d0d0d; border: 1px solid #2a2a2a; border-radius: 8px; color: #fff; font-size: 1.1rem; text-align: center; }
+        .popup-btns { display: flex; gap: 8px; margin-bottom: 16px; }
+        .popup-btn { flex: 1; padding: 10px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 6px; color: #888; font-size: 0.8rem; font-weight: 500; cursor: pointer; }
+        .popup-btn:active { background: #2a2a2a; border-color: #3b82f6; color: #3b82f6; }
+        .popup-submit { width: 100%; padding: 16px; background: #3b82f6; border: none; border-radius: 8px; color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer; }
+        .popup-submit:active { background: #2563eb; }
+        
+        .no-game { text-align: center; color: #555; padding: 40px; }
+        .loading { text-align: center; padding: 40px; }
+        .loading-spinner { width: 30px; height: 30px; border: 3px solid #2a2a2a; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Connecting...</span>
+            </div>
+            <span class="latency" id="latency">--</span>
+        </div>
+        <div class="header-controls">
+            <button class="header-btn" id="demoToggle" onclick="toggleDemoMode()">Demo</button>
+            <button class="header-btn" id="settingsToggle" onclick="toggleSettings()">⚙️</button>
+        </div>
+    </div>
+    
+    <div class="settings-panel" id="settingsPanel">
+        <div class="settings-section">
+            <div class="settings-label">Order Mode</div>
+            <div class="settings-btns">
+                <button class="settings-btn" id="mode-yes" onclick="setOrderMode('yes')">YES only</button>
+                <button class="settings-btn" id="mode-no" onclick="setOrderMode('no')">NO only</button>
+                <button class="settings-btn active" id="mode-both" onclick="setOrderMode('both')">Both</button>
+            </div>
+        </div>
+        <div class="settings-section">
+            <div class="settings-label">Quick Qty Button</div>
+            <div class="settings-btns">
+                <button class="settings-btn" id="qtypreset-500" onclick="setQtyPreset(500)">500</button>
+                <button class="settings-btn active" id="qtypreset-1000" onclick="setQtyPreset(1000)">1k</button>
+                <button class="settings-btn" id="qtypreset-2000" onclick="setQtyPreset(2000)">2k</button>
+                <button class="settings-btn" id="qtypreset-5000" onclick="setQtyPreset(5000)">5k</button>
+            </div>
+        </div>
+        <div class="settings-section">
+            <div class="settings-label">Default Sell %</div>
+            <div class="settings-btns">
+                <button class="settings-btn" id="sell-25" onclick="setSellDefault(25)">25%</button>
+                <button class="settings-btn active" id="sell-50" onclick="setSellDefault(50)">50%</button>
+                <button class="settings-btn" id="sell-75" onclick="setSellDefault(75)">75%</button>
+                <button class="settings-btn" id="sell-100" onclick="setSellDefault(100)">100%</button>
+            </div>
+        </div>
+        <div class="settings-section">
+            <div class="settings-label">Sell Markup (¢)</div>
+            <input type="number" class="settings-input" id="sellMarkup" value="3">
+        </div>
+        <div class="settings-section">
+            <div class="settings-label">Buy Below +Goal (¢)</div>
+            <input type="number" class="settings-input" id="buyOffset" value="3">
+        </div>
+        <div class="settings-section">
+            <div class="settings-label">Market Sell Price</div>
+            <div class="settings-row" style="margin-top: 6px;">
+                <input type="number" class="settings-input" id="marketSellOffset" value="1" style="width: 50px;">
+                <span class="settings-row-label" style="flex: 0;">¢</span>
+                <select class="settings-select" id="marketSellDirection">
+                    <option value="below">below</option>
+                    <option value="above">above</option>
+                </select>
+                <select class="settings-select" id="marketSellReference">
+                    <option value="ask">ask</option>
+                    <option value="bid">bid</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <div class="game-select-wrapper">
+        <select class="game-select" id="gameSelect" onchange="selectGame(this.value)">
+            <option value="">Select a game...</option>
+        </select>
+    </div>
+    
+    <div class="main-content">
+        <div id="gameContainer">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <div>Connecting...</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="fixed-order-bar">
+        <div class="order-sections-row">
+            <div class="team-order-section" id="homeOrderSection">
+                <div class="team-order-row">
+                    <input type="number" class="order-input" id="home-price" placeholder="¢">
+                    <input type="number" class="order-input" id="home-qty" placeholder="Qty">
+                    <button class="qty-btn" id="home-qty-btn" onclick="addQtyPreset('home')">1k</button>
+                </div>
+                <button class="submit-btn" id="home-submit-btn" onclick="submitTeamOrder('home')">HOME</button>
+            </div>
+            
+            <div class="team-order-section" id="awayOrderSection">
+                <div class="team-order-row">
+                    <input type="number" class="order-input" id="away-price" placeholder="¢">
+                    <input type="number" class="order-input" id="away-qty" placeholder="Qty">
+                    <button class="qty-btn" id="away-qty-btn" onclick="addQtyPreset('away')">1k</button>
+                </div>
+                <button class="submit-btn" id="away-submit-btn" onclick="submitTeamOrder('away')">AWAY</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="popup-overlay" id="sellPopup" onclick="closeSellPopup(event)">
+        <div class="popup" onclick="event.stopPropagation()">
+            <div class="popup-header">
+                <div class="popup-title-row">
+                    <span class="popup-title">Sell Position</span>
+                    <button class="market-sell-btn" id="marketSellBtn" onclick="marketSell()">Market 55¢</button>
+                </div>
+                <div class="popup-subtitle" id="sellPopupInfo">500 LA contracts • Avg: 65¢</div>
+            </div>
+            <div class="popup-inputs">
+                <div class="popup-input-group">
+                    <label class="popup-input-label">Price ¢</label>
+                    <input type="number" class="popup-input" id="sellPrice" placeholder="Price">
+                </div>
+                <div class="popup-input-group">
+                    <label class="popup-input-label">Quantity</label>
+                    <input type="number" class="popup-input" id="sellQty" placeholder="Qty">
+                </div>
+            </div>
+            <div class="popup-btns">
+                <button class="popup-btn" onclick="setSellQtyPercent(25)">25%</button>
+                <button class="popup-btn" onclick="setSellQtyPercent(50)">50%</button>
+                <button class="popup-btn" onclick="setSellQtyPercent(75)">75%</button>
+                <button class="popup-btn" onclick="setSellQtyPercent(100)">100%</button>
+            </div>
+            <button class="popup-submit" onclick="confirmSell()">Confirm Sell</button>
+        </div>
+    </div>
+    
+    <script>
+        // State
+        let ws = null;
+        let demoMode = false;
+        let prices = {};
+        let orderbooks = {};
+        let priceHistory = {}; // { ticker: { kalshi: [{time, price}], fmv: [{time, price}] } }
+        let kalshiMarkets = {};
+        let marketTimes = {};
+        let games = [];
+        let selectedGameId = null;
+        let pendingOrders = [];
+        let positions = [];
+        let orderMode = 'both';
+        let sellDefaultPercent = 50;
+        let qtyPreset = 1000;
+        let currentSellPosition = null;
+        let demoInterval1 = null;
+        let demoInterval2 = null;
+        let demoOrders = [];
+        let demoPositions = [];
+        let demoOrderId = 1;
+        
+        // Demo Data
+        const demoGames = [
+            { id: 'ANA-LA', homeAbbrev: 'LA', awayAbbrev: 'ANA', homeScore: 2, awayScore: 1, period: 2, clock: '8:45', state: 'live', startTime: '7:30 PM', gameTimestamp: Date.now(), marketKey: 'ANA-LA' },
+            { id: 'BOS-NYR', homeAbbrev: 'NYR', awayAbbrev: 'BOS', homeScore: 0, awayScore: 0, period: 0, clock: '', state: 'pregame', startTime: '10:00 PM', gameTimestamp: Date.now() + 3600000, marketKey: 'BOS-NYR' }
+        ];
+        
+        const demoMarkets = {
+            'ANA-LA': { away: 'ANA', home: 'LA', tickers: { 'LA': { ticker: 'DEMO-LA', yesBid: 65, noBid: 37 }, 'ANA': { ticker: 'DEMO-ANA', yesBid: 35, noBid: 67 } } },
+            'BOS-NYR': { away: 'BOS', home: 'NYR', tickers: { 'NYR': { ticker: 'DEMO-NYR', yesBid: 52, noBid: 50 }, 'BOS': { ticker: 'DEMO-BOS', yesBid: 48, noBid: 54 } } }
+        };
+        
+        // Team Data
+        const teamNames = { 'ANA': 'Ducks', 'ARI': 'Coyotes', 'BOS': 'Bruins', 'BUF': 'Sabres', 'CAR': 'Hurricanes', 'CBJ': 'Blue Jackets', 'CGY': 'Flames', 'CHI': 'Blackhawks', 'COL': 'Avalanche', 'DAL': 'Stars', 'DET': 'Red Wings', 'EDM': 'Oilers', 'FLA': 'Panthers', 'LA': 'Kings', 'MIN': 'Wild', 'MTL': 'Canadiens', 'NSH': 'Predators', 'NJ': 'Devils', 'NYI': 'Islanders', 'NYR': 'Rangers', 'OTT': 'Senators', 'PHI': 'Flyers', 'PIT': 'Penguins', 'SEA': 'Kraken', 'SJ': 'Sharks', 'STL': 'Blues', 'TB': 'Lightning', 'TOR': 'Maple Leafs', 'UTA': 'Utah HC', 'VAN': 'Canucks', 'VGK': 'Golden Knights', 'WPG': 'Jets', 'WSH': 'Capitals' };
+        
+        const teamColors = { 'ANA': '252,76,2', 'BOS': '252,181,20', 'BUF': '0,48,135', 'CAR': '206,17,38', 'CBJ': '0,38,84', 'CGY': '200,16,46', 'CHI': '207,10,44', 'COL': '111,38,61', 'DAL': '0,104,71', 'DET': '206,17,38', 'EDM': '4,30,66', 'FLA': '4,30,66', 'LA': '17,17,17', 'MIN': '21,71,52', 'MTL': '175,30,45', 'NSH': '255,184,28', 'NJ': '206,17,38', 'NYI': '0,83,155', 'NYR': '0,56,168', 'OTT': '200,16,46', 'PHI': '247,73,2', 'PIT': '252,181,20', 'SEA': '153,217,217', 'SJ': '0,109,117', 'STL': '0,47,135', 'TB': '0,40,104', 'TOR': '0,32,91', 'UTA': '105,179,231', 'VAN': '0,32,91', 'VGK': '185,151,91', 'WPG': '4,30,66', 'WSH': '200,16,46' };
+        
+        // WebSocket Connection
+        function connect() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}`);
+            
+            ws.onopen = () => {
+                document.getElementById('statusDot').classList.add('connected');
+                document.getElementById('statusText').textContent = 'Connected';
+            };
+            
+            ws.onclose = () => {
+                document.getElementById('statusDot').classList.remove('connected');
+                document.getElementById('statusText').textContent = 'Disconnected';
+                if (!demoMode) setTimeout(connect, 2000);
+            };
+            
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                handleMessage(msg);
+            };
+        }
+        
+        function handleMessage(msg) {
+            switch (msg.type) {
+                case 'init':
+                    prices = msg.prices || {};
+                    orderbooks = msg.orderbooks || {};
+                    buildKalshiMarkets();
+                    fetchGameTimes();
+                    fetchOrdersAndPositions();
+                    break;
+                    
+                case 'price_update':
+                    prices[msg.ticker] = { yesBid: msg.yesBid, noBid: msg.noBid, midPrice: msg.midPrice };
+                    document.getElementById('latency').textContent = (Date.now() - msg.timestamp) + 'ms';
+                    updateKalshiMarket(msg.ticker);
+                    if (selectedGameId) renderGame();
+                    break;
+                    
+                case 'orderbook_update':
+                    orderbooks[msg.ticker] = msg.orderbook;
+                    if (selectedGameId) renderGame();
+                    break;
+            }
+        }
+        
+        // Parsing Functions
+        function parseTickerTeams(ticker) {
+            const match = ticker.match(/NHL[A-Z]+(\d{2}[A-Z]{3}\d{2})-([A-Z]+)$/);
+            if (!match) return null;
+            const teamsPart = match[1].slice(7);
+            const winner = match[2];
+            const validTeams = new Set(['ANA','ARI','BOS','BUF','CAR','CBJ','CGY','CHI','COL','DAL','DET','EDM','FLA','LA','MIN','MTL','NSH','NJ','NYI','NYR','OTT','PHI','PIT','SEA','SJ','STL','TB','TOR','UTA','VAN','VGK','WPG','WSH']);
+            for (let i = 2; i <= Math.min(3, teamsPart.length - 2); i++) {
+                const away = teamsPart.slice(0, i);
+                const home = teamsPart.slice(i);
+                if (validTeams.has(away) && validTeams.has(home)) return { away, home, winner };
+            }
+            return null;
+        }
+        
+        function buildKalshiMarkets() {
+            kalshiMarkets = {};
+            Object.keys(prices).forEach(ticker => {
+                const teams = parseTickerTeams(ticker);
+                if (!teams) return;
+                const key = [teams.away, teams.home].sort().join('-');
+                if (!kalshiMarkets[key]) kalshiMarkets[key] = { away: teams.away, home: teams.home, tickers: {} };
+                kalshiMarkets[key].tickers[teams.winner] = { ticker, ...prices[ticker] };
+            });
+        }
+        
+        function updateKalshiMarket(ticker) {
+            const teams = parseTickerTeams(ticker);
+            if (!teams) return;
+            const key = [teams.away, teams.home].sort().join('-');
+            if (!kalshiMarkets[key]) kalshiMarkets[key] = { away: teams.away, home: teams.home, tickers: {} };
+            kalshiMarkets[key].tickers[teams.winner] = { ticker, ...prices[ticker] };
+        }
+        
+        async function fetchGameTimes() {
+            try {
+                const res = await fetch('/api/nhl/score');
+                const data = await res.json();
+                const nhlToKalshi = { 'LAK': 'LA', 'SJS': 'SJ', 'TBL': 'TB', 'NJD': 'NJ' };
+                
+                (data.games || []).forEach(g => {
+                    const homeAbbrev = g.homeTeam?.abbrev;
+                    const awayAbbrev = g.awayTeam?.abbrev;
+                    if (!homeAbbrev || !awayAbbrev) return;
+                    const homeK = nhlToKalshi[homeAbbrev] || homeAbbrev;
+                    const awayK = nhlToKalshi[awayAbbrev] || awayAbbrev;
+                    const key = [awayK, homeK].sort().join('-');
+                    const gameDate = g.startTimeUTC ? new Date(g.startTimeUTC) : null;
+                    
+                    marketTimes[key] = {
+                        startTime: gameDate ? gameDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '',
+                        gameTimestamp: gameDate ? gameDate.getTime() : 0,
+                        actualHome: homeK, actualAway: awayK,
+                        period: g.period || 0, clock: g.clock?.timeRemaining || '',
+                        homeScore: g.homeTeam?.score || 0, awayScore: g.awayTeam?.score || 0,
+                        state: g.gameState === 'LIVE' || g.gameState === 'CRIT' ? 'live' : g.gameState === 'FINAL' || g.gameState === 'OFF' ? 'final' : 'pregame'
+                    };
+                });
+                
+                buildGames();
+                setTimeout(fetchGameTimes, 10000);
+            } catch (e) {
+                console.error('Failed to fetch game times:', e);
+                setTimeout(fetchGameTimes, 5000);
+            }
+        }
+        
+        async function fetchOrdersAndPositions() {
+            if (demoMode) return;
+            try {
+                const [ordersRes, positionsRes] = await Promise.all([
+                    fetch('/api/kalshi/orders'),
+                    fetch('/api/kalshi/positions')
+                ]);
+                const ordersData = await ordersRes.json();
+                const positionsData = await positionsRes.json();
+                pendingOrders = ordersData.orders || [];
+                positions = (positionsData.market_positions || []).filter(p => p.position !== 0);
+                if (selectedGameId) renderGame();
+            } catch (e) {
+                console.error('Failed to fetch orders/positions:', e);
+            }
+            setTimeout(fetchOrdersAndPositions, 5000);
+        }
+        
+        function buildGames() {
+            games = [];
+            Object.keys(kalshiMarkets).forEach(key => {
+                const market = kalshiMarkets[key];
+                const timeData = marketTimes[key];
+                if (!timeData) return;
+                games.push({
+                    id: key, homeAbbrev: timeData.actualHome || market.home, awayAbbrev: timeData.actualAway || market.away,
+                    homeScore: timeData.homeScore || 0, awayScore: timeData.awayScore || 0,
+                    period: timeData.period || 0, clock: timeData.clock || '', state: timeData.state || 'pregame',
+                    startTime: timeData.startTime || '', gameTimestamp: timeData.gameTimestamp || 0, marketKey: key
+                });
+            });
+            games.sort((a, b) => a.gameTimestamp - b.gameTimestamp);
+            updateGameSelect();
+            if (!selectedGameId && games.length > 0) {
+                const liveGame = games.find(g => g.state === 'live');
+                selectGame(liveGame ? liveGame.id : games[0].id);
+            } else if (selectedGameId) {
+                renderGame();
+            }
+        }
+        
+        function updateGameSelect() {
+            const select = document.getElementById('gameSelect');
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Select a game...</option>';
+            games.forEach(g => {
+                const option = document.createElement('option');
+                option.value = g.id;
+                const status = g.state === 'live' ? '🔴 LIVE' : g.state === 'final' ? '✓ Final' : g.startTime;
+                option.textContent = `${g.awayAbbrev} @ ${g.homeAbbrev} - ${status}`;
+                select.appendChild(option);
+            });
+            if (currentValue) select.value = currentValue;
+        }
+        
+        function selectGame(gameId) {
+            selectedGameId = gameId;
+            document.getElementById('gameSelect').value = gameId;
+            renderGame();
+        }
+        
+        function getOrdersForTicker(ticker) {
+            if (demoMode) return demoOrders.filter(o => o.ticker === ticker);
+            return pendingOrders.filter(o => o.ticker === ticker);
+        }
+        
+        function getPositionForTicker(ticker) {
+            if (demoMode) return demoPositions.find(p => p.ticker === ticker);
+            return positions.find(p => p.ticker === ticker);
+        }
+        
+        function renderGame() {
+            const container = document.getElementById('gameContainer');
+            const game = games.find(g => g.id === selectedGameId);
+            
+            if (!game) {
+                container.innerHTML = '<div class="no-game">Select a game to view</div>';
+                document.getElementById('home-submit-btn').textContent = 'HOME';
+                document.getElementById('away-submit-btn').textContent = 'AWAY';
+                document.getElementById('home-submit-btn').style.background = '#333';
+                document.getElementById('away-submit-btn').style.background = '#333';
+                return;
+            }
+            
+            const market = kalshiMarkets[game.marketKey];
+            const homeData = market?.tickers[game.homeAbbrev] || {};
+            const awayData = market?.tickers[game.awayAbbrev] || {};
+            
+            const homeBid = homeData.yesBid || '--';
+            const awayBid = awayData.yesBid || '--';
+            const homeFmv = homeBid !== '--' ? homeBid : '--';
+            const awayFmv = awayBid !== '--' ? awayBid : '--';
+            // +Goal is always FMV + 15 (model projection for scoring team)
+            const homeGoal = homeFmv !== '--' ? Math.min(99, homeFmv + 15) : '--';
+            const awayGoal = awayFmv !== '--' ? Math.min(99, awayFmv + 15) : '--';
+            
+            // Update submit buttons with team name and color
+            const homeBtn = document.getElementById('home-submit-btn');
+            const awayBtn = document.getElementById('away-submit-btn');
+            const homeColor = teamColors[game.homeAbbrev] || '100,100,100';
+            const awayColor = teamColors[game.awayAbbrev] || '100,100,100';
+            
+            // Check if color is too dark (use white button instead)
+            const isDark = (rgb) => {
+                const [r, g, b] = rgb.split(',').map(Number);
+                const luminance = (0.299 * r + 0.587 * g + 0.114 * b);
+                return luminance < 50;
+            };
+            
+            homeBtn.textContent = game.homeAbbrev;
+            if (isDark(homeColor)) {
+                homeBtn.style.background = '#ffffff';
+                homeBtn.style.borderColor = '#cccccc';
+                homeBtn.style.color = '#000';
+            } else {
+                homeBtn.style.background = `rgb(${homeColor})`;
+                homeBtn.style.borderColor = `rgba(${homeColor}, 0.7)`;
+                homeBtn.style.color = '#fff';
+            }
+            
+            awayBtn.textContent = game.awayAbbrev;
+            if (isDark(awayColor)) {
+                awayBtn.style.background = '#ffffff';
+                awayBtn.style.borderColor = '#cccccc';
+                awayBtn.style.color = '#000';
+            } else {
+                awayBtn.style.background = `rgb(${awayColor})`;
+                awayBtn.style.borderColor = `rgba(${awayColor}, 0.7)`;
+                awayBtn.style.color = '#fff';
+            }
+            
+            window.currentGame = { homeAbbrev: game.homeAbbrev, awayAbbrev: game.awayAbbrev, homeTicker: homeData.ticker, awayTicker: awayData.ticker, homeGoal, awayGoal };
+            
+            // Record price history
+            recordPrice(homeData.ticker, homeBid, homeFmv);
+            recordPrice(awayData.ticker, awayBid, awayFmv);
+            
+            const homeOrders = getOrdersForTicker(homeData.ticker);
+            const awayOrders = getOrdersForTicker(awayData.ticker);
+            const homePosition = getPositionForTicker(homeData.ticker);
+            const awayPosition = getPositionForTicker(awayData.ticker);
+            
+            // Get orderbook data
+            const homeBook = orderbooks[homeData.ticker] || { yes: [], no: [] };
+            const awayBook = orderbooks[awayData.ticker] || { yes: [], no: [] };
+            
+            container.innerHTML = `
+                <div class="game-status">
+                    ${game.state === 'live' ? `<div class="live-badge">LIVE</div><div class="game-clock">${formatPeriod(game.period)} ${game.clock}</div>` : 
+                      game.state === 'final' ? `<div class="game-clock">Final</div>` : `<div class="pregame-time">${game.startTime}</div>`}
+                </div>
+                
+                <div class="game-cards-row">
+                    <div class="team-card">
+                        <div class="team-header">
+                            <div class="team-info">
+                                <span class="team-abbrev">${game.homeAbbrev}</span>
+                            </div>
+                            <div class="team-score">${game.homeScore}</div>
+                        </div>
+                        <div class="stats-row">
+                            <div class="stat-box fmv-box"><div class="stat-label">FMV</div><div class="stat-value">${homeFmv}${homeFmv !== '--' ? '¢' : ''}</div></div>
+                            ${game.state === 'live' ? `<div class="stat-box goal-box clickable" onclick="fillGoalPrice('home', ${homeGoal})"><div class="stat-label">+Goal</div><div class="stat-value">${homeGoal}¢</div></div>` : ''}
+                            <div class="stat-box kalshi-box"><div class="stat-label">Kalshi</div><div class="stat-value">${homeBid !== '--' ? homeBid + '¢' : '--'}</div></div>
+                        </div>
+                        ${renderOrderbook(homeBook, game.homeAbbrev)}
+                        ${renderPriceChart(homeData.ticker, game.homeAbbrev)}
+                        ${renderOrdersSection(homeOrders, homeData.ticker)}
+                        ${renderPositionsSection(homePosition, homeData.ticker, game.homeAbbrev)}
+                    </div>
+                    
+                    <div class="team-card">
+                        <div class="team-header">
+                            <div class="team-info">
+                                <span class="team-abbrev">${game.awayAbbrev}</span>
+                            </div>
+                            <div class="team-score">${game.awayScore}</div>
+                        </div>
+                        <div class="stats-row">
+                            <div class="stat-box fmv-box"><div class="stat-label">FMV</div><div class="stat-value">${awayFmv}${awayFmv !== '--' ? '¢' : ''}</div></div>
+                            ${game.state === 'live' ? `<div class="stat-box goal-box clickable" onclick="fillGoalPrice('away', ${awayGoal})"><div class="stat-label">+Goal</div><div class="stat-value">${awayGoal}¢</div></div>` : ''}
+                            <div class="stat-box kalshi-box"><div class="stat-label">Kalshi</div><div class="stat-value">${awayBid !== '--' ? awayBid + '¢' : '--'}</div></div>
+                        </div>
+                        ${renderOrderbook(awayBook, game.awayAbbrev)}
+                        ${renderPriceChart(awayData.ticker, game.awayAbbrev)}
+                        ${renderOrdersSection(awayOrders, awayData.ticker)}
+                        ${renderPositionsSection(awayPosition, awayData.ticker, game.awayAbbrev)}
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderOrderbook(book, team) {
+            // YES ASKS - derived from NO bids (NO bid at X = YES ask at 100-X)
+            // Sort highest to lowest (descending) for display
+            const asks = (book.no || [])
+                .filter(l => Array.isArray(l) && l.length >= 2 && l[1] > 0)
+                .map(l => [100 - l[0], l[1]])
+                .sort((a, b) => b[0] - a[0]) // highest first (descending)
+                .slice(0, 3);
+            
+            // YES BIDS - directly from book.yes
+            // Sort highest to lowest (descending) for display
+            const bids = (book.yes || [])
+                .filter(l => Array.isArray(l) && l.length >= 2 && l[1] > 0)
+                .sort((a, b) => b[0] - a[0]) // highest first (descending)
+                .slice(0, 3);
+            
+            // Best bid is highest bid, best ask is lowest ask
+            const bestBid = bids[0]?.[0];
+            const bestAsk = asks.length > 0 ? asks[asks.length - 1]?.[0] : null;
+            const spread = (bestAsk && bestBid) ? (bestAsk - bestBid) : null;
+            
+            const maxQty = Math.max(...[...asks, ...bids].map(x => x[1] || 0), 1);
+            
+            if (asks.length === 0 && bids.length === 0) {
+                return `<div class="orderbook-section"><div class="orderbook-title">Trade Yes</div><div style="color:#555;font-size:0.6rem;">No orderbook data</div></div>`;
+            }
+            
+            // Display: asks (descending), spread line, bids (descending)
+            return `
+                <div class="orderbook-section">
+                    <div class="orderbook-header">
+                        <span class="orderbook-title">Trade Yes</span>
+                    </div>
+                    <div class="orderbook-asks">
+                        ${asks.map(([price, qty]) => `
+                            <div class="orderbook-row">
+                                <div class="orderbook-bar ask" style="width: ${Math.max(10, (qty / maxQty) * 60)}%"></div>
+                                <span class="orderbook-price ask">${price}¢</span>
+                                <span class="orderbook-qty">${formatQty(qty)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="orderbook-spread-line">${spread !== null ? `Spread ${spread}¢` : ''}</div>
+                    <div class="orderbook-bids">
+                        ${bids.map(([price, qty]) => `
+                            <div class="orderbook-row">
+                                <div class="orderbook-bar bid" style="width: ${Math.max(10, (qty / maxQty) * 60)}%"></div>
+                                <span class="orderbook-price bid">${price}¢</span>
+                                <span class="orderbook-qty">${formatQty(qty)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        function formatQty(qty) {
+            if (qty >= 1000) return (qty / 1000).toFixed(qty >= 10000 ? 0 : 1) + 'k';
+            return qty.toLocaleString();
+        }
+        
+        function recordPrice(ticker, kalshiPrice, fmvPrice) {
+            if (!ticker) return;
+            if (!priceHistory[ticker]) {
+                priceHistory[ticker] = { kalshi: [], fmv: [] };
+            }
+            const now = Date.now();
+            if (kalshiPrice && kalshiPrice !== '--') {
+                priceHistory[ticker].kalshi.push({ time: now, price: kalshiPrice });
+                // Keep last 60 data points (about 2 minutes at 2s intervals)
+                if (priceHistory[ticker].kalshi.length > 60) {
+                    priceHistory[ticker].kalshi.shift();
+                }
+            }
+            if (fmvPrice && fmvPrice !== '--') {
+                priceHistory[ticker].fmv.push({ time: now, price: fmvPrice });
+                if (priceHistory[ticker].fmv.length > 60) {
+                    priceHistory[ticker].fmv.shift();
+                }
+            }
+        }
+        
+        function renderPriceChart(ticker, team) {
+            const history = priceHistory[ticker];
+            if (!history || (history.kalshi.length < 2 && history.fmv.length < 2)) {
+                return '';
+            }
+            
+            const allPrices = [...history.kalshi.map(p => p.price), ...history.fmv.map(p => p.price)];
+            const minPrice = Math.max(0, Math.min(...allPrices) - 5);
+            const maxPrice = Math.min(100, Math.max(...allPrices) + 5);
+            const range = maxPrice - minPrice || 1;
+            
+            const width = 100;
+            const height = 80;
+            
+            const toY = (price) => height - ((price - minPrice) / range) * height;
+            
+            // Create SVG paths
+            const createPath = (data, color) => {
+                if (data.length < 2) return '';
+                const startTime = data[0].time;
+                const endTime = data[data.length - 1].time;
+                const timeRange = endTime - startTime || 1;
+                
+                const points = data.map((p, i) => {
+                    const x = ((p.time - startTime) / timeRange) * width;
+                    const y = toY(p.price);
+                    return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+                }).join(' ');
+                
+                return `<path d="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+            };
+            
+            const kalshiPath = createPath(history.kalshi, '#22c55e');
+            const fmvPath = createPath(history.fmv, '#3b82f6');
+            
+            const currentKalshi = history.kalshi.length > 0 ? history.kalshi[history.kalshi.length - 1].price : '--';
+            const currentFmv = history.fmv.length > 0 ? history.fmv[history.fmv.length - 1].price : '--';
+            
+            return `
+                <div class="price-chart-section">
+                    <div class="price-chart-header">
+                        <span class="price-chart-title">${team} Price History</span>
+                        <div class="price-chart-legend">
+                            <div class="legend-item"><div class="legend-dot kalshi"></div>Kalshi</div>
+                            <div class="legend-item"><div class="legend-dot fmv"></div>FMV</div>
+                        </div>
+                    </div>
+                    <div class="price-chart-canvas">
+                        <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+                            ${kalshiPath}
+                            ${fmvPath}
+                        </svg>
+                        <div class="price-chart-values">
+                            <span>${maxPrice}%</span>
+                            <span>${minPrice}%</span>
+                        </div>
+                    </div>
+                    <div class="price-chart-current">
+                        <span class="current-price kalshi">${currentKalshi}%</span>
+                        <span class="current-price fmv">${currentFmv}%</span>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderOrdersSection(orders, ticker) {
+            if (!orders || orders.length === 0) return '';
+            return `
+                <div class="orders-section">
+                    <div class="orders-title">Pending Orders</div>
+                    ${orders.map(o => `
+                        <div class="order-item">
+                            <div class="order-info">
+                                <span class="order-side ${o.side}">${o.side.toUpperCase()}</span>
+                                <span class="order-details">${o.remaining_count || o.count}x @ ${o.yes_price || o.no_price}¢</span>
+                            </div>
+                            <button class="order-cancel" onclick="cancelOrder('${o.order_id}')">✕</button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+        
+        function renderPositionsSection(position, ticker, team) {
+            if (!position || position.position === 0) return '';
+            const contracts = Math.abs(position.position);
+            const avgPrice = position.market_exposure ? Math.round(position.market_exposure / contracts) : 0;
+            const currentBid = prices[ticker]?.yesBid || 0;
+            const pnl = (currentBid - avgPrice) * contracts;
+            const pnlClass = pnl >= 0 ? 'profit' : 'loss';
+            
+            return `
+                <div class="positions-section">
+                    <div class="positions-title">Position</div>
+                    <div class="position-item" onclick="openSellPopup('${ticker}', '${team}', ${contracts}, ${avgPrice})">
+                        <div class="position-info">
+                            <span class="position-contracts">${contracts} contracts</span>
+                            <span class="position-avg">Avg: ${avgPrice}¢</span>
+                        </div>
+                        <span class="position-pnl ${pnlClass}">${pnl >= 0 ? '+' : ''}${pnl}¢</span>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function formatPeriod(period) {
+            if (!period) return '';
+            if (period === 1) return '1st';
+            if (period === 2) return '2nd';
+            if (period === 3) return '3rd';
+            if (period === 4) return 'OT';
+            return `${period}th`;
+        }
+        
+        function probToAmericanOdds(prob) {
+            if (prob === '--' || prob === null || isNaN(prob)) return '--';
+            const p = parseFloat(prob);
+            if (p <= 0 || p >= 100) return '--';
+            return p >= 50 ? Math.round(-100 * p / (100 - p)) : '+' + Math.round(100 * (100 - p) / p);
+        }
+        
+        // Order Functions
+        function fillGoalPrice(side, goalPrice) {
+            const buyOffset = parseInt(document.getElementById('buyOffset')?.value) || 3;
+            const fillPrice = goalPrice - buyOffset;
+            document.getElementById(side + '-price').value = fillPrice;
+        }
+        
+        function addQtyPreset(side) {
+            const input = document.getElementById(side + '-qty');
+            input.value = (parseInt(input.value) || 0) + qtyPreset;
+        }
+        
+        function setQtyPreset(value) {
+            qtyPreset = value;
+            const label = value >= 1000 ? (value / 1000) + 'k' : value;
+            document.getElementById('home-qty-btn').textContent = label;
+            document.getElementById('away-qty-btn').textContent = label;
+            [500, 1000, 2000, 5000].forEach(v => {
+                const el = document.getElementById('qtypreset-' + v);
+                if (el) el.classList.toggle('active', v === value);
+            });
+        }
+        
+        function submitTeamOrder(side) {
+            const price = parseInt(document.getElementById(side + '-price').value);
+            const qty = parseInt(document.getElementById(side + '-qty').value);
+            if (!price || !qty) { alert('Enter price and quantity'); return; }
+            
+            const game = window.currentGame;
+            if (!game) { alert('No game selected'); return; }
+            
+            const goalTeam = side === 'home' ? game.homeAbbrev : game.awayAbbrev;
+            const otherTeam = side === 'home' ? game.awayAbbrev : game.homeAbbrev;
+            const goalTicker = side === 'home' ? game.homeTicker : game.awayTicker;
+            const otherTicker = side === 'home' ? game.awayTicker : game.homeTicker;
+            
+            submitGoalOrder(goalTeam, otherTeam, goalTicker, otherTicker, price, qty);
+        }
+        
+        function submitGoalFromFixed(side) {
+            submitTeamOrder(side);
+        }
+        
+        async function submitGoalOrder(goalTeam, otherTeam, goalTicker, otherTicker, price, qty) {
+            const orders = [];
+            
+            if (orderMode === 'both') {
+                orders.push({ ticker: goalTicker, side: 'yes', price: price, label: `${goalTeam} YES` });
+                orders.push({ ticker: otherTicker, side: 'no', price: 100 - price, label: `${otherTeam} NO` });
+            } else if (orderMode === 'yes') {
+                orders.push({ ticker: goalTicker, side: 'yes', price: price, label: `${goalTeam} YES` });
+            } else {
+                orders.push({ ticker: otherTicker, side: 'no', price: 100 - price, label: `${otherTeam} NO` });
+            }
+            
+            let successCount = 0;
+            for (const order of orders) {
+                if (!order.ticker) continue;
+                
+                if (demoMode) {
+                    demoOrders.push({ order_id: 'demo-' + (demoOrderId++), ticker: order.ticker, side: order.side, count: qty, remaining_count: qty, yes_price: order.side === 'yes' ? order.price : null, no_price: order.side === 'no' ? order.price : null });
+                    successCount++;
+                    continue;
+                }
+                
+                try {
+                    const body = { ticker: order.ticker, action: 'buy', side: order.side, type: 'limit', count: qty };
+                    if (order.side === 'yes') body.yes_price = order.price;
+                    else body.no_price = order.price;
+                    
+                    const response = await fetch('/api/kalshi/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                    if (response.ok) successCount++;
+                } catch (e) { console.error(e); }
+            }
+            
+            if (successCount > 0) {
+                renderGame();
+                if (!demoMode) fetchOrdersAndPositions();
+            }
+        }
+        
+        async function cancelOrder(orderId) {
+            if (demoMode) {
+                demoOrders = demoOrders.filter(o => o.order_id !== orderId);
+                renderGame();
+                return;
+            }
+            
+            try {
+                await fetch(`/api/kalshi/order/${orderId}`, { method: 'DELETE' });
+                fetchOrdersAndPositions();
+            } catch (e) { console.error(e); }
+        }
+        
+        // Sell Functions
+        function openSellPopup(ticker, team, contracts, avgPrice) {
+            currentSellPosition = { ticker, team, contracts, avgPrice };
+            
+            const markup = parseInt(document.getElementById('sellMarkup').value) || 3;
+            const defaultQty = Math.round(contracts * sellDefaultPercent / 100);
+            
+            document.getElementById('sellPopupInfo').textContent = `${contracts} ${team} contracts • Avg: ${avgPrice}¢`;
+            document.getElementById('sellPrice').value = avgPrice + markup;
+            document.getElementById('sellQty').value = defaultQty;
+            
+            // Calculate market sell price
+            updateMarketSellButton();
+            
+            document.getElementById('sellPopup').classList.add('show');
+        }
+        
+        function updateMarketSellButton() {
+            if (!currentSellPosition) return;
+            
+            const book = orderbooks[currentSellPosition.ticker];
+            if (!book) {
+                document.getElementById('marketSellBtn').textContent = 'Market --';
+                return;
+            }
+            
+            // Get best bid and best ask for YES
+            const bids = (book.yes || []).filter(l => l[1] > 0).sort((a, b) => b[0] - a[0]);
+            const asks = (book.no || []).filter(l => l[1] > 0).map(l => [100 - l[0], l[1]]).sort((a, b) => a[0] - b[0]);
+            
+            const bestBid = bids[0]?.[0];
+            const bestAsk = asks[0]?.[0];
+            
+            const offset = parseInt(document.getElementById('marketSellOffset')?.value) || 1;
+            const direction = document.getElementById('marketSellDirection')?.value || 'below';
+            const reference = document.getElementById('marketSellReference')?.value || 'ask';
+            
+            let marketPrice;
+            if (reference === 'ask' && bestAsk) {
+                marketPrice = direction === 'below' ? bestAsk - offset : bestAsk + offset;
+            } else if (reference === 'bid' && bestBid) {
+                marketPrice = direction === 'below' ? bestBid - offset : bestBid + offset;
+            } else {
+                document.getElementById('marketSellBtn').textContent = 'Market --';
+                return;
+            }
+            
+            marketPrice = Math.max(1, Math.min(99, marketPrice));
+            currentSellPosition.marketPrice = marketPrice;
+            document.getElementById('marketSellBtn').textContent = `Market ${marketPrice}¢`;
+        }
+        
+        function marketSell() {
+            if (!currentSellPosition || !currentSellPosition.marketPrice) return;
+            
+            document.getElementById('sellPrice').value = currentSellPosition.marketPrice;
+            document.getElementById('sellQty').value = currentSellPosition.contracts;
+            confirmSell();
+        }
+        
+        function closeSellPopup(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('sellPopup').classList.remove('show');
+            currentSellPosition = null;
+        }
+        
+        function setSellQtyPercent(percent) {
+            if (!currentSellPosition) return;
+            document.getElementById('sellQty').value = Math.round(currentSellPosition.contracts * percent / 100);
+        }
+        
+        async function confirmSell() {
+            if (!currentSellPosition) return;
+            
+            const price = parseInt(document.getElementById('sellPrice').value);
+            const qty = parseInt(document.getElementById('sellQty').value);
+            
+            if (!price || !qty) { alert('Enter price and quantity'); return; }
+            
+            if (demoMode) {
+                const pos = demoPositions.find(p => p.ticker === currentSellPosition.ticker);
+                if (pos) pos.position -= qty;
+                demoOrders.push({ order_id: 'demo-' + (demoOrderId++), ticker: currentSellPosition.ticker, side: 'yes', action: 'sell', count: qty, remaining_count: qty, yes_price: price });
+                closeSellPopup();
+                renderGame();
+                return;
+            }
+            
+            try {
+                const body = { ticker: currentSellPosition.ticker, action: 'sell', side: 'yes', type: 'limit', count: qty, yes_price: price };
+                const response = await fetch('/api/kalshi/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                if (response.ok) {
+                    closeSellPopup();
+                    fetchOrdersAndPositions();
+                }
+            } catch (e) { console.error(e); alert('Sell failed'); }
+        }
+        
+        // Settings
+        function toggleSettings() {
+            document.getElementById('settingsPanel').classList.toggle('show');
+            document.getElementById('settingsToggle').classList.toggle('active');
+        }
+        
+        function setOrderMode(mode) {
+            orderMode = mode;
+            document.getElementById('mode-yes').classList.toggle('active', mode === 'yes');
+            document.getElementById('mode-no').classList.toggle('active', mode === 'no');
+            document.getElementById('mode-both').classList.toggle('active', mode === 'both');
+        }
+        
+        function setSellDefault(percent) {
+            sellDefaultPercent = percent;
+            ['25','50','75','100'].forEach(p => document.getElementById('sell-' + p).classList.toggle('active', parseInt(p) === percent));
+        }
+        
+        // Demo Mode
+        function toggleDemoMode() {
+            demoMode = !demoMode;
+            document.getElementById('demoToggle').classList.toggle('active', demoMode);
+            
+            if (demoMode) {
+                if (ws) ws.close();
+                initDemo();
+            } else {
+                stopDemo();
+                connect();
+            }
+        }
+        
+        function initDemo() {
+            document.getElementById('statusDot').classList.add('connected');
+            document.getElementById('statusText').textContent = 'Demo Mode';
+            document.getElementById('latency').textContent = '12ms';
+            
+            games = JSON.parse(JSON.stringify(demoGames));
+            kalshiMarkets = JSON.parse(JSON.stringify(demoMarkets));
+            demoOrders = [
+                { order_id: 'demo-1', ticker: 'DEMO-LA', side: 'yes', count: 500, remaining_count: 500, yes_price: 68 },
+                { order_id: 'demo-2', ticker: 'DEMO-LA', side: 'yes', count: 1000, remaining_count: 750, yes_price: 67 },
+                { order_id: 'demo-3', ticker: 'DEMO-ANA', side: 'yes', count: 200, remaining_count: 200, yes_price: 38 }
+            ];
+            demoPositions = [
+                { ticker: 'DEMO-LA', position: 500, market_exposure: 32500 },
+                { ticker: 'DEMO-ANA', position: 200, market_exposure: 7000 }
+            ];
+            
+            // Demo orderbook data
+            // Kalshi structure: { yes: [[bid_price, qty], ...], no: [[no_bid_price, qty], ...] }
+            // YES asks are derived from NO bids: ask_price = 100 - no_bid_price
+            // Asks should be HIGHER than bids (that's the spread)
+            // Example: If LA is at 65%, asks might be 68,67,66 and bids 64,63,62
+            orderbooks = {
+                'DEMO-LA': { 
+                    // Bids at 64,63,62 (descending)
+                    yes: [[64, 21000], [63, 99000], [62, 11000]],
+                    // NO bids at 32,33,34 → YES asks at 68,67,66 (descending)
+                    no: [[32, 2200], [33, 12000], [34, 16000]]
+                },
+                'DEMO-ANA': { 
+                    // Bids at 34,33,32 (descending)
+                    yes: [[34, 15000], [33, 8500], [32, 5200]],
+                    // NO bids at 62,63,64 → YES asks at 38,37,36 (descending)
+                    no: [[62, 12000], [63, 7800], [64, 3500]]
+                },
+                'DEMO-NYR': { 
+                    yes: [[52, 32000], [51, 45000], [50, 18000]], 
+                    no: [[44, 28000], [45, 22000], [46, 15000]] 
+                },
+                'DEMO-BOS': { 
+                    yes: [[47, 25000], [46, 38000], [45, 12000]], 
+                    no: [[49, 20000], [50, 30000], [51, 8000]] 
+                }
+            };
+            
+            updateGameSelect();
+            selectGame(games[0].id);
+            
+            // Generate demo price history
+            const now = Date.now();
+            const generateHistory = (basePrice, volatility) => {
+                const history = [];
+                let price = basePrice;
+                for (let i = 60; i >= 0; i--) {
+                    price = Math.max(5, Math.min(95, price + (Math.random() - 0.5) * volatility));
+                    history.push({ time: now - i * 2000, price: Math.round(price) });
+                }
+                return history;
+            };
+            
+            priceHistory = {
+                'DEMO-LA': { kalshi: generateHistory(65, 4), fmv: generateHistory(64, 3) },
+                'DEMO-ANA': { kalshi: generateHistory(35, 4), fmv: generateHistory(36, 3) },
+                'DEMO-NYR': { kalshi: generateHistory(52, 3), fmv: generateHistory(51, 2) },
+                'DEMO-BOS': { kalshi: generateHistory(48, 3), fmv: generateHistory(49, 2) }
+            };
+            
+            demoInterval1 = setInterval(() => {
+                Object.keys(kalshiMarkets).forEach(key => {
+                    Object.keys(kalshiMarkets[key].tickers).forEach(team => {
+                        const t = kalshiMarkets[key].tickers[team];
+                        t.yesBid = Math.max(1, Math.min(99, t.yesBid + Math.floor(Math.random() * 3) - 1));
+                    });
+                });
+                if (selectedGameId) renderGame();
+            }, 2000);
+            
+            demoInterval2 = setInterval(() => {
+                games.forEach(g => {
+                    if (g.state === 'live' && g.clock) {
+                        const [min, sec] = g.clock.split(':').map(Number);
+                        let totalSec = min * 60 + sec - 1;
+                        if (totalSec < 0) { totalSec = 1200; g.period = Math.min(g.period + 1, 3); }
+                        g.clock = `${Math.floor(totalSec / 60)}:${String(totalSec % 60).padStart(2, '0')}`;
+                    }
+                });
+                if (selectedGameId) renderGame();
+            }, 1000);
+        }
+        
+        function stopDemo() {
+            if (demoInterval1) clearInterval(demoInterval1);
+            if (demoInterval2) clearInterval(demoInterval2);
+            games = [];
+            kalshiMarkets = {};
+            selectedGameId = null;
+            document.getElementById('gameSelect').innerHTML = '<option value="">Select a game...</option>';
+            document.getElementById('gameContainer').innerHTML = '<div class="loading"><div class="loading-spinner"></div><div>Connecting...</div></div>';
+        }
+        
+        // Initialize
+        connect();
+    </script>
+</body>
+</html>
