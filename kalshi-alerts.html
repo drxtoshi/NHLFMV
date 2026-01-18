@@ -1,0 +1,3992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalshi NHL Goal Alerts</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: #111;
+            border-bottom: 1px solid #222;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 0.75rem;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #333;
+        }
+        .dot.connected { background: #00ff00; box-shadow: 0 0 8px #00ff00; }
+        .dot.disconnected { background: #ff4444; }
+        .latency { color: #666; font-size: 0.7rem; }
+        .latency.fast { color: #00ff00; }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .btn {
+            padding: 6px 12px;
+            border: 1px solid #333;
+            background: #1a1a1a;
+            color: #888;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .btn:hover { border-color: #00ff00; color: #00ff00; }
+        .btn.active { border-color: #00ff00; color: #00ff00; background: #00ff0011; }
+        
+        .balance-display {
+            color: #00cc00;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        
+        .position-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 6px;
+            background: #1a3a1a;
+            border: 1px solid #2a5a2a;
+            border-radius: 3px;
+            font-size: 0.6rem;
+            color: #00ff00;
+            cursor: pointer;
+            margin-left: 4px;
+            white-space: nowrap;
+        }
+        .position-badge:hover {
+            background: #2a4a2a;
+            border-color: #3a6a3a;
+        }
+        .position-badge.short {
+            background: #3a1a1a;
+            border-color: #5a2a2a;
+            color: #ff6666;
+        }
+        .position-badge.short:hover {
+            background: #4a2a2a;
+        }
+        
+        .position-container {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            flex-shrink: 0;
+        }
+        
+        .quick-sell-btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 5px;
+            background: #3a2a1a;
+            border: 1px solid #5a4a2a;
+            border-radius: 3px;
+            font-size: 0.55rem;
+            color: #ffaa00;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .quick-sell-btn:hover {
+            background: #4a3a2a;
+            border-color: #6a5a3a;
+            color: #ffcc00;
+        }
+        
+        .pending-orders {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 4px;
+            padding: 4px 6px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 3px;
+            min-height: 20px;
+        }
+        .pending-order {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 0.55rem;
+            white-space: nowrap;
+        }
+        .pending-order.buy {
+            background: #1a2a1a;
+            border: 1px solid #2a4a2a;
+            color: #00cc00;
+        }
+        .pending-order.sell {
+            background: #2a1a1a;
+            border: 1px solid #4a2a2a;
+            color: #ff6666;
+        }
+        .pending-order .cancel-btn {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            padding: 0 2px;
+            font-size: 0.6rem;
+        }
+        .pending-order .cancel-btn:hover {
+            color: #ff4444;
+        }
+        .pending-orders-label {
+            font-size: 0.5rem;
+            color: #555;
+            text-transform: uppercase;
+            margin-right: 4px;
+        }
+        
+        .sell-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            z-index: 1001;
+            min-width: 280px;
+        }
+        .sell-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            display: none;
+        }
+        .sell-modal-overlay.active {
+            display: block;
+        }
+        .sell-modal h4 {
+            margin: 0 0 15px 0;
+            color: #fff;
+        }
+        .sell-modal-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .sell-modal-row label {
+            color: #888;
+            font-size: 0.8rem;
+        }
+        .sell-modal-row input, .sell-modal-row select {
+            padding: 6px 10px;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #fff;
+            width: 100px;
+        }
+        .sell-modal-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+        }
+        .sell-modal-buttons button {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+        .sell-btn-confirm {
+            background: #cc3333;
+            color: #fff;
+        }
+        .sell-btn-market {
+            background: #cc6600;
+            color: #fff;
+        }
+        .sell-btn-cancel {
+            background: #333;
+            color: #888;
+        }
+        .sell-qty-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .sell-qty-controls input {
+            width: 100px;
+        }
+        .sell-pct-btns {
+            display: flex;
+            gap: 4px;
+        }
+        .sell-pct-btn {
+            padding: 4px 8px;
+            border: 1px solid #444;
+            border-radius: 3px;
+            background: #222;
+            color: #888;
+            font-size: 0.65rem;
+            cursor: pointer;
+        }
+        .sell-pct-btn:hover {
+            background: #333;
+            color: #fff;
+            border-color: #666;
+        }
+
+        .section-title {
+            font-size: 0.7rem;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 15px 15px 10px;
+        }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 610px);
+            gap: 12px;
+            padding: 0 12px 12px;
+            justify-content: center;
+        }
+        
+        @media (max-width: 630px) {
+            .games-grid {
+                grid-template-columns: 1fr;
+            }
+            .game-card {
+                width: 100%;
+                min-width: 0;
+            }
+        }
+
+        .game-card {
+            background: #111;
+            border-radius: 8px;
+            border: 1px solid #222;
+            overflow: hidden;
+            width: 610px;
+        }
+
+        .game-header {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            padding: 10px 15px;
+            border-bottom: 1px solid #222;
+        }
+        .game-status {
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 3px;
+        }
+        .game-status.live { background: #00ff0022; color: #00ff00; }
+        .game-status.pregame { background: #4a9eff22; color: #4a9eff; }
+        .game-status.final { background: #33333366; color: #666; }
+        .game-time { 
+            font-size: 0.75rem; 
+            color: #888; 
+            text-align: center;
+            font-weight: 500;
+        }
+        .game-controls {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+        .game-control-btn {
+            padding: 3px 6px;
+            border: 1px solid #333;
+            border-radius: 3px;
+            background: #1a1a1a;
+            color: #555;
+            font-size: 0.7rem;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: all 0.15s;
+        }
+        .game-control-btn:hover {
+            opacity: 1;
+            border-color: #555;
+        }
+        .game-control-btn.active {
+            opacity: 1;
+            border-color: #4a9eff;
+            background: #4a9eff22;
+        }
+        .game-card.pinned {
+            border: 1px solid #4a9eff44;
+            box-shadow: 0 0 10px #4a9eff22;
+        }
+        .game-card.hidden-game {
+            display: none;
+        }
+        .game-card.muted {
+            opacity: 0.6;
+        }
+        .hidden-games-notice {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 8px;
+        }
+        .btn-small {
+            padding: 4px 10px;
+            font-size: 0.65rem;
+            border: 1px solid #444;
+            border-radius: 3px;
+            background: #222;
+            color: #888;
+            cursor: pointer;
+        }
+        .btn-small:hover {
+            border-color: #666;
+            color: #fff;
+        }
+        .liquidity-toggle {
+            padding: 3px 8px;
+            border: 1px solid #333;
+            border-radius: 3px;
+            background: #1a1a1a;
+            color: #666;
+            font-size: 0.65rem;
+            cursor: pointer;
+        }
+        .liquidity-toggle:hover { border-color: #4a9eff; color: #4a9eff; }
+        .liquidity-toggle.active { border-color: #4a9eff; color: #4a9eff; background: #4a9eff11; }
+        
+        /* Liquidity Panel */
+        .liquidity-panel {
+            display: none;
+            padding: 8px 12px;
+            border-top: 1px solid #222;
+            background: #0a0a0a;
+        }
+        .liquidity-panel.expanded { display: block; }
+        .liquidity-markets {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .liquidity-market-wrapper {
+            background: #111;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .liquidity-team-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1a1a1a;
+            padding: 6px 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #fff;
+            border-bottom: 1px solid #222;
+        }
+        .trade-yes-label {
+            color: #10b981;
+            font-size: 0.7rem;
+        }
+        .liquidity-market {
+            padding: 6px;
+        }
+        .liquidity-market-header {
+            display: none;
+        }
+        .liquidity-table {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+        .liquidity-table-header {
+            display: none;
+        }
+        .liquidity-row {
+            display: grid;
+            grid-template-columns: 70px 50px 1fr;
+            gap: 6px;
+            align-items: center;
+            padding: 2px 4px;
+            font-size: 0.65rem;
+        }
+        .liquidity-row.ask-row {
+            background: rgba(127, 29, 29, 0.15);
+        }
+        .liquidity-row.bid-row {
+            background: rgba(6, 78, 59, 0.15);
+        }
+        .liquidity-bar-bg {
+            height: 16px;
+            background: transparent;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .liquidity-bar {
+            height: 100%;
+            border-radius: 2px;
+            position: absolute;
+            right: 0;
+        }
+        .liquidity-bar.ask { 
+            background: rgba(185, 28, 28, 0.5);
+        }
+        .liquidity-bar.bid { 
+            background: rgba(6, 95, 70, 0.5);
+        }
+        .liquidity-price {
+            font-weight: 600;
+            text-align: center;
+            font-size: 0.7rem;
+        }
+        .liquidity-price.ask { color: #ef4444; }
+        .liquidity-price.bid { color: #10b981; }
+        .liquidity-qty {
+            text-align: right;
+            color: #888;
+            font-size: 0.65rem;
+        }
+        .liquidity-spread-row {
+            display: grid;
+            grid-template-columns: 70px 50px 1fr;
+            gap: 6px;
+            padding: 3px 4px;
+            border-top: 1px solid #333;
+            border-bottom: 1px solid #333;
+            margin: 2px 0;
+        }
+        .spread-label {
+            display: none;
+        }
+        .spread-value {
+            font-size: 0.6rem;
+            color: #666;
+            text-align: center;
+        }
+
+        .game-score {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        
+        .team-columns {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: stretch;
+        }
+        .team-column {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .team-column .team-section {
+            padding: 6px 6px;
+            min-height: 70px;
+        }
+        .team-column .goal-panel {
+            flex: 1;
+            border-right: none;
+        }
+        .team-column-divider {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            font-size: 1.2rem;
+            font-weight: 600;
+            padding: 0;
+            align-self: start;
+            margin-top: 50px;
+        }
+        .team-column-divider span {
+            display: flex;
+            align-items: center;
+        }
+        
+        .team-section {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .team-section.away { 
+            flex-direction: row; 
+            justify-content: flex-start;
+        }
+        .team-section.home { 
+            flex-direction: row; 
+            justify-content: flex-end;
+        }
+        .team-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .team-section.away .team-info { align-items: flex-start; }
+        .team-section.home .team-info { align-items: flex-end; }
+        .box-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+        .box-stack .odds-box {
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-top: -2px;
+        }
+        .team-abbrev { color: #fff; font-size: 1.3rem; font-weight: 700; }
+        .team-name { color: #666; font-size: 0.65rem; font-weight: 400; }
+        .score-spacer { width: 3px; }
+        .score { 
+            color: #fff; 
+            font-size: 2.5rem; 
+            font-weight: 700; 
+            min-width: 35px;
+            text-align: center;
+        }
+        .team-section.away .score { text-align: right; }
+        .team-section.home .score { text-align: left; }
+        .score-separator { color: #444; }
+        
+        .fmv-box {
+            background: linear-gradient(145deg, rgba(60, 60, 60, 0.6) 0%, rgba(40, 40, 40, 0.6) 100%);
+            border-radius: 6px;
+            padding: 4px 6px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            text-align: center;
+            min-width: 48px;
+        }
+        .fmv-label {
+            font-size: 0.5rem;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 1px;
+        }
+        .fmv-value {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #fff;
+            font-family: 'SF Mono', 'Monaco', monospace;
+        }
+        .odds-box {
+            background: rgba(40, 40, 40, 0.6);
+            border-radius: 4px;
+            padding: 2px 4px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            text-align: center;
+            margin-top: -2px;
+        }
+        .odds-value {
+            font-size: 0.55rem;
+            font-weight: 600;
+            color: #fff;
+            font-family: 'SF Mono', 'Monaco', monospace;
+        }
+        .next-goal-box {
+            background: linear-gradient(145deg, rgba(16, 185, 129, 0.25) 0%, rgba(16, 185, 129, 0.15) 100%);
+            border-radius: 6px;
+            padding: 4px 6px;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            text-align: center;
+            min-width: 44px;
+        }
+        .next-goal-label {
+            font-size: 0.5rem;
+            color: #10b981;
+            text-transform: uppercase;
+            margin-bottom: 1px;
+            font-weight: 600;
+        }
+        .next-goal-value {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #34d399;
+            font-family: 'SF Mono', 'Monaco', monospace;
+        }
+        .kalshi-bidask-box {
+            background: linear-gradient(145deg, rgba(74, 158, 255, 0.12) 0%, rgba(74, 158, 255, 0.05) 100%);
+            border-radius: 6px;
+            padding: 4px 5px;
+            border: 1px solid rgba(74, 158, 255, 0.2);
+            text-align: center;
+            min-width: 44px;
+        }
+        .kalshi-bidask-label {
+            font-size: 0.4rem;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 1px;
+        }
+        .kalshi-bidask-value {
+            font-size: 0.6rem;
+            font-weight: 600;
+            font-family: 'SF Mono', 'Monaco', monospace;
+        }
+        .kalshi-bidask-value .bid { color: #00cc00; }
+        .kalshi-bidask-value .ask { color: #ff6666; }
+        .pregame-badge {
+            color: #4a9eff;
+            font-size: 0.55rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 1px 3px;
+            border-radius: 3px;
+            background: rgba(74, 158, 255, 0.1);
+            border: 1px solid rgba(74, 158, 255, 0.2);
+        }
+        .pregame-badge:hover {
+            background: rgba(74, 158, 255, 0.2);
+            border-color: rgba(74, 158, 255, 0.4);
+        }
+        .pregame-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 16px;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .pregame-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+        .pregame-popup h3 {
+            margin: 0 0 12px 0;
+            color: #fff;
+            font-size: 0.9rem;
+        }
+        .pregame-popup-input {
+            width: 80px;
+            padding: 8px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-align: center;
+            background: #222;
+            border: 1px solid #444;
+            border-radius: 4px;
+            color: #4a9eff;
+            margin-right: 8px;
+        }
+        .pregame-popup-input:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+        .pregame-popup-btns {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .pregame-popup-btn {
+            padding: 6px 16px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+        }
+        .pregame-popup-btn.save {
+            background: #1a5c1a;
+            color: #fff;
+        }
+        .pregame-popup-btn.save:hover {
+            background: #227722;
+        }
+        .pregame-popup-btn.cancel {
+            background: #333;
+            color: #888;
+        }
+        .pregame-popup-btn.cancel:hover {
+            background: #444;
+            color: #fff;
+        }
+        .pregame-source {
+            color: #555;
+        }
+
+        .kalshi-market-select {
+            padding: 10px 15px;
+            border-bottom: 1px solid #222;
+        }
+        .kalshi-market-select label {
+            display: block;
+            font-size: 0.65rem;
+            color: #555;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .kalshi-market-select select {
+            width: 100%;
+            padding: 8px 10px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 0.8rem;
+        }
+
+        .goal-panels {
+            display: flex;
+        }
+
+        .goal-panel {
+            padding: 6px 6px;
+            border-right: 1px solid #222;
+        }
+        .goal-panel:last-child { border-right: none; }
+
+        .price-bid { color: #00cc00; }
+        .price-ask { color: #ff6666; }
+        .price-sep { color: #444; }
+        .price-na { color: #444; }
+
+        .order-sides {
+            display: flex;
+            gap: 4px;
+        }
+
+        .order-side {
+            background: #0a0a0a;
+            border-radius: 4px;
+            padding: 5px 3px;
+        }
+        .order-side.yes-side .order-side-header { align-items: flex-start; }
+        .order-side.no-side .order-side-header { align-items: flex-end; text-align: right; }
+        .order-side-header {
+            display: flex;
+            flex-direction: column;
+            font-size: 0.7rem;
+            margin-bottom: 2px;
+            line-height: 1.1;
+        }
+        .order-side-header .yes { color: #00ff00; font-weight: 600; }
+        .order-side-header .no { color: #ff4444; font-weight: 600; }
+        .order-side-header .team { color: #aaa; font-size: 0.6rem; }
+
+        .order-column-headers {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 3px;
+            font-size: 0.6rem;
+            color: #555;
+            align-items: center;
+            justify-content: space-between;
+            width: 132px;
+        }
+        .order-column-headers span:first-child { text-align: left; }
+        
+        .order-price-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .order-price-header .bid-ask {
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .order-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .order-row {
+            display: grid;
+            grid-template-columns: 48px 54px 26px;
+            gap: 2px;
+            align-items: center;
+        }
+        .order-row-num {
+            display: none;
+        }
+        .fmv-stagger-btn {
+            padding: 4px 6px;
+            border: 1px solid #4a9eff;
+            border-radius: 3px;
+            font-size: 0.6rem;
+            font-weight: 600;
+            cursor: pointer;
+            background: #1a2a4a;
+            color: #4a9eff;
+        }
+        .fmv-stagger-btn:hover:not(:disabled) {
+            background: #2a3a5a;
+            color: #6abeff;
+        }
+        .fmv-stagger-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        .fmv-stagger-group {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+        .fmv-adjust-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+        .fmv-adjust-btn {
+            background: #222;
+            color: #888;
+            border: 1px solid #444;
+            border-radius: 2px;
+            padding: 1px 4px;
+            font-size: 0.5rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .fmv-adjust-btn:hover {
+            background: #333;
+            color: #fff;
+            border-color: #666;
+        }
+        .auto-reprice-btn {
+            background: #222;
+            color: #888;
+            border: 1px solid #444;
+            border-radius: 2px;
+            padding: 4px 6px;
+            font-size: 0.55rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .auto-reprice-btn:hover {
+            border-color: #666;
+            color: #fff;
+        }
+        .auto-reprice-btn.active {
+            background: #1a3a1a;
+            color: #00ff00;
+            border-color: #00aa00;
+        }
+        .order-input, .order-select {
+            width: 100%;
+            padding: 4px 5px;
+            background: #151515;
+            border: 1px solid #333;
+            border-radius: 3px;
+            color: #fff;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+        .order-select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath fill='%23666' d='M0 2l4 4 4-4z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 4px center;
+            padding-right: 14px;
+        }
+        .order-input:focus, .order-select:focus {
+            outline: none;
+            border-color: #00ff00;
+        }
+        .order-input::placeholder { color: #444; }
+        
+        .quick-btn {
+            padding: 3px 2px;
+            border: 1px solid #333;
+            border-radius: 3px;
+            font-size: 0.55rem;
+            font-weight: 600;
+            cursor: pointer;
+            background: #222;
+            color: #888;
+        }
+        .quick-btn:hover {
+            background: #333;
+            color: #fff;
+        }
+        .quick-btn.fmv-btn {
+            color: #4a9eff;
+        }
+        .quick-btn.fmv-btn:hover {
+            background: #1a3a5c;
+            color: #6ab4ff;
+        }
+        .quick-btn.qty-btn {
+            color: #00cc00;
+        }
+        .quick-btn.qty-btn:hover {
+            background: #1a3a1a;
+            color: #00ff00;
+        }
+        .qty-btn-group {
+            display: flex;
+            align-items: center;
+            gap: 1px;
+        }
+        .qty-adjust-btn {
+            background: #222;
+            color: #888;
+            border: 1px solid #444;
+            border-radius: 2px;
+            padding: 1px 4px;
+            font-size: 0.5rem;
+            cursor: pointer;
+            line-height: 1;
+            display: block;
+            width: 100%;
+        }
+        .qty-adjust-btn:hover {
+            background: #333;
+            color: #fff;
+            border-color: #666;
+        }
+        .qty-adjust-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+        
+        .stagger-btn {
+            padding: 3px 5px;
+            border: 1px solid #444;
+            border-radius: 3px;
+            font-size: 0.55rem;
+            cursor: pointer;
+            background: #222;
+            color: #888;
+        }
+        .stagger-btn:hover {
+            background: #333;
+            color: #4a9eff;
+            border-color: #4a9eff;
+        }
+        .qty-toggles {
+            display: flex;
+            gap: 2px;
+            justify-content: center;
+        }
+
+        .panel-buttons {
+            display: flex;
+            gap: 2px;
+            margin-top: 4px;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        .mirror-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 4px 3px;
+            border-radius: 3px;
+            background: #333;
+            color: #888;
+            border: 1px solid #555;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .mirror-toggle.active {
+            background: #00aa00;
+            color: #fff;
+            border-color: #00cc00;
+        }
+        .mirror-toggle:hover {
+            border-color: #888;
+        }
+        .btn-clear {
+            padding: 4px 6px;
+            border: 1px solid #444;
+            border-radius: 3px;
+            font-size: 0.55rem;
+            font-weight: 600;
+            cursor: pointer;
+            background: #222;
+            color: #888;
+        }
+        .btn-clear:hover { background: #333; color: #fff; }
+        .btn-submit {
+            padding: 4px 12px;
+            border: none;
+            border-radius: 3px;
+            font-size: 0.55rem;
+            font-weight: 600;
+            cursor: pointer;
+            background: #1a5c1a;
+            color: #fff;
+        }
+        .btn-submit:hover { background: #227722; }
+        .btn-arm {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 3px;
+            font-size: 0.55rem;
+            font-weight: 600;
+            cursor: pointer;
+            background: #cc6600;
+            color: #fff;
+        }
+        .btn-arm:hover { background: #dd7711; }
+        .btn-arm.armed {
+            background: #ff4444;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .spike-alert {
+            position: fixed;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 30px;
+            border-radius: 8px;
+            text-align: center;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+            cursor: pointer;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+            to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+        .spike-alert.positive {
+            background: linear-gradient(135deg, #00aa00, #006600);
+            border: 2px solid #00ff00;
+        }
+        .spike-alert.negative {
+            background: linear-gradient(135deg, #aa0000, #660000);
+            border: 2px solid #ff4444;
+        }
+        .spike-alert .ticker { font-size: 1rem; font-weight: 600; }
+        .spike-alert .change { font-size: 2rem; font-weight: 900; }
+
+        .no-games {
+            text-align: center;
+            color: #555;
+            padding: 40px;
+        }
+
+        /* Settings Modal */
+        .settings-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+        }
+        .settings-overlay.open { display: flex; }
+        .settings-modal {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            min-width: 300px;
+            max-width: 400px;
+        }
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+        .settings-header h3 {
+            margin: 0;
+            font-size: 1rem;
+            color: #fff;
+        }
+        .settings-close {
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+        .settings-close:hover { color: #fff; }
+        .settings-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .settings-label {
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+        .settings-input {
+            width: 80px;
+            padding: 8px 10px;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+        .settings-input:focus {
+            outline: none;
+            border-color: #00ff00;
+        }
+        .settings-hint {
+            font-size: 0.7rem;
+            color: #555;
+            margin-top: 4px;
+        }
+        .settings-divider {
+            border-top: 1px solid #333;
+            margin: 15px 0;
+        }
+        .settings-section-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #888;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="status">
+            <div class="status-item">
+                <span class="dot" id="kalshiDot"></span>
+                <span>Kalshi WS</span>
+            </div>
+            <div class="status-item">
+                <span class="dot" id="serverDot"></span>
+                <span>Server</span>
+            </div>
+            <span class="latency" id="latency">--ms</span>
+            <span style="color:#333">|</span>
+            <span id="marketCount">0 markets</span>
+            <span id="updateCount">0 updates</span>
+            <span style="color:#333">|</span>
+            <span class="balance-display" id="balanceDisplay">$--</span>
+        </div>
+        <div class="controls">
+            <button class="btn" id="soundBtn">🔊 Sound</button>
+            <button class="btn" id="settingsBtn">⚙️ Settings</button>
+        </div>
+    </div>
+
+    <div class="settings-overlay" id="settingsOverlay">
+        <div class="settings-modal">
+            <div class="settings-header">
+                <h3>Settings</h3>
+                <button class="settings-close" id="settingsClose">&times;</button>
+            </div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-label">Spike Alert Threshold</div>
+                    <div class="settings-hint">Minimum price change (¢) to trigger alert</div>
+                </div>
+                <input type="number" class="settings-input" id="spikeThreshold" value="5" min="1" max="50" onchange="updateSpikeThreshold()">
+            </div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-label">Spike Detection Window</div>
+                    <div class="settings-hint">Seconds to detect price movement (0.5-10)</div>
+                </div>
+                <select class="settings-input" id="spikeWindow" style="width: 80px;" onchange="updateSpikeWindow()">
+                    <option value="500">0.5s</option>
+                    <option value="1000">1.0s</option>
+                    <option value="1500">1.5s</option>
+                    <option value="2000" selected>2.0s</option>
+                    <option value="2500">2.5s</option>
+                    <option value="3000">3.0s</option>
+                    <option value="4000">4.0s</option>
+                    <option value="5000">5.0s</option>
+                    <option value="10000">10s</option>
+                </select>
+            </div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-label">Order Rows</div>
+                    <div class="settings-hint">Number of price/qty rows per side (1-10)</div>
+                </div>
+                <input type="number" class="settings-input" id="orderRowsInput" value="3" min="1" max="10" onchange="updateOrderRows()">
+            </div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-label">Qty Stagger %</div>
+                    <div class="settings-hint">Percent increase per row when staggering qty</div>
+                </div>
+                <input type="number" class="settings-input" id="qtyStaggerPct" value="50" min="0" max="500">
+            </div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-label">Qty +k Button</div>
+                    <div class="settings-hint">Increment amount for quick add button</div>
+                </div>
+                <select class="settings-input" id="qtyIncrementInput" style="width: 100px;" onchange="qtyIncrement = parseInt(this.value) || 1000; renderGames();">
+                    <option value="100">+100</option>
+                    <option value="500">+500</option>
+                    <option value="1000" selected>+1k</option>
+                    <option value="2000">+2k</option>
+                    <option value="5000">+5k</option>
+                    <option value="10000">+10k</option>
+                    <option value="25000">+25k</option>
+                    <option value="50000">+50k</option>
+                    <option value="100000">+100k</option>
+                </select>
+            </div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-label">FMV Price Offset</div>
+                    <div class="settings-hint">Cents below FMV for staggered prices (0-10)</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="number" class="settings-input" id="fmvOffsetInput" value="3" min="0" max="10" onchange="updateGlobalFmvOffset(parseInt(this.value) || 3);">
+                    <label style="display: flex; align-items: center; gap: 4px; font-size: 0.7rem; color: #888; cursor: pointer;" title="When checked, all games use this offset. When unchecked, each game can have its own offset.">
+                        <input type="checkbox" id="fmvOffsetGlobal" checked onchange="toggleGlobalFmvOffset(this.checked)">
+                        All
+                    </label>
+                </div>
+            </div>
+            <div class="settings-divider"></div>
+            <div class="settings-section-title">Sell Settings</div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-label">Market Sell Reference</div>
+                    <div class="settings-hint">Base price for market sell</div>
+                </div>
+                <select class="settings-input" id="marketSellRef" style="width: 100px;">
+                    <option value="bid">Bid</option>
+                    <option value="ask">Ask</option>
+                </select>
+            </div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-label">Market Sell Direction</div>
+                    <div class="settings-hint">Above or below reference</div>
+                </div>
+                <select class="settings-input" id="marketSellDir" style="width: 100px;">
+                    <option value="below">Below</option>
+                    <option value="above">Above</option>
+                </select>
+            </div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-label">Market Sell Offset</div>
+                    <div class="settings-hint">Cents from reference price</div>
+                </div>
+                <input type="number" class="settings-input" id="marketSellOffset" value="2" min="0" max="20">
+            </div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-label">Quick Sell Markup ¢</div>
+                    <div class="settings-hint">Cents above avg price for quick sell</div>
+                </div>
+                <input type="number" class="settings-input" id="quickSellMarkup" value="5" min="0" max="50">
+            </div>
+        </div>
+    </div>
+
+    <div id="alertsContainer"></div>
+    
+    <div class="sell-modal-overlay" id="sellModalOverlay">
+        <div class="sell-modal">
+            <h4>Sell Position</h4>
+            <div class="sell-modal-row">
+                <label>Position</label>
+                <span id="sellPositionInfo">--</span>
+            </div>
+            <div class="sell-modal-row">
+                <label>Current Bid/Ask</label>
+                <span id="sellBidAsk">--/--</span>
+            </div>
+            <div class="sell-modal-row">
+                <label>Quantity</label>
+                <div class="sell-qty-controls">
+                    <input type="number" id="sellQty" value="1" min="1">
+                    <div class="sell-pct-btns">
+                        <button class="sell-pct-btn" onclick="setSellPct(25)">25%</button>
+                        <button class="sell-pct-btn" onclick="setSellPct(50)">50%</button>
+                        <button class="sell-pct-btn" onclick="setSellPct(75)">75%</button>
+                        <button class="sell-pct-btn" onclick="setSellPct(100)">100%</button>
+                    </div>
+                </div>
+            </div>
+            <div class="sell-modal-row">
+                <label>Limit Price</label>
+                <select id="sellPrice"></select>
+            </div>
+            <div class="sell-modal-buttons">
+                <button class="sell-btn-cancel" onclick="closeSellModal()">Cancel</button>
+                <button class="sell-btn-market" onclick="marketSell()">Market Sell @ <span id="marketSellPreview">--</span>¢</button>
+                <button class="sell-btn-confirm" onclick="confirmSell()">Limit Sell</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-title">GAMES</div>
+    <div class="games-grid" id="gamesGrid">
+        <div class="no-games">Connecting...</div>
+    </div>
+
+    <script>
+        // State
+        let ws = null;
+        let prices = {};
+        let games = [];
+        let kalshiMarkets = {};
+        let spikeThreshold = 5;
+        let orderRows = 3; // Default number of order rows
+        let qtyStaggerPct = 50; // Default qty stagger percentage
+        let fmvOffset = 3; // Default cents below FMV (global)
+        let fmvOffsetGlobal = true; // Whether to use global offset for all games
+        let gameFmvOffsets = {}; // gameId -> offset (per-game offsets)
+        let qtyIncrement = 1000; // Default qty increment for +k button
+        let marketSellOffset = 2; // Default cents below bid for market sell
+        let armedOrders = {}; // gameId-team -> { orders, armed }
+        let updateCount = 0;
+        let soundEnabled = true;
+        let audioContext = null;
+        
+        // Game display state
+        let mutedGames = {};   // gameId -> true if muted (no alerts)
+        let pinnedGames = {};  // gameId -> true if pinned to top
+        let hiddenGames = {};  // gameId -> true if hidden
+        let activeGameAlerts = {}; // gameKey -> true if alert is currently showing
+        
+        // Pregame price tracking
+        let lockedPregamePrices = {}; // gameKey -> { home: 0.xx, away: 0.xx } - locked when game goes live
+        let userPregamePrices = {};   // gameKey -> { home: 0.xx, away: 0.xx } - user overrides
+        
+        // Portfolio data
+        let portfolioBalance = 0;
+        let portfolioPositions = {};
+        let pendingOrders = {}; // ticker -> [{orderId, action, side, price, qty}, ...]
+        let currentSellPosition = null;
+
+        // Team data
+        const teamNames = {
+            'ANA': 'Ducks', 'ARI': 'Coyotes', 'BOS': 'Bruins', 'BUF': 'Sabres', 'CAR': 'Hurricanes',
+            'CBJ': 'Blue Jackets', 'CGY': 'Flames', 'CHI': 'Blackhawks', 'COL': 'Avalanche',
+            'DAL': 'Stars', 'DET': 'Red Wings', 'EDM': 'Oilers', 'FLA': 'Panthers',
+            'LA': 'Kings', 'LAK': 'Kings', 'MIN': 'Wild', 'MTL': 'Canadiens',
+            'NJ': 'Devils', 'NJD': 'Devils', 'NSH': 'Predators', 'NYI': 'Islanders', 'NYR': 'Rangers',
+            'OTT': 'Senators', 'PHI': 'Flyers', 'PIT': 'Penguins', 'SEA': 'Kraken',
+            'SJ': 'Sharks', 'SJS': 'Sharks', 'STL': 'Blues', 'TB': 'Lightning', 'TBL': 'Lightning',
+            'TOR': 'Maple Leafs', 'UTA': 'Utah HC', 'VAN': 'Canucks',
+            'VGK': 'Golden Knights', 'VGS': 'Golden Knights', 'WPG': 'Jets', 'WSH': 'Capitals'
+        };
+
+        const teamCities = {
+            'ANA': 'Anaheim', 'ARI': 'Arizona', 'BOS': 'Boston', 'BUF': 'Buffalo', 'CAR': 'Carolina',
+            'CBJ': 'Columbus', 'CGY': 'Calgary', 'CHI': 'Chicago', 'COL': 'Colorado',
+            'DAL': 'Dallas', 'DET': 'Detroit', 'EDM': 'Edmonton', 'FLA': 'Florida',
+            'LA': 'Los Angeles', 'LAK': 'Los Angeles', 'MIN': 'Minnesota', 'MTL': 'Montreal',
+            'NJ': 'New Jersey', 'NJD': 'New Jersey', 'NSH': 'Nashville', 'NYI': 'New York', 'NYR': 'New York',
+            'OTT': 'Ottawa', 'PHI': 'Philadelphia', 'PIT': 'Pittsburgh', 'SEA': 'Seattle',
+            'SJ': 'San Jose', 'SJS': 'San Jose', 'STL': 'St. Louis', 'TB': 'Tampa Bay', 'TBL': 'Tampa Bay',
+            'TOR': 'Toronto', 'UTA': 'Utah', 'VAN': 'Vancouver',
+            'VGK': 'Vegas', 'VGS': 'Vegas', 'WPG': 'Winnipeg', 'WSH': 'Washington'
+        };
+
+        // NHL team primary colors
+        const teamColors = {
+            'ANA': '#F47A38', 'ARI': '#8C2633', 'BOS': '#FFB81C', 'BUF': '#002654', 'CAR': '#CC0000',
+            'CBJ': '#002654', 'CGY': '#D2001C', 'CHI': '#CF0A2C', 'COL': '#6F263D',
+            'DAL': '#006847', 'DET': '#CE1126', 'EDM': '#041E42', 'FLA': '#041E42',
+            'LA': '#111111', 'LAK': '#111111', 'MIN': '#154734', 'MTL': '#AF1E2D',
+            'NJ': '#CE1126', 'NJD': '#CE1126', 'NSH': '#FFB81C', 'NYI': '#00539B', 'NYR': '#0038A8',
+            'OTT': '#C52032', 'PHI': '#F74902', 'PIT': '#FCB514', 'SEA': '#99D9D9',
+            'SJ': '#006D75', 'SJS': '#006D75', 'STL': '#002F87', 'TB': '#002868', 'TBL': '#002868',
+            'TOR': '#00205B', 'UTA': '#6CACE4', 'VAN': '#00205B',
+            'VGK': '#B4975A', 'VGS': '#B4975A', 'WPG': '#041E42', 'WSH': '#041E42'
+        };
+
+        // ==========================================
+        // BERNIER WIN PROBABILITY MODEL
+        // Based on empirical NHL data (2009-2017)
+        // ==========================================
+        
+        // Historical win probabilities for team LEADING by X goals
+        const WIN_PROB_LEADING = {
+          1: { 3600: 0.58, 3000: 0.61, 2400: 0.64, 1800: 0.69, 1200: 0.75, 600: 0.82, 300: 0.88, 0: 1.00 },
+          2: { 3600: 0.75, 3000: 0.78, 2400: 0.82, 1800: 0.86, 1200: 0.91, 600: 0.95, 300: 0.97, 0: 1.00 },
+          3: { 3600: 0.87, 3000: 0.89, 2400: 0.92, 1800: 0.94, 1200: 0.96, 600: 0.98, 300: 0.99, 0: 1.00 },
+          4: { 3600: 0.93, 3000: 0.94, 2400: 0.96, 1800: 0.97, 1200: 0.98, 600: 0.99, 300: 0.995, 0: 1.00 },
+          5: { 3600: 0.96, 3000: 0.97, 2400: 0.98, 1800: 0.98, 1200: 0.99, 600: 0.995, 300: 0.998, 0: 1.00 }
+        };
+        
+        // Weight of pregame odds at different times
+        const ODDS_WEIGHT = {
+          0: { 3600: 1.00, 3000: 0.88, 2400: 0.72, 1800: 0.52, 1200: 0.28, 600: 0.10, 300: 0.03, 0: 0.00 },
+          1: { 3600: 0.75, 3000: 0.62, 2400: 0.48, 1800: 0.32, 1200: 0.16, 600: 0.06, 300: 0.02, 0: 0.00 },
+          2: { 3600: 0.50, 3000: 0.40, 2400: 0.30, 1800: 0.18, 1200: 0.08, 600: 0.03, 300: 0.01, 0: 0.00 },
+          3: { 3600: 0.32, 3000: 0.25, 2400: 0.18, 1800: 0.10, 1200: 0.05, 600: 0.02, 300: 0.005, 0: 0.00 },
+          4: { 3600: 0.20, 3000: 0.15, 2400: 0.10, 1800: 0.06, 1200: 0.03, 600: 0.01, 300: 0.003, 0: 0.00 },
+          5: { 3600: 0.12, 3000: 0.09, 2400: 0.06, 1800: 0.03, 1200: 0.015, 600: 0.005, 300: 0.002, 0: 0.00 }
+        };
+        
+        function interpolateWinProb(table, seconds) {
+          const times = [3600, 3000, 2400, 1800, 1200, 600, 300, 0];
+          seconds = Math.max(0, Math.min(3600, seconds));
+          for (let i = 0; i < times.length - 1; i++) {
+            if (seconds <= times[i] && seconds >= times[i + 1]) {
+              const upper = times[i];
+              const lower = times[i + 1];
+              const ratio = (seconds - lower) / (upper - lower);
+              return table[lower] + ratio * (table[upper] - table[lower]);
+            }
+          }
+          if (seconds >= 3600) return table[3600];
+          return table[0];
+        }
+        
+        // Calculate win probability using Bernier model
+        function calcWinProb(pregameProb, goalDiff, secondsRemaining) {
+          const absDiff = Math.min(Math.abs(goalDiff), 5);
+          
+          if (goalDiff === 0) {
+            const weight = interpolateWinProb(ODDS_WEIGHT[0], secondsRemaining);
+            const pregameEdge = pregameProb - 0.50;
+            return 0.50 + (weight * pregameEdge);
+          }
+          
+          if (goalDiff > 0) {
+            const baseProb = interpolateWinProb(WIN_PROB_LEADING[absDiff], secondsRemaining);
+            const weight = interpolateWinProb(ODDS_WEIGHT[absDiff], secondsRemaining);
+            const pregameEdge = pregameProb - 0.50;
+            let adjustedProb = baseProb + (weight * pregameEdge);
+            return Math.max(0.01, Math.min(0.99, adjustedProb));
+          }
+          
+          const opponentPregame = 1 - pregameProb;
+          const opponentBaseProb = interpolateWinProb(WIN_PROB_LEADING[absDiff], secondsRemaining);
+          const weight = interpolateWinProb(ODDS_WEIGHT[absDiff], secondsRemaining);
+          const opponentEdge = opponentPregame - 0.50;
+          let opponentProb = opponentBaseProb + (weight * opponentEdge);
+          opponentProb = Math.max(0.01, Math.min(0.99, opponentProb));
+          return 1 - opponentProb;
+        }
+
+        function calcSeconds(period, clock) {
+          const parts = (clock || '20:00').split(':').map(Number);
+          const t = (parts[0] || 0) * 60 + (parts[1] || 0);
+          let secs;
+          if (period === 1) secs = t + 2400;
+          else if (period === 2) secs = t + 1200;
+          else if (period >= 3) secs = t;
+          else secs = t;
+          return Math.max(1, secs);
+        }
+
+        // DOM
+        const kalshiDot = document.getElementById('kalshiDot');
+        const serverDot = document.getElementById('serverDot');
+        const latencyEl = document.getElementById('latency');
+        const marketCountEl = document.getElementById('marketCount');
+        const updateCountEl = document.getElementById('updateCount');
+        const gamesGrid = document.getElementById('gamesGrid');
+        const alertsContainer = document.getElementById('alertsContainer');
+
+        // Parse ticker - handles KXNHLGAME-26JAN18STLEDM-STL format
+        // Teams are concatenated: STLEDM = STL+EDM, ANALA = ANA+LA, SJDET = SJ+DET
+        function parseTickerTeams(ticker) {
+            // First extract the teams part and winner
+            const mainMatch = ticker.match(/KXNHLGAME-\d+[A-Z]+\d+([A-Z]+)-([A-Z]{2,3})$/i);
+            if (!mainMatch) return null;
+            
+            const teamsPart = mainMatch[1]; // e.g., "STLEDM", "ANALA", "SJDET"
+            const winner = mainMatch[2];     // e.g., "STL", "ANA", "SJ"
+            
+            // Valid NHL team abbreviations
+            const validTeams = new Set([
+                'ANA', 'ARI', 'BOS', 'BUF', 'CAR', 'CBJ', 'CGY', 'CHI', 'COL', 'DAL',
+                'DET', 'EDM', 'FLA', 'LA', 'MIN', 'MTL', 'NSH', 'NYI', 'NYR', 'OTT',
+                'PHI', 'PIT', 'SEA', 'SJ', 'STL', 'TB', 'TOR', 'UTA', 'VAN', 'VGK', 
+                'WPG', 'WSH', 'NJ', 'WAS'
+            ]);
+            
+            // Try all possible splits and find one where both parts are valid teams
+            const len = teamsPart.length;
+            for (let i = 2; i <= Math.min(3, len - 2); i++) {
+                const away = teamsPart.slice(0, i);
+                const home = teamsPart.slice(i);
+                if (validTeams.has(away) && validTeams.has(home)) {
+                    return { away, home, winner };
+                }
+            }
+            
+            // Fallback: try common splits if no valid match found
+            // This handles edge cases
+            const splits = [
+                [2, len-2], [3, len-3], [2, len-3], [3, len-2]
+            ].filter(([a,h]) => a >= 2 && h >= 2 && a <= 3 && h <= 3);
+            
+            for (const [a, h] of splits) {
+                if (a + h === len) {
+                    return { 
+                        away: teamsPart.slice(0, a), 
+                        home: teamsPart.slice(a), 
+                        winner 
+                    };
+                }
+            }
+            
+            return null;
+        }
+
+        // Audio
+        async function initAudio() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function playAlert() {
+            if (!soundEnabled || !audioContext) return;
+            if (audioContext.state === 'suspended') audioContext.resume();
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.frequency.value = 880;
+            gain.gain.value = 0.3;
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            osc.start();
+            osc.stop(audioContext.currentTime + 0.3);
+        }
+
+        function speak(text) {
+            if (!soundEnabled || !('speechSynthesis' in window)) return;
+            speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.rate = 1.3;
+            speechSynthesis.speak(utter);
+        }
+
+        // WebSocket
+        function connect() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}`);
+
+            ws.onopen = () => {
+                serverDot.className = 'dot connected';
+            };
+
+            ws.onclose = () => {
+                serverDot.className = 'dot disconnected';
+                kalshiDot.className = 'dot disconnected';
+                setTimeout(connect, 2000);
+            };
+
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                handleMessage(msg);
+            };
+        }
+
+        function handleMessage(msg) {
+            switch (msg.type) {
+                case 'init':
+                    prices = msg.prices || {};
+                    kalshiDot.className = msg.kalshiConnected ? 'dot connected' : 'dot disconnected';
+                    marketCountEl.textContent = `${msg.tickers?.length || 0} markets`;
+                    buildKalshiMarkets();
+                    break;
+
+                case 'kalshi_status':
+                    kalshiDot.className = msg.status === 'connected' ? 'dot connected' : 'dot disconnected';
+                    break;
+
+                case 'price_update':
+                    updateCount++;
+                    updateCountEl.textContent = `${updateCount} updates`;
+                    prices[msg.ticker] = {
+                        midPrice: msg.midPrice,
+                        yesBid: msg.yesBid,
+                        noBid: msg.noBid,
+                        priceChange: msg.priceChange,
+                        lastUpdate: msg.timestamp
+                    };
+                    latencyEl.textContent = `${Date.now() - msg.timestamp}ms`;
+                    latencyEl.className = 'latency fast';
+                    
+                    // Update kalshiMarkets data only (no DOM updates on every tick)
+                    const priceTeams = parseTickerTeams(msg.ticker);
+                    if (priceTeams) {
+                        // Always use alphabetical order for the key to avoid duplicates
+                        const key = [priceTeams.away, priceTeams.home].sort().join('-');
+                        if (!kalshiMarkets[key]) {
+                            kalshiMarkets[key] = { away: priceTeams.away, home: priceTeams.home, tickers: {} };
+                        }
+                        kalshiMarkets[key].tickers[priceTeams.winner] = { ticker: msg.ticker, ...prices[msg.ticker] };
+                    }
+                    break;
+
+                case 'spike_alert':
+                    // Only alert on positive spikes (price going up = likely goal)
+                    if (msg.priceChange > 0) {
+                        const spikeTeams = parseTickerTeams(msg.ticker);
+                        if (spikeTeams) {
+                            // Always use alphabetical order for the key
+                            const gameKey = [spikeTeams.away, spikeTeams.home].sort().join('-');
+                            
+                            // Skip if this game already has an active alert
+                            if (activeGameAlerts[gameKey]) {
+                                console.log('Alert already active for game', gameKey);
+                                break;
+                            }
+                            
+                            // Check if game is muted
+                            if (!isGameMuted(msg.ticker)) {
+                                // Mark game as having active alert
+                                activeGameAlerts[gameKey] = true;
+                                
+                                createSpikeAlert(msg, gameKey);
+                                playAlert();
+                                const cityName = teamCities[spikeTeams.winner] || spikeTeams.winner;
+                                speak(cityName);
+                                checkArmedOrders(spikeTeams, msg.priceChange);
+                            } else {
+                                console.log('Alert muted for', msg.ticker);
+                            }
+                        }
+                    }
+                    break;
+            }
+        }
+
+        function buildKalshiMarkets() {
+            kalshiMarkets = {};
+            Object.keys(prices).forEach(ticker => {
+                const teams = parseTickerTeams(ticker);
+                if (!teams) return;
+                
+                // Always use alphabetical order for the key to avoid duplicates
+                // But preserve the actual away/home from the ticker
+                const sortedKey = [teams.away, teams.home].sort().join('-');
+                
+                if (!kalshiMarkets[sortedKey]) {
+                    kalshiMarkets[sortedKey] = { away: teams.away, home: teams.home, tickers: {} };
+                }
+                kalshiMarkets[sortedKey].tickers[teams.winner] = { ticker, ...prices[ticker] };
+            });
+            
+            // Rebuild games from Kalshi markets (force render on init)
+            buildGamesFromKalshi(true);
+        }
+
+        function createSpikeAlert(msg, gameKey) {
+            const teams = parseTickerTeams(msg.ticker);
+            const teamName = teams ? (teamNames[teams.winner] || teams.winner) : msg.ticker;
+
+            const alert = document.createElement('div');
+            alert.className = 'spike-alert ' + (msg.priceChange > 0 ? 'positive' : 'negative');
+            alert.innerHTML = `
+                <div class="ticker">${teamName}</div>
+                <div class="change">${msg.priceChange > 0 ? '+' : ''}${msg.priceChange.toFixed(1)}¢</div>
+            `;
+            
+            // Clear tracking when alert is dismissed
+            const clearAlert = () => {
+                delete activeGameAlerts[gameKey];
+                alert.remove();
+            };
+            
+            alert.onclick = clearAlert;
+            alertsContainer.appendChild(alert);
+            setTimeout(clearAlert, 10000);
+        }
+
+        function checkArmedOrders(teams, priceChange) {
+            // Check if we have armed orders for the team that spiked
+            // Always use alphabetical order for the key
+            const gameKey = [teams.away, teams.home].sort().join('-');
+            const orderKey = `${gameKey}-${teams.winner}`;
+            const armed = armedOrders[orderKey];
+            
+            if (armed && armed.armed && armed.orders.length > 0) {
+                console.log(`ARMED ORDER TRIGGERED: ${orderKey}`, armed.orders);
+                speak(`Triggered! Submitting orders for ${teamNames[teams.winner] || teams.winner}`);
+                
+                // Submit each armed order
+                armed.orders.forEach(async (order) => {
+                    try {
+                        const response = await fetch('/api/kalshi/order', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                ticker: order.ticker,
+                                action: 'buy',
+                                side: order.side,
+                                type: 'limit',
+                                count: order.qty,
+                                yes_price: order.side === 'yes' ? order.price : undefined,
+                                no_price: order.side === 'no' ? order.price : undefined
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (response.ok) {
+                            console.log('Armed order placed:', result);
+                        } else {
+                            console.error('Armed order failed:', result);
+                            speak(`Order failed`);
+                        }
+                    } catch (err) {
+                        console.error('Armed order error:', err);
+                    }
+                });
+                
+                // Disarm after triggering
+                armed.armed = false;
+                renderGames();
+            }
+        }
+
+        // Build games list from Kalshi markets (no ESPN dependency)
+        function buildGamesFromKalshi(forceRender = false) {
+            const newGames = [];
+            const seen = new Set();
+            
+            Object.keys(kalshiMarkets).forEach(key => {
+                if (seen.has(key)) return;
+                seen.add(key);
+                
+                const market = kalshiMarkets[key];
+                const gameId = key; // Use market key as game ID
+                
+                // Get time data from marketTimes
+                let timeData = marketTimes[key];
+                
+                // Skip games without time data
+                if (!timeData || !timeData.gameTimestamp) {
+                    return;
+                }
+                
+                // Use actual home/away from NHL data if available, otherwise from market
+                const homeAbbrev = timeData.actualHome || market.home;
+                const awayAbbrev = timeData.actualAway || market.away;
+                
+                // Check if game already exists - preserve its state
+                const existingGame = games.find(g => g.id === gameId);
+                
+                newGames.push({
+                    id: gameId,
+                    state: existingGame?.state || 'pregame',
+                    homeAbbrev: homeAbbrev,
+                    awayAbbrev: awayAbbrev,
+                    homeScore: existingGame?.homeScore || 0,
+                    awayScore: existingGame?.awayScore || 0,
+                    period: existingGame?.period || 0,
+                    clock: existingGame?.clock || '',
+                    startTime: timeData.startTime || '',
+                    startDate: timeData.startDate || '',
+                    gameTimestamp: timeData.gameTimestamp || 0,
+                    marketKey: key
+                });
+            });
+            
+            // Filter to TODAY and TOMORROW (local time)
+            const now = new Date();
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const dayAfterTomorrow = new Date(todayStart.getTime() + 2 * 24 * 60 * 60 * 1000);
+            
+            const filteredGames = newGames.filter(g => {
+                if (g.state === 'live') return true; // Always show live games
+                const gameDate = new Date(g.gameTimestamp);
+                return gameDate >= todayStart && gameDate < dayAfterTomorrow;
+            });
+            
+            // Sort by game time
+            filteredGames.sort((a, b) => a.gameTimestamp - b.gameTimestamp);
+            
+            // Only re-render if number of games changed or forceRender
+            const gamesChanged = games.length !== filteredGames.length || 
+                                 games.some((g, i) => filteredGames[i]?.id !== g.id);
+            
+            games = filteredGames;
+            
+            if (forceRender || gamesChanged) {
+                renderGames();
+            }
+        }
+        
+        // Store market time data
+        let marketTimes = {};
+        
+        // Fetch game times from NHL schedule API (today + tomorrow)
+        async function fetchGameTimes() {
+            try {
+                const today = new Date();
+                const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+                const todayStr = today.toISOString().split('T')[0];
+                const tomorrowStr = tomorrow.toISOString().split('T')[0];
+                
+                // NHL to Kalshi abbreviation mapping
+                const nhlToKalshi = {
+                    'LAK': 'LA',
+                    'SJS': 'SJ', 
+                    'TBL': 'TB',
+                    'NJD': 'NJ'
+                };
+                
+                // Fetch schedule for both days AND live scores
+                const [todayRes, tomorrowRes, scoreRes] = await Promise.all([
+                    fetch(`/api/nhl/schedule?date=${todayStr}`),
+                    fetch(`/api/nhl/schedule?date=${tomorrowStr}`),
+                    fetch(`/api/nhl/score`)  // Live game data
+                ]);
+                
+                const todayData = await todayRes.json();
+                const tomorrowData = await tomorrowRes.json();
+                const scoreData = await scoreRes.json();
+                
+                // Process live games from score/now FIRST (includes live + today's games)
+                const liveGames = scoreData.games || [];
+                console.log('Score/now returned', liveGames.length, 'games');
+                
+                liveGames.forEach(g => {
+                    const homeAbbrev = g.homeTeam?.abbrev;
+                    const awayAbbrev = g.awayTeam?.abbrev;
+                    
+                    if (!homeAbbrev || !awayAbbrev) return;
+                    
+                    const homeK = nhlToKalshi[homeAbbrev] || homeAbbrev;
+                    const awayK = nhlToKalshi[awayAbbrev] || awayAbbrev;
+                    
+                    const gameDate = g.startTimeUTC ? new Date(g.startTimeUTC) : null;
+                    const startTime = gameDate ? gameDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+                    const startDate = gameDate ? gameDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
+                    const gameTimestamp = gameDate ? gameDate.getTime() : 0;
+                    
+                    // Always use alphabetical sorted key
+                    const key = [awayK, homeK].sort().join('-');
+                    
+                    const timeData = { startTime, startDate, gameTimestamp, actualHome: homeK, actualAway: awayK };
+                    
+                    marketTimes[key] = timeData;
+                });
+                
+                // Then process schedule data for any games not in score/now
+                const scheduleGames = [
+                    ...(todayData.gameWeek?.flatMap(week => week.games || []) || []),
+                    ...(tomorrowData.gameWeek?.flatMap(week => week.games || []) || [])
+                ];
+                
+                scheduleGames.forEach(g => {
+                    const homeAbbrev = g.homeTeam?.abbrev;
+                    const awayAbbrev = g.awayTeam?.abbrev;
+                    
+                    if (!homeAbbrev || !awayAbbrev) return;
+                    
+                    const homeK = nhlToKalshi[homeAbbrev] || homeAbbrev;
+                    const awayK = nhlToKalshi[awayAbbrev] || awayAbbrev;
+                    
+                    const gameDate = g.startTimeUTC ? new Date(g.startTimeUTC) : null;
+                    const startTime = gameDate ? gameDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+                    const startDate = gameDate ? gameDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
+                    const gameTimestamp = gameDate ? gameDate.getTime() : 0;
+                    
+                    // Always use alphabetical sorted key
+                    const key = [awayK, homeK].sort().join('-');
+                    
+                    const timeData = { startTime, startDate, gameTimestamp, actualHome: homeK, actualAway: awayK };
+                    
+                    // Only set if not already set (don't overwrite live data)
+                    if (!marketTimes[key]) {
+                        marketTimes[key] = timeData;
+                    }
+                });
+                
+                console.log('marketTimes total keys:', Object.keys(marketTimes).length);
+                
+                // Rebuild games with time data
+                if (Object.keys(kalshiMarkets).length > 0) {
+                    buildGamesFromKalshi();
+                }
+            } catch (e) {
+                console.error('Failed to fetch game times:', e);
+            }
+        }
+
+        // Fetch ESPN data for live scores/periods - only updates existing Kalshi games
+        async function fetchLiveGameData() {
+            try {
+                const res = await fetch('/api/espn/scoreboard');
+                const data = await res.json();
+                
+                const espnGames = {};
+                (data.events || []).forEach(e => {
+                    const comp = e.competitions?.[0];
+                    const home = comp?.competitors?.find(c => c.homeAway === 'home');
+                    const away = comp?.competitors?.find(c => c.homeAway === 'away');
+                    const status = comp?.status;
+                    
+                    const homeEspn = home?.team?.abbreviation;
+                    const awayEspn = away?.team?.abbreviation;
+                    
+                    // Map ESPN abbrevs to Kalshi abbrevs
+                    const espnToKalshi = { 'LAK': 'LA', 'SJS': 'SJ', 'TBL': 'TB', 'NJD': 'NJ' };
+                    const homeKalshi = espnToKalshi[homeEspn] || homeEspn;
+                    const awayKalshi = espnToKalshi[awayEspn] || awayEspn;
+                    
+                    let state = 'pregame';
+                    if (status?.type?.state === 'in') state = 'live';
+                    else if (status?.type?.state === 'post') state = 'final';
+                    
+                    const gameDate = new Date(e.date);
+                    
+                    const gameData = {
+                        state,
+                        homeScore: parseInt(home?.score) || 0,
+                        awayScore: parseInt(away?.score) || 0,
+                        period: status?.period || 0,
+                        clock: status?.displayClock || '',
+                        startTime: gameDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+                        startDate: gameDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+                        gameTimestamp: gameDate.getTime()
+                    };
+                    
+                    // Store by ALL possible key formats
+                    const keys = [
+                        `${awayKalshi}-${homeKalshi}`,
+                        `${homeKalshi}-${awayKalshi}`,
+                        `${awayEspn}-${homeEspn}`,
+                        `${homeEspn}-${awayEspn}`
+                    ];
+                    keys.forEach(k => espnGames[k] = gameData);
+                });
+                
+                console.log('ESPN games loaded:', Object.keys(espnGames));
+                
+                // Update our games with ESPN data - use targeted DOM updates
+                let needsFullRender = false;
+                const kalshiToEspnMap = { 'LA': 'LAK', 'SJ': 'SJS', 'TB': 'TBL', 'NJ': 'NJD' };
+                
+                games.forEach(g => {
+                    // Try multiple key formats to match
+                    const away = g.awayAbbrev;
+                    const home = g.homeAbbrev;
+                    const awayEspn = kalshiToEspnMap[away] || away;
+                    const homeEspn = kalshiToEspnMap[home] || home;
+                    
+                    const keysToTry = [
+                        g.marketKey,
+                        `${away}-${home}`,
+                        `${home}-${away}`,
+                        `${awayEspn}-${homeEspn}`,
+                        `${homeEspn}-${awayEspn}`
+                    ];
+                    
+                    let espnData = null;
+                    for (const key of keysToTry) {
+                        if (espnGames[key]) {
+                            espnData = espnGames[key];
+                            break;
+                        }
+                    }
+                    
+                    if (espnData) {
+                        // Check if state changed (needs full re-render for layout changes)
+                        if (g.state !== espnData.state) {
+                            needsFullRender = true;
+                        }
+                        
+                        // Update game data
+                        g.state = espnData.state;
+                        g.homeScore = espnData.homeScore;
+                        g.awayScore = espnData.awayScore;
+                        g.period = espnData.period;
+                        g.clock = espnData.clock;
+                        g.startTime = espnData.startTime;
+                        g.startDate = espnData.startDate;
+                        g.gameTimestamp = espnData.gameTimestamp;
+                        
+                        // Update DOM elements directly if they exist
+                        updateGameCardUI(g);
+                    }
+                });
+                
+                if (needsFullRender) {
+                    // Re-sort: live first, then pregame, then final
+                    games.sort((a, b) => {
+                        const order = { live: 0, pregame: 1, final: 2 };
+                        return (order[a.state] ?? 1) - (order[b.state] ?? 1);
+                    });
+                    renderGames();
+                }
+            } catch (e) {
+                console.error('Failed to fetch live game data:', e);
+            }
+        }
+        
+        // Update specific game card UI elements without full re-render
+        function updateGameCardUI(game) {
+            const card = document.querySelector(`.game-card[data-game-id="${game.id}"]`);
+            if (!card) return;
+            
+            // Update status badge
+            const statusBadge = card.querySelector('.game-status');
+            if (statusBadge) {
+                if (game.state === 'live') {
+                    statusBadge.className = 'game-status live';
+                    statusBadge.textContent = 'LIVE';
+                } else if (game.state === 'final') {
+                    statusBadge.className = 'game-status final';
+                    statusBadge.textContent = 'FINAL';
+                }
+            }
+            
+            // Update period/clock display
+            const periodClock = card.querySelector('.period-clock');
+            if (periodClock) {
+                if (game.state === 'live') {
+                    const periodNames = { 1: '1st', 2: '2nd', 3: '3rd', 4: 'OT', 5: '2OT' };
+                    periodClock.textContent = `${periodNames[game.period] || game.period} ${game.clock}`;
+                } else if (game.state === 'final') {
+                    periodClock.textContent = `${game.awayScore || 0} - ${game.homeScore || 0}`;
+                }
+            }
+            
+            // Update scores
+            const awayScore = card.querySelector('.away-score');
+            const homeScore = card.querySelector('.home-score');
+            if (awayScore) awayScore.textContent = game.awayScore;
+            if (homeScore) homeScore.textContent = game.homeScore;
+            
+            // Update FMV values if live
+            if (game.state === 'live') {
+                // Get pregame prices
+                const gameKey = game.marketKey || game.id;
+                const pregamePrices = getPregamePrices(game, gameKey);
+                const pregameHome = pregamePrices.home;
+                const pregameAway = pregamePrices.away;
+                
+                const goalDiffHome = game.homeScore - game.awayScore;
+                const goalDiffAway = game.awayScore - game.homeScore;
+                const seconds = calcSeconds(game.period, game.clock);
+                
+                const fmvHome = Math.round(calcWinProb(pregameHome, goalDiffHome, seconds) * 100);
+                const fmvAway = Math.round(calcWinProb(pregameAway, goalDiffAway, seconds) * 100);
+                const nextGoalHome = Math.round(calcWinProb(pregameHome, goalDiffHome + 1, Math.max(1, seconds)) * 100);
+                const nextGoalAway = Math.round(calcWinProb(pregameAway, goalDiffAway + 1, Math.max(1, seconds)) * 100);
+                
+                // Check auto-reprice for this game
+                checkAutoReprice(game.id, 'home', 'yes', nextGoalHome);
+                checkAutoReprice(game.id, 'home', 'no', nextGoalHome);
+                checkAutoReprice(game.id, 'away', 'yes', nextGoalAway);
+                checkAutoReprice(game.id, 'away', 'no', nextGoalAway);
+                
+                // Update FMV displays
+                const homeFmv = card.querySelector('.home-fmv');
+                const awayFmv = card.querySelector('.away-fmv');
+                const homeNextGoal = card.querySelector('.home-next-goal');
+                const awayNextGoal = card.querySelector('.away-next-goal');
+                
+                if (homeFmv) homeFmv.textContent = `${fmvHome}%`;
+                if (awayFmv) awayFmv.textContent = `${fmvAway}%`;
+                if (homeNextGoal) homeNextGoal.textContent = `${nextGoalHome}%`;
+                if (awayNextGoal) awayNextGoal.textContent = `${nextGoalAway}%`;
+            }
+        }
+
+        function getKalshiMarketsForGame(homeAbbrev, awayAbbrev) {
+            // Also try Kalshi abbreviation variants
+            const variants = { 'LAK': 'LA', 'SJS': 'SJ', 'TBL': 'TB', 'NJD': 'NJ' };
+            const homeVar = variants[homeAbbrev] || homeAbbrev;
+            const awayVar = variants[awayAbbrev] || awayAbbrev;
+            
+            // Always use alphabetical sorted key
+            const key = [awayVar, homeVar].sort().join('-');
+
+            if (kalshiMarkets[key]) return { key, market: kalshiMarkets[key] };
+            return null;
+        }
+        
+        // Get pregame prices for a game - uses Kalshi price, user override, or locked price
+        function getPregamePrices(game, gameKey) {
+            // User override takes priority
+            if (userPregamePrices[gameKey]) {
+                return {
+                    home: userPregamePrices[gameKey].home,
+                    away: userPregamePrices[gameKey].away,
+                    source: 'user'
+                };
+            }
+            
+            // If game is live, use locked pregame price
+            if (game.state === 'live' && lockedPregamePrices[gameKey]) {
+                return {
+                    home: lockedPregamePrices[gameKey].home,
+                    away: lockedPregamePrices[gameKey].away,
+                    source: 'locked'
+                };
+            }
+            
+            // Get current Kalshi price
+            const market = kalshiMarkets[gameKey];
+            if (market) {
+                const homeTicker = market.tickers[game.homeAbbrev];
+                const awayTicker = market.tickers[game.awayAbbrev];
+                
+                if (homeTicker && homeTicker.midPrice) {
+                    const homeProb = homeTicker.midPrice / 100;
+                    const awayProb = awayTicker?.midPrice ? awayTicker.midPrice / 100 : (1 - homeProb);
+                    
+                    // If pregame, store as potential lock price
+                    if (game.state === 'pregame') {
+                        lockedPregamePrices[gameKey] = { home: homeProb, away: awayProb };
+                    }
+                    
+                    // If game just went live, lock the price
+                    if (game.state === 'live' && !lockedPregamePrices[gameKey]) {
+                        lockedPregamePrices[gameKey] = { home: homeProb, away: awayProb };
+                    }
+                    
+                    return {
+                        home: lockedPregamePrices[gameKey]?.home || homeProb,
+                        away: lockedPregamePrices[gameKey]?.away || awayProb,
+                        source: 'kalshi'
+                    };
+                }
+            }
+            
+            // Default to 50/50
+            return { home: 0.50, away: 0.50, source: 'default' };
+        }
+        
+        // Convert probability (0-100) to American odds
+        function probToAmericanOdds(prob) {
+            if (prob === '--' || prob === null || prob === undefined || isNaN(prob)) return '--';
+            const p = parseFloat(prob);
+            if (p <= 0 || p >= 100) return '--';
+            if (p >= 50) {
+                // Favorite: negative odds
+                return Math.round(-100 * p / (100 - p));
+            } else {
+                // Underdog: positive odds
+                return '+' + Math.round(100 * (100 - p) / p);
+            }
+        }
+        
+        // Set user pregame price
+        function setUserPregame(gameKey, homeProb) {
+            userPregamePrices[gameKey] = { home: homeProb, away: 1 - homeProb };
+            lockedPregamePrices[gameKey] = userPregamePrices[gameKey];
+            renderGames();
+        }
+        
+        // Handle pregame input change
+        function onPregameInput(gameKey, side, value) {
+            const pct = parseFloat(value);
+            if (isNaN(pct) || pct < 1 || pct > 99) return;
+            
+            const homeProb = side === 'home' ? pct / 100 : (100 - pct) / 100;
+            setUserPregame(gameKey, homeProb);
+        }
+
+        // Pregame popup functions
+        function openPregamePopup(gameKey, side, currentValue) {
+            // Remove any existing popup
+            closePregamePopup();
+            
+            const overlay = document.createElement('div');
+            overlay.className = 'pregame-popup-overlay';
+            overlay.onclick = closePregamePopup;
+            
+            const popup = document.createElement('div');
+            popup.className = 'pregame-popup';
+            popup.innerHTML = `
+                <h3>Set Pregame Win %</h3>
+                <div style="display: flex; align-items: center;">
+                    <input type="number" class="pregame-popup-input" id="pregame-popup-value" 
+                        value="${currentValue}" min="1" max="99" autofocus>
+                    <span style="color: #888;">%</span>
+                </div>
+                <div class="pregame-popup-btns">
+                    <button class="pregame-popup-btn save" onclick="savePregamePopup('${gameKey}', '${side}')">Save</button>
+                    <button class="pregame-popup-btn cancel" onclick="closePregamePopup()">Cancel</button>
+                </div>
+            `;
+            
+            document.body.appendChild(overlay);
+            document.body.appendChild(popup);
+            
+            // Focus and select input
+            setTimeout(() => {
+                const input = document.getElementById('pregame-popup-value');
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }, 10);
+            
+            // Handle Enter key
+            popup.querySelector('input').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    savePregamePopup(gameKey, side);
+                } else if (e.key === 'Escape') {
+                    closePregamePopup();
+                }
+            });
+        }
+        
+        function savePregamePopup(gameKey, side) {
+            const input = document.getElementById('pregame-popup-value');
+            if (input) {
+                const value = parseInt(input.value);
+                if (value >= 1 && value <= 99) {
+                    onPregameInput(gameKey, side, value);
+                }
+            }
+            closePregamePopup();
+        }
+        
+        function closePregamePopup() {
+            const overlay = document.querySelector('.pregame-popup-overlay');
+            const popup = document.querySelector('.pregame-popup');
+            if (overlay) overlay.remove();
+            if (popup) popup.remove();
+        }
+
+        function getCountdown(timestamp) {
+            if (!timestamp) return '';
+            const now = Date.now();
+            const diff = timestamp - now;
+            if (diff <= 0) return 'Starting soon';
+            
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            
+            if (hours > 24) {
+                const days = Math.floor(hours / 24);
+                return `Starts in ${days}d ${hours % 24}h`;
+            } else if (hours > 0) {
+                return `Starts in ${hours}h ${mins}m`;
+            } else {
+                return `Starts in ${mins}m`;
+            }
+        }
+
+        // Store saved input values globally
+        let savedInputValues = {};
+        
+        function saveInputValues() {
+            savedInputValues = {};
+            document.querySelectorAll('.order-select, .order-input').forEach(el => {
+                if (el.id && el.value) {
+                    savedInputValues[el.id] = el.value;
+                }
+            });
+        }
+        
+        function restoreInputValues() {
+            Object.keys(savedInputValues).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.value = savedInputValues[id];
+                }
+            });
+        }
+        
+        // Restore mirror checkbox states after re-render
+        function restoreMirrorStates() {
+            Object.keys(mirrorState).forEach(key => {
+                if (mirrorState[key]) {
+                    const btn = document.getElementById(`mirror-${key}`);
+                    if (btn) {
+                        btn.textContent = 'MIRROR ON';
+                        btn.classList.add('active');
+                    }
+                }
+            });
+        }
+
+        function renderGames() {
+            // Save input values before re-rendering
+            saveInputValues();
+            
+            if (games.length === 0) {
+                gamesGrid.innerHTML = '<div class="no-games">Waiting for Kalshi markets...</div>';
+                return;
+            }
+            
+            // Filter to show only today's games and live games
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+            
+            let filteredGames = games.filter(g => {
+                // Filter out hidden games
+                if (hiddenGames[g.id]) return false;
+                // Always show live games
+                if (g.state === 'live') return true;
+                // Always show final games (today)
+                if (g.state === 'final') return true;
+                // Show only games today
+                if (g.gameTimestamp) {
+                    const gameDate = new Date(g.gameTimestamp);
+                    return gameDate >= today && gameDate < tomorrow;
+                }
+                // If no timestamp, don't show it
+                return false;
+            });
+            
+            // Sort: pinned first, then live, then pregame, then final
+            filteredGames.sort((a, b) => {
+                const aPinned = pinnedGames[a.id] ? 1 : 0;
+                const bPinned = pinnedGames[b.id] ? 1 : 0;
+                if (aPinned !== bPinned) return bPinned - aPinned; // Pinned first
+                // Then by state: live > pregame > final
+                const stateOrder = { live: 0, pregame: 1, final: 2 };
+                const aState = stateOrder[a.state] ?? 1;
+                const bState = stateOrder[b.state] ?? 1;
+                if (aState !== bState) return aState - bState;
+                // Then by timestamp
+                const aTime = a.gameTimestamp ? new Date(a.gameTimestamp).getTime() : 0;
+                const bTime = b.gameTimestamp ? new Date(b.gameTimestamp).getTime() : 0;
+                return aTime - bTime;
+            });
+            
+            // Show hidden count if any
+            const hiddenCount = Object.values(hiddenGames).filter(Boolean).length;
+            
+            if (filteredGames.length === 0) {
+                gamesGrid.innerHTML = `<div class="no-games">No games to show ${hiddenCount > 0 ? `<br><button class="btn" onclick="showAllGames()">Show ${hiddenCount} hidden</button>` : ''}</div>`;
+                return;
+            }
+
+            gamesGrid.innerHTML = (hiddenCount > 0 ? `<div class="hidden-games-notice"><button class="btn-small" onclick="showAllGames()">Show ${hiddenCount} hidden game${hiddenCount > 1 ? 's' : ''}</button></div>` : '') + filteredGames.map(g => {
+                const gameKey = g.marketKey || `${g.awayAbbrev}-${g.homeAbbrev}`;
+                
+                let statusClass = 'pregame';
+                let statusText = 'PREGAME';
+                let timeDisplay = '';
+                
+                const isLive = g.state === 'live';
+                const isFinal = g.state === 'final';
+                
+                if (isLive) {
+                    statusClass = 'live';
+                    statusText = 'LIVE';
+                    timeDisplay = `${g.period}${getOrdinal(g.period)} ${g.clock}`;
+                } else if (isFinal) {
+                    statusClass = 'final';
+                    statusText = 'FINAL';
+                    timeDisplay = `${g.awayScore || 0} - ${g.homeScore || 0}`;
+                } else {
+                    // Pregame - show date and time from game object
+                    if (g.startDate && g.startTime) {
+                        timeDisplay = `${g.startDate} @ ${g.startTime}`;
+                    } else if (g.startTime) {
+                        timeDisplay = g.startTime;
+                    } else {
+                        // Fallback to marketTimes lookup
+                        const timeData = marketTimes[gameKey];
+                        if (timeData) {
+                            timeDisplay = `${timeData.startDate} @ ${timeData.startTime}`;
+                        }
+                    }
+                }
+                
+                const awayName = teamNames[g.awayAbbrev] || '';
+                const homeName = teamNames[g.homeAbbrev] || '';
+                
+                // Get pregame prices
+                const pregamePrices = getPregamePrices(g, gameKey);
+                const pregameHome = pregamePrices.home;
+                const pregameAway = pregamePrices.away;
+                const pregameSource = pregamePrices.source;
+                
+                // Calculate FMV using Bernier model
+                const seconds = isLive ? calcSeconds(g.period, g.clock) : 3600;
+                const goalDiffHome = (g.homeScore || 0) - (g.awayScore || 0);
+                const goalDiffAway = -goalDiffHome;
+                
+                const fmvHome = isLive ? Math.round(calcWinProb(pregameHome, goalDiffHome, seconds) * 100) : '--';
+                const fmvAway = isLive ? Math.round(calcWinProb(pregameAway, goalDiffAway, seconds) * 100) : '--';
+                
+                // Next goal FMV (if this team scores next) - for pregame, use pregame probability
+                const nextGoalHomeNum = isLive ? Math.round(calcWinProb(pregameHome, goalDiffHome + 1, Math.max(1, seconds)) * 100) : Math.round(pregameHome * 100);
+                const nextGoalAwayNum = isLive ? Math.round(calcWinProb(pregameAway, goalDiffAway + 1, Math.max(1, seconds)) * 100) : Math.round(pregameAway * 100);
+                const nextGoalHome = isLive ? nextGoalHomeNum : '--';
+                const nextGoalAway = isLive ? nextGoalAwayNum : '--';
+
+                const awayColor = teamColors[g.awayAbbrev] || '#111';
+                const homeColor = teamColors[g.homeAbbrev] || '#111';
+
+                // Get Kalshi market data for bid/ask display
+                const variants = { 'LAK': 'LA', 'SJS': 'SJ', 'TBL': 'TB', 'NJD': 'NJ' };
+                const awayK = variants[g.awayAbbrev] || g.awayAbbrev;
+                const homeK = variants[g.homeAbbrev] || g.homeAbbrev;
+                const market = kalshiMarkets[gameKey];
+                const awayMarket = market?.tickers?.[awayK] || market?.tickers?.[g.awayAbbrev];
+                const homeMarket = market?.tickers?.[homeK] || market?.tickers?.[g.homeAbbrev];
+                
+                // Away team bid/ask (YES side)
+                const awayBid = awayMarket?.yesBid ?? '--';
+                const awayAsk = (awayMarket?.noBid != null) ? (100 - awayMarket.noBid) : '--';
+                // Home team bid/ask (YES side)
+                const homeBid = homeMarket?.yesBid ?? '--';
+                const homeAsk = (homeMarket?.noBid != null) ? (100 - homeMarket.noBid) : '--';
+
+                return `
+                    <div class="game-card ${pinnedGames[g.id] ? 'pinned' : ''} ${hiddenGames[g.id] ? 'hidden-game' : ''}" data-game-id="${g.id}" data-timestamp="${g.gameTimestamp || ''}" data-pinned="${pinnedGames[g.id] ? '1' : '0'}">
+                        <div class="game-header">
+                            <span class="game-status ${statusClass}">${statusText}</span>
+                            <span class="game-time period-clock">${timeDisplay}</span>
+                            <div class="game-controls">
+                                <button class="game-control-btn ${mutedGames[g.id] ? 'active' : ''}" onclick="toggleMuteGame('${g.id}')" title="Mute alerts">🔇</button>
+                                <button class="game-control-btn ${pinnedGames[g.id] ? 'active' : ''}" onclick="togglePinGame('${g.id}')" title="Pin to top">📌</button>
+                                <button class="game-control-btn" onclick="toggleHideGame('${g.id}')" title="Hide game">👁️</button>
+                                <button class="liquidity-toggle ${liquidityExpanded[g.id] ? 'active' : ''}" onclick="toggleLiquidity('${g.id}')">📊 Depth</button>
+                            </div>
+                        </div>
+                        <div class="team-columns">
+                            <div class="team-column away-column" style="background: ${awayColor}4D;">
+                                <div class="team-section away">
+                                    <div class="team-info">
+                                        <span class="team-abbrev">${g.awayAbbrev}</span>
+                                        ${awayName ? `<span class="team-name">${awayName}</span>` : ''}
+                                        <span class="pregame-badge" onclick="openPregamePopup('${gameKey}', 'away', ${Math.round(pregameAway * 100)})" title="Click to edit pregame %">P:${Math.round(pregameAway * 100)}%</span>
+                                    </div>
+                                    <div class="box-stack">
+                                        <div class="fmv-box">
+                                            <div class="fmv-label">FMV</div>
+                                            <div class="fmv-value away-fmv">${fmvAway}${fmvAway !== '--' ? '%' : ''}</div>
+                                        </div>
+                                        <div class="odds-box">
+                                            <div class="odds-value">${probToAmericanOdds(fmvAway)}</div>
+                                        </div>
+                                    </div>
+                                    ${isLive ? `
+                                    <div class="box-stack">
+                                        <div class="next-goal-box">
+                                            <div class="next-goal-label">+Goal</div>
+                                            <div class="next-goal-value away-next-goal">${nextGoalAway}%</div>
+                                        </div>
+                                        <div class="odds-box">
+                                            <div class="odds-value">${probToAmericanOdds(nextGoalAway)}</div>
+                                        </div>
+                                    </div>
+                                    ` : ''}
+                                    <div class="box-stack">
+                                        <div class="kalshi-bidask-box">
+                                            <div class="kalshi-bidask-label">Kalshi</div>
+                                            <div class="kalshi-bidask-value"><span class="bid">${awayBid !== '--' ? awayBid + '¢' : '--'}</span>/<span class="ask">${awayAsk !== '--' ? awayAsk + '¢' : '--'}</span></div>
+                                        </div>
+                                        <div class="odds-box">
+                                            <div class="odds-value">${probToAmericanOdds(awayBid)}</div>
+                                        </div>
+                                    </div>
+                                    <div class="score-spacer"></div>
+                                    ${isLive ? `<span class="score away-score">${g.awayScore}</span>` : ''}
+                                </div>
+                                ${renderGoalPanel(g, 'away', gameKey, nextGoalAwayNum, isLive)}
+                            </div>
+                            <div class="team-column-divider"><span>@</span></div>
+                            <div class="team-column home-column" style="background: ${homeColor}4D;">
+                                <div class="team-section home">
+                                    ${isLive ? `<span class="score home-score">${g.homeScore}</span>` : ''}
+                                    <div class="score-spacer"></div>
+                                    <div class="box-stack">
+                                        <div class="kalshi-bidask-box">
+                                            <div class="kalshi-bidask-label">Kalshi</div>
+                                            <div class="kalshi-bidask-value"><span class="bid">${homeBid !== '--' ? homeBid + '¢' : '--'}</span>/<span class="ask">${homeAsk !== '--' ? homeAsk + '¢' : '--'}</span></div>
+                                        </div>
+                                        <div class="odds-box">
+                                            <div class="odds-value">${probToAmericanOdds(homeBid)}</div>
+                                        </div>
+                                    </div>
+                                    ${isLive ? `
+                                    <div class="box-stack">
+                                        <div class="next-goal-box">
+                                            <div class="next-goal-label">+Goal</div>
+                                            <div class="next-goal-value home-next-goal">${nextGoalHome}%</div>
+                                        </div>
+                                        <div class="odds-box">
+                                            <div class="odds-value">${probToAmericanOdds(nextGoalHome)}</div>
+                                        </div>
+                                    </div>
+                                    ` : ''}
+                                    <div class="box-stack">
+                                        <div class="fmv-box">
+                                            <div class="fmv-label">FMV</div>
+                                            <div class="fmv-value home-fmv">${fmvHome}${fmvHome !== '--' ? '%' : ''}</div>
+                                        </div>
+                                        <div class="odds-box">
+                                            <div class="odds-value">${probToAmericanOdds(fmvHome)}</div>
+                                        </div>
+                                    </div>
+                                    <div class="team-info">
+                                        <span class="team-abbrev">${g.homeAbbrev}</span>
+                                        ${homeName ? `<span class="team-name">${homeName}</span>` : ''}
+                                        <span class="pregame-badge" onclick="openPregamePopup('${gameKey}', 'home', ${Math.round(pregameHome * 100)})" title="Click to edit pregame %">P:${Math.round(pregameHome * 100)}%</span>
+                                    </div>
+                                </div>
+                                ${renderGoalPanel(g, 'home', gameKey, nextGoalHomeNum, isLive)}
+                            </div>
+                        </div>
+                        <div class="liquidity-panel ${liquidityExpanded[g.id] ? 'expanded' : ''}" id="liquidity-${g.id}">
+                            ${renderLiquidityPanel(g, gameKey)}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Restore input values after re-rendering
+            restoreInputValues();
+            restoreMirrorStates();
+            restoreAutoRepriceStates();
+        }
+
+        function renderGoalPanel(game, side, gameKey, nextGoalFmv, isLive) {
+            const team = side === 'home' ? game.homeAbbrev : game.awayAbbrev;
+            const opponent = side === 'home' ? game.awayAbbrev : game.homeAbbrev;
+            const orderKey = `${gameKey}-${team}`;
+            const armed = armedOrders[orderKey];
+
+            // Get Kalshi abbreviation variant
+            const variants = { 'LAK': 'LA', 'SJS': 'SJ', 'TBL': 'TB', 'NJD': 'NJ' };
+            const teamK = variants[team] || team;
+            const oppK = variants[opponent] || opponent;
+            
+            // Get market data - for this panel we need:
+            // YES side: team's YES market (team scores)
+            // NO side: opponent's NO market (opponent doesn't score = team scores)
+            const market = kalshiMarkets[gameKey];
+            const teamData = market?.tickers?.[teamK] || market?.tickers?.[team];
+            const oppData = market?.tickers?.[oppK] || market?.tickers?.[opponent];
+            
+            // For the team's market:
+            // - yesBid = highest bid to buy YES (direct from yes array) 
+            // - yesAsk = lowest ask to sell YES = 100 - highest NO bid (from same market's no array)
+            // The WS server sends yesBid (from yes array) and noBid (from no array)
+            const yesBid = teamData?.yesBid ?? '--';
+            const yesAsk = (teamData?.noBid != null) ? (100 - teamData.noBid) : '--';
+            
+            // For opponent's market (used for the NO side of this panel):
+            // - noBid = highest bid to buy NO on opponent's market
+            // - noAsk = 100 - opponent's yesBid
+            const noBid = oppData?.noBid ?? '--';
+            const noAsk = (oppData?.yesBid != null) ? (100 - oppData.yesBid) : '--';
+            
+            // Get positions for this panel
+            const teamTicker = teamData?.ticker;
+            const oppTicker = oppData?.ticker;
+            const teamPosition = teamTicker ? portfolioPositions[teamTicker] : null;
+            // For the NO side, we show the OPPONENT's NO position (negative position on opponent's ticker)
+            const oppNoPosition = oppTicker ? portfolioPositions[oppTicker] : null;
+            
+            // Current bid/ask prices for sell modal
+            // YES side: team's YES bid/ask
+            const teamCurrentBid = typeof yesBid === 'number' ? yesBid : null;
+            const teamCurrentAsk = typeof yesAsk === 'number' ? yesAsk : null;
+            // NO side: opponent's NO bid/ask
+            const oppNoBid = oppData?.noBid ?? null;
+            const oppNoAsk = (oppData?.yesBid != null) ? (100 - oppData.yesBid) : null;
+            
+            // Get pending orders for this ticker
+            const teamPendingOrders = teamTicker ? (pendingOrders[teamTicker] || []) : [];
+            const oppPendingOrders = oppTicker ? (pendingOrders[oppTicker] || []) : [];
+            // Filter for YES side orders on team ticker
+            const yesPendingOrders = teamPendingOrders.filter(o => o.side === 'yes' || !o.side);
+            // Filter for NO side orders on opponent ticker
+            const noPendingOrders = oppPendingOrders.filter(o => o.side === 'no');
+            
+            // Position badge HTML - show qty, $value, avg price + quick sell button
+            // YES side: show positive positions (long YES) on team's ticker
+            let teamPosBadge = '';
+            if (teamPosition && teamPosition.position > 0) {
+                const posQty = teamPosition.position;
+                const avgPrice = teamPosition.avgPrice || 0;
+                const value = Math.round(Math.abs(posQty * avgPrice / 100));
+                const markupCents = parseInt(document.getElementById('quickSellMarkup')?.value) || 5;
+                teamPosBadge = `<span class="position-container"><span class="position-badge" onclick="openSellModal('${teamTicker}', '${teamK}', ${posQty}, 'yes', ${avgPrice}, ${teamCurrentBid || 'null'}, ${teamCurrentAsk || 'null'})">+${posQty} @ ${avgPrice}¢ ($${value})</span><button class="quick-sell-btn" onclick="event.stopPropagation(); quickSell('${teamTicker}', '${teamK}', ${posQty}, 'yes', ${avgPrice})" title="Sell all at ${avgPrice + markupCents}¢ (avg+${markupCents}¢)">+${markupCents}¢</button></span>`;
+            }
+            
+            // NO side: show negative positions on OPPONENT's ticker (short opponent YES = long opponent NO)
+            // A negative position on opponent means you own NO contracts on opponent (betting opponent loses = team wins)
+            let oppNoBadge = '';
+            if (oppNoPosition && oppNoPosition.position < 0) {
+                const posQty = Math.abs(oppNoPosition.position); // Make positive for display
+                const avgPrice = oppNoPosition.avgPrice || 0;
+                const value = Math.round(Math.abs(posQty * avgPrice / 100));
+                const markupCents = parseInt(document.getElementById('quickSellMarkup')?.value) || 5;
+                // To sell NO position on opponent, we pass opponent's ticker, 'no' as side, and use opponent's NO bid/ask
+                oppNoBadge = `<span class="position-container"><span class="position-badge" onclick="openSellModal('${oppTicker}', '${oppK}', ${posQty}, 'no', ${avgPrice}, ${oppNoBid || 'null'}, ${oppNoAsk || 'null'})">${oppNoPosition.position} @ ${avgPrice}¢ ($${value})</span><button class="quick-sell-btn" onclick="event.stopPropagation(); quickSell('${oppTicker}', '${oppK}', ${posQty}, 'no', ${avgPrice})" title="Sell NO at ${avgPrice + markupCents}¢ (avg+${markupCents}¢)">+${markupCents}¢</button></span>`;
+            }
+            
+            // Pending orders HTML for YES side
+            let teamPendingHtml = '';
+            if (yesPendingOrders.length > 0) {
+                teamPendingHtml = `<div class="pending-orders"><span class="pending-orders-label">Orders:</span>${yesPendingOrders.map(o => 
+                    `<span class="pending-order ${o.action}">${o.action === 'buy' ? 'B' : 'S'} ${o.qty}@${o.price}¢<button class="cancel-btn" onclick="cancelOrder('${o.orderId}')" title="Cancel">✕</button></span>`
+                ).join('')}</div>`;
+            }
+            
+            // Pending orders HTML for NO side
+            let noPendingHtml = '';
+            if (noPendingOrders.length > 0) {
+                noPendingHtml = `<div class="pending-orders"><span class="pending-orders-label">Orders:</span>${noPendingOrders.map(o => 
+                    `<span class="pending-order ${o.action}">${o.action === 'buy' ? 'B' : 'S'} ${o.qty}@${o.price}¢<button class="cancel-btn" onclick="cancelOrder('${o.orderId}')" title="Cancel">✕</button></span>`
+                ).join('')}</div>`;
+            }
+            
+            // Generate price options 99-1 (high to low)
+            const priceOptions = ['<option value="">¢</option>'].concat(
+                Array.from({length: 99}, (_, i) => `<option value="${99-i}">${99-i}</option>`)
+            ).join('');
+            
+            // Generate row indices based on orderRows setting
+            const rowIndices = Array.from({length: orderRows}, (_, i) => i + 1);
+
+            // Get team color for background
+            const teamColor = teamColors[team] || teamColors[teamK] || '#111';
+            
+            return `
+                <div class="goal-panel">
+                    <div class="order-sides">
+                        <div class="order-side yes-side">
+                            <div class="order-side-header">
+                                <span class="yes">YES${teamPosBadge}</span>
+                                <span class="team">${teamK}</span>
+                            </div>
+                            <div class="order-column-headers">
+                                <div class="fmv-stagger-group">
+                                    <div class="fmv-adjust-stack">
+                                        <button class="fmv-adjust-btn" onclick="adjustFmvOffset(1, '${game.id}')" title="Increase offset">▲</button>
+                                        <button class="fmv-adjust-btn" onclick="adjustFmvOffset(-1, '${game.id}')" title="Decrease offset">▼</button>
+                                    </div>
+                                    <button class="fmv-stagger-btn" onclick="fmvStaggerPrices('yes', '${game.id}', '${side}', ${nextGoalFmv})" ${!isLive ? 'disabled style="opacity:0.3"' : ''} title="Fill all prices from FMV-offset">-${getGameFmvOffset(game.id)}¢</button>
+                                    <button class="auto-reprice-btn" id="auto-yes-${game.id}-${side}" onclick="toggleAutoReprice('yes', '${game.id}', '${side}', ${nextGoalFmv})" title="Auto-reprice when FMV changes">A</button>
+                                </div>
+                                <div class="qty-toggles">
+                                    <button class="stagger-btn" onclick="lockQty('yes', '${game.id}', '${side}')" title="Lock: copy row 1 qty to all">🔒</button>
+                                    <div class="qty-adjust-stack">
+                                        <button class="qty-adjust-btn" onclick="adjustQtyIncrement(1)" title="Increase increment">▲</button>
+                                        <button class="qty-adjust-btn" onclick="adjustQtyIncrement(-1)" title="Decrease increment">▼</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="order-rows">
+                                ${rowIndices.map(i => `
+                                    <div class="order-row">
+                                        <select class="order-select" id="yes-price-${game.id}-${side}-${i}">${priceOptions}</select>
+                                        <input type="text" class="order-input" placeholder="qty" id="yes-qty-${game.id}-${side}-${i}">
+                                        <button class="quick-btn qty-btn" onclick="addQty('yes-qty-${game.id}-${side}-${i}', qtyIncrement)">${formatQtyIncrement(qtyIncrement)}</button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            ${teamPendingHtml}
+                        </div>
+                        <div class="order-side no-side">
+                            <div class="order-side-header">
+                                <span class="no">NO${oppNoBadge}</span>
+                                <span class="team">${oppK}</span>
+                            </div>
+                            <div class="order-column-headers">
+                                <div class="fmv-stagger-group">
+                                    <div class="fmv-adjust-stack">
+                                        <button class="fmv-adjust-btn" onclick="adjustFmvOffset(1, '${game.id}')" title="Increase offset">▲</button>
+                                        <button class="fmv-adjust-btn" onclick="adjustFmvOffset(-1, '${game.id}')" title="Decrease offset">▼</button>
+                                    </div>
+                                    <button class="fmv-stagger-btn" onclick="fmvStaggerPrices('no', '${game.id}', '${side}', ${nextGoalFmv})" ${!isLive ? 'disabled style="opacity:0.3"' : ''} title="Fill all prices from FMV-offset">-${getGameFmvOffset(game.id)}¢</button>
+                                    <button class="auto-reprice-btn" id="auto-no-${game.id}-${side}" onclick="toggleAutoReprice('no', '${game.id}', '${side}', ${nextGoalFmv})" title="Auto-reprice when FMV changes">A</button>
+                                </div>
+                                <div class="qty-toggles">
+                                    <button class="stagger-btn" onclick="lockQty('no', '${game.id}', '${side}')" title="Lock: copy row 1 qty to all">🔒</button>
+                                    <div class="qty-adjust-stack">
+                                        <button class="qty-adjust-btn" onclick="adjustQtyIncrement(1)" title="Increase increment">▲</button>
+                                        <button class="qty-adjust-btn" onclick="adjustQtyIncrement(-1)" title="Decrease increment">▼</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="order-rows">
+                                ${rowIndices.map(i => `
+                                    <div class="order-row">
+                                        <select class="order-select" id="no-price-${game.id}-${side}-${i}">${priceOptions}</select>
+                                        <input type="text" class="order-input" placeholder="qty" id="no-qty-${game.id}-${side}-${i}">
+                                        <button class="quick-btn qty-btn" onclick="addQty('no-qty-${game.id}-${side}-${i}', qtyIncrement)">${formatQtyIncrement(qtyIncrement)}</button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            ${noPendingHtml}
+                        </div>
+                    </div>
+                    <div class="panel-buttons">
+                        <button class="mirror-toggle" id="mirror-${game.id}-${side}" onclick="handleMirrorToggle('${game.id}', '${side}')">MIRROR OFF</button>
+                        <button class="btn-clear" onclick="clearInputs('${game.id}', '${side}')">Clear</button>
+                        <button class="btn-submit" onclick="submitNow('${game.id}', '${side}', '${team}')">Submit</button>
+                        <button class="btn-arm ${armed?.armed ? 'armed' : ''}" onclick="toggleArm('${game.id}', '${side}', '${team}', '${gameKey}')">⚡ ${armed?.armed ? 'Disarm' : 'Arm'}</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getOrdinal(n) {
+            const s = ['th', 'st', 'nd', 'rd'];
+            const v = n % 100;
+            return (s[(v - 20) % 10] || s[v] || s[0]);
+        }
+        
+        // Track liquidity panel state
+        let liquidityExpanded = {};
+        
+        // Toggle liquidity panel
+        function toggleLiquidity(gameId) {
+            liquidityExpanded[gameId] = !liquidityExpanded[gameId];
+            const panel = document.getElementById(`liquidity-${gameId}`);
+            const btn = document.querySelector(`[data-game-id="${gameId}"] .liquidity-toggle`);
+            
+            if (panel) {
+                panel.classList.toggle('expanded', liquidityExpanded[gameId]);
+            }
+            if (btn) {
+                btn.classList.toggle('active', liquidityExpanded[gameId]);
+            }
+            
+            // Fetch orderbook data when expanded
+            if (liquidityExpanded[gameId]) {
+                fetchOrderbook(gameId);
+            }
+        }
+        
+        // Toggle mute for a game (no audio/voice alerts)
+        function toggleMuteGame(gameId) {
+            mutedGames[gameId] = !mutedGames[gameId];
+            renderGames();
+        }
+        
+        // Toggle pin for a game (show at top)
+        function togglePinGame(gameId) {
+            pinnedGames[gameId] = !pinnedGames[gameId];
+            renderGames();
+        }
+        
+        // Toggle hide for a game
+        function toggleHideGame(gameId) {
+            hiddenGames[gameId] = !hiddenGames[gameId];
+            renderGames();
+        }
+        
+        // Show all hidden games
+        function showAllGames() {
+            hiddenGames = {};
+            renderGames();
+        }
+        
+        // Check if game is muted (for alert suppression)
+        function isGameMuted(ticker) {
+            const teams = parseTickerTeams(ticker);
+            if (!teams) return false;
+            const gameKey = `${teams.away}-${teams.home}`;
+            const game = games.find(g => g.marketKey === gameKey || `${g.awayAbbrev}-${g.homeAbbrev}` === gameKey);
+            // Suppress alerts if game is muted OR hidden
+            return game ? (mutedGames[game.id] || hiddenGames[game.id]) : false;
+        }
+        
+        // Store orderbook data
+        let orderbookData = {};
+        
+        // Fetch orderbook for a game's markets
+        async function fetchOrderbook(gameId) {
+            const game = games.find(g => g.id === gameId);
+            if (!game) {
+                console.log('Game not found:', gameId);
+                return;
+            }
+            
+            const gameKey = game.marketKey || `${game.awayAbbrev}-${game.homeAbbrev}`;
+            const market = kalshiMarkets[gameKey];
+            
+            console.log('=== ORDERBOOK FETCH DEBUG ===');
+            console.log('Game:', gameKey, 'ID:', gameId);
+            console.log('kalshiMarkets[gameKey]:', market);
+            console.log('All kalshiMarkets keys:', Object.keys(kalshiMarkets));
+            
+            const variants = { 'LAK': 'LA', 'SJS': 'SJ', 'TBL': 'TB', 'NJD': 'NJ' };
+            const awayK = variants[game.awayAbbrev] || game.awayAbbrev;
+            const homeK = variants[game.homeAbbrev] || game.homeAbbrev;
+            
+            // Get tickers for both teams - try multiple approaches
+            let awayTicker = market?.tickers?.[awayK]?.ticker || market?.tickers?.[game.awayAbbrev]?.ticker;
+            let homeTicker = market?.tickers?.[homeK]?.ticker || market?.tickers?.[game.homeAbbrev]?.ticker;
+            
+            console.log('Initial tickers - away:', awayTicker, 'home:', homeTicker);
+            console.log('Market tickers object:', market?.tickers);
+            
+            // Fallback: search all prices for matching team
+            if (!awayTicker || !homeTicker) {
+                console.log('Searching prices for tickers. All price keys:', Object.keys(prices));
+                for (const ticker of Object.keys(prices)) {
+                    if (!awayTicker && ticker.includes(`-${awayK}`) && ticker.endsWith(`-${awayK}`)) {
+                        awayTicker = ticker;
+                        console.log('Found away ticker from prices:', awayTicker);
+                    }
+                    if (!homeTicker && ticker.includes(`-${homeK}`) && ticker.endsWith(`-${homeK}`)) {
+                        homeTicker = ticker;
+                        console.log('Found home ticker from prices:', homeTicker);
+                    }
+                }
+            }
+            
+            console.log('Final tickers to fetch:', awayTicker, homeTicker);
+            
+            // Fetch orderbooks - try WS data first, then REST API
+            const fetchBook = async (ticker, team) => {
+                if (!ticker) {
+                    console.log('No ticker for', team);
+                    return null;
+                }
+                try {
+                    // Try WebSocket stored orderbook first (more reliable for live data)
+                    console.log('Fetching WS orderbook for ticker:', ticker);
+                    const wsRes = await fetch(`/api/ws-orderbook?ticker=${ticker}`);
+                    if (wsRes.ok) {
+                        const wsData = await wsRes.json();
+                        console.log('WS Orderbook response for', ticker, ':', wsData);
+                        if (wsData.orderbook?.yes?.length > 0 || wsData.orderbook?.no?.length > 0) {
+                            return wsData;
+                        }
+                    }
+                    
+                    // Fallback to REST API
+                    console.log('WS orderbook empty, trying REST API for ticker:', ticker);
+                    const res = await fetch(`/api/kalshi/orderbook?ticker=${ticker}`);
+                    if (!res.ok) {
+                        console.error('REST Orderbook fetch failed:', res.status, res.statusText);
+                        return null;
+                    }
+                    const data = await res.json();
+                    console.log('REST Orderbook response for', ticker, ':', data);
+                    return data;
+                } catch (e) {
+                    console.error('Orderbook fetch error:', e);
+                    return null;
+                }
+            };
+            
+            const [awayBook, homeBook] = await Promise.all([
+                fetchBook(awayTicker, awayK),
+                fetchBook(homeTicker, homeK)
+            ]);
+            
+            orderbookData[gameId] = {
+                away: { ticker: awayTicker, team: awayK, book: awayBook },
+                home: { ticker: homeTicker, team: homeK, book: homeBook }
+            };
+            
+            console.log('Stored orderbook data:', orderbookData[gameId]);
+            console.log('=== END ORDERBOOK DEBUG ===');
+            
+            // Re-render liquidity panel
+            const panel = document.getElementById(`liquidity-${gameId}`);
+            if (panel) {
+                panel.innerHTML = renderLiquidityPanel(game, gameKey);
+            }
+        }
+        
+        // Render liquidity panel - Kalshi style
+        function renderLiquidityPanel(game, gameKey) {
+            const data = orderbookData[game.id];
+            if (!data) {
+                return '<div style="color: #666; font-size: 0.7rem; text-align: center; padding: 10px;">Click Depth to load orderbook...</div>';
+            }
+            
+            const renderMarketBook = (teamData) => {
+                // Kalshi API returns { orderbook: { yes: [...], no: [...] }, market: {...} }
+                const book = teamData?.book?.orderbook;
+                const marketInfo = teamData?.book?.market;
+                const lastPrice = marketInfo?.last_price || marketInfo?.yes_price;
+                
+                console.log('Rendering book for', teamData?.team);
+                console.log('- book object:', book);
+                console.log('- book.yes:', book?.yes);
+                console.log('- book.no:', book?.no);
+                
+                // Check if book has data
+                const hasYes = book?.yes && Array.isArray(book.yes) && book.yes.length > 0;
+                const hasNo = book?.no && Array.isArray(book.no) && book.no.length > 0;
+                
+                console.log('- hasYes:', hasYes, 'hasNo:', hasNo);
+                
+                if (!book || (!hasYes && !hasNo)) {
+                    // Try to show at least the bid/ask from WS data
+                    const market = kalshiMarkets[game.marketKey || `${game.awayAbbrev}-${game.homeAbbrev}`];
+                    const wsData = market?.tickers?.[teamData?.team];
+                    
+                    return `<div class="liquidity-market">
+                        <div class="liquidity-market-header">
+                            <span class="team">${teamData?.team || 'Unknown'} YES</span>
+                            <span class="last">${lastPrice ? `Last ${lastPrice}¢` : ''}</span>
+                        </div>
+                        <div style="color: #666; font-size: 0.65rem; padding: 8px;">
+                            ${!teamData?.ticker ? 'Ticker not found' : 'Orderbook empty or not available'}
+                            ${wsData ? `<br>WS Bid/Ask: ${wsData.yesBid ?? '--'}/${wsData.noBid ? (100 - wsData.noBid) : '--'}` : ''}
+                        </div>
+                    </div>`;
+                }
+                
+                // YES ASKS - derived from NO bids (NO bid at X = YES ask at 100-X)
+                // Sort low to high, take best 3 (lowest), then reverse for display (highest at top)
+                const asks = (book.no || [])
+                    .filter(l => Array.isArray(l) && l.length >= 2 && l[1] > 0)
+                    .map(l => [100 - l[0], l[1]])
+                    .sort((a, b) => a[0] - b[0]) // Low to high (best ask first)
+                    .slice(0, 3); // Take 3 best asks
+                
+                // YES BIDS - directly from book.yes
+                // Sort high to low (best bid first), take top 3
+                const bids = (book.yes || [])
+                    .filter(l => Array.isArray(l) && l.length >= 2 && l[1] > 0)
+                    .sort((a, b) => b[0] - a[0]) // High to low (best bid first)
+                    .slice(0, 3); // Take 3 best bids
+                
+                console.log('Processed - asks:', asks, 'bids:', bids);
+                
+                // Calculate max for bar scaling
+                const allQtys = [...asks.map(a => a[1]), ...bids.map(b => b[1])];
+                const maxQty = Math.max(...allQtys, 1);
+                
+                // Best bid/ask for spread display
+                const bestBid = bids[0]?.[0];
+                const bestAsk = asks[0]?.[0];
+                const spread = (bestAsk && bestBid) ? (bestAsk - bestBid) : null;
+                
+                return `
+                    <div class="liquidity-market">
+                        <div class="liquidity-table">
+                            ${asks.slice().reverse().map(([price, qty]) => `
+                                <div class="liquidity-row ask-row">
+                                    <div class="liquidity-bar-bg">
+                                        <div class="liquidity-bar ask" style="width: ${(qty / maxQty) * 100}%"></div>
+                                    </div>
+                                    <span class="liquidity-price ask">${price}¢</span>
+                                    <span class="liquidity-qty">${qty.toLocaleString()}</span>
+                                </div>
+                            `).join('')}
+                            ${asks.length === 0 ? '<div class="liquidity-row"><span></span><span class="liquidity-price">--</span><span>--</span></div>' : ''}
+                            <div class="liquidity-spread-row">
+                                <span></span>
+                                <span class="spread-value">${spread ? `Spread ${spread}¢` : ''}</span>
+                                <span></span>
+                            </div>
+                            ${bids.map(([price, qty]) => `
+                                <div class="liquidity-row bid-row">
+                                    <div class="liquidity-bar-bg">
+                                        <div class="liquidity-bar bid" style="width: ${(qty / maxQty) * 100}%"></div>
+                                    </div>
+                                    <span class="liquidity-price bid">${price}¢</span>
+                                    <span class="liquidity-qty">${qty.toLocaleString()}</span>
+                                </div>
+                            `).join('')}
+                            ${bids.length === 0 ? '<div class="liquidity-row"><span></span><span class="liquidity-price">--</span><span>--</span></div>' : ''}
+                        </div>
+                    </div>
+                `;
+            };
+            
+            return `
+                <div class="liquidity-markets">
+                    <div class="liquidity-market-wrapper">
+                        <div class="liquidity-team-label">
+                            <span>${data.away?.team || ''}</span>
+                            <span class="trade-yes-label">Trade Yes</span>
+                        </div>
+                        ${renderMarketBook(data.away)}
+                    </div>
+                    <div class="liquidity-market-wrapper">
+                        <div class="liquidity-team-label">
+                            <span>${data.home?.team || ''}</span>
+                            <span class="trade-yes-label">Trade Yes</span>
+                        </div>
+                        ${renderMarketBook(data.home)}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Quick button: Add quantity
+        function addQty(inputId, amount) {
+            const input = document.getElementById(inputId);
+            if (input) {
+                const current = parseInt(input.value) || 0;
+                input.value = current + amount;
+                // Save to prevent wipe on re-render
+                savedInputValues[inputId] = input.value;
+                
+                // Parse the inputId to check if we need to mirror
+                // Format: yes-qty-{gameId}-{side}-{row} or no-qty-{gameId}-{side}-{row}
+                const parts = inputId.split('-');
+                if (parts.length >= 5 && parts[0] === 'yes') {
+                    const gameId = parts[2];
+                    const side = parts[3];
+                    
+                    // If mirror is enabled, mirror all YES to NO
+                    if (mirrorState[`${gameId}-${side}`]) {
+                        mirrorAllYesToNo(gameId, side);
+                    }
+                }
+            }
+        }
+        
+        // Clear all inputs for a panel
+        function clearInputs(gameId, side) {
+            for (let i = 1; i <= orderRows; i++) {
+                // Clear YES side
+                const yesPrice = document.getElementById(`yes-price-${gameId}-${side}-${i}`);
+                const yesQty = document.getElementById(`yes-qty-${gameId}-${side}-${i}`);
+                if (yesPrice) { yesPrice.value = ''; delete savedInputValues[yesPrice.id]; }
+                if (yesQty) { yesQty.value = ''; delete savedInputValues[yesQty.id]; }
+                
+                // Clear NO side
+                const noPrice = document.getElementById(`no-price-${gameId}-${side}-${i}`);
+                const noQty = document.getElementById(`no-qty-${gameId}-${side}-${i}`);
+                if (noPrice) { noPrice.value = ''; delete savedInputValues[noPrice.id]; }
+                if (noQty) { noQty.value = ''; delete savedInputValues[noQty.id]; }
+            }
+        }
+        
+        // Track mirror state
+        let mirrorState = {};
+        
+        // Track auto-reprice state: key = "gameId-side-yesNo", value = { enabled: bool, lastFmv: number }
+        let autoRepriceState = {};
+        
+        // Handle mirror toggle
+        function handleMirrorToggle(gameId, side) {
+            const key = `${gameId}-${side}`;
+            // Toggle the state
+            mirrorState[key] = !mirrorState[key];
+            
+            // Update button appearance
+            const btn = document.getElementById(`mirror-${gameId}-${side}`);
+            if (btn) {
+                btn.textContent = mirrorState[key] ? 'MIRROR ON' : 'MIRROR OFF';
+                btn.classList.toggle('active', mirrorState[key]);
+            }
+            
+            if (mirrorState[key]) {
+                // Immediately mirror all current YES values to NO
+                mirrorAllYesToNo(gameId, side);
+            }
+        }
+        
+        // Update mirror label text (called from restoreMirrorStates)
+        function updateMirrorLabel(gameId, side) {
+            const btn = document.getElementById(`mirror-${gameId}-${side}`);
+            if (btn) {
+                btn.textContent = mirrorState[`${gameId}-${side}`] ? 'MIRROR ON' : 'MIRROR OFF';
+                btn.classList.toggle('active', mirrorState[`${gameId}-${side}`]);
+            }
+        }
+        
+        // Mirror all YES values to NO for a panel
+        function mirrorAllYesToNo(gameId, side) {
+            for (let i = 1; i <= orderRows; i++) {
+                const yesPrice = document.getElementById(`yes-price-${gameId}-${side}-${i}`);
+                const yesQty = document.getElementById(`yes-qty-${gameId}-${side}-${i}`);
+                const noPrice = document.getElementById(`no-price-${gameId}-${side}-${i}`);
+                const noQty = document.getElementById(`no-qty-${gameId}-${side}-${i}`);
+                
+                if (yesPrice && noPrice) {
+                    noPrice.value = yesPrice.value;
+                    savedInputValues[noPrice.id] = noPrice.value;
+                }
+                if (yesQty && noQty) {
+                    noQty.value = yesQty.value;
+                    savedInputValues[noQty.id] = noQty.value;
+                }
+            }
+        }
+        
+        // Global input handler for mirroring - attach to document
+        document.addEventListener('input', function(e) {
+            const target = e.target;
+            if (!target.id) return;
+            
+            // Check if this is a YES price or qty input
+            const match = target.id.match(/^yes-(price|qty)-(.+)-(.+)-(\d+)$/);
+            if (!match) return;
+            
+            const [, type, gameId, side, row] = match;
+            
+            // Check if mirror is enabled for this panel
+            if (!mirrorState[`${gameId}-${side}`]) return;
+            
+            // Mirror to NO side
+            const noInput = document.getElementById(`no-${type}-${gameId}-${side}-${row}`);
+            if (noInput) {
+                noInput.value = target.value;
+                savedInputValues[noInput.id] = target.value;
+            }
+        });
+        
+        // Also handle change events (for select dropdowns)
+        document.addEventListener('change', function(e) {
+            const target = e.target;
+            if (!target.id) return;
+            
+            // Check if this is a YES price or qty input
+            const match = target.id.match(/^yes-(price|qty)-(.+)-(.+)-(\d+)$/);
+            if (!match) return;
+            
+            const [, type, gameId, side, row] = match;
+            
+            // Check if mirror is enabled for this panel
+            if (!mirrorState[`${gameId}-${side}`]) return;
+            
+            // Mirror to NO side
+            const noInput = document.getElementById(`no-${type}-${gameId}-${side}-${row}`);
+            if (noInput) {
+                noInput.value = target.value;
+                savedInputValues[noInput.id] = target.value;
+            }
+        });
+        
+        // Update order rows setting
+        function updateOrderRows() {
+            const input = document.getElementById('orderRowsInput');
+            const newValue = parseInt(input?.value) || 3;
+            orderRows = Math.max(1, Math.min(10, newValue));
+            input.value = orderRows;
+            renderGames(); // Re-render with new row count
+        }
+        
+        // Update spike detection window on server
+        async function updateSpikeWindow() {
+            const select = document.getElementById('spikeWindow');
+            const windowMs = parseInt(select?.value) || 2000;
+            try {
+                const res = await fetch('/api/config/spike-window', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ window: windowMs })
+                });
+                if (res.ok) {
+                    console.log('Spike window updated to', windowMs, 'ms');
+                }
+            } catch (e) {
+                console.error('Failed to update spike window:', e);
+            }
+        }
+        
+        // Update spike threshold on server
+        async function updateSpikeThreshold() {
+            const input = document.getElementById('spikeThreshold');
+            const threshold = parseInt(input?.value) || 5;
+            try {
+                const res = await fetch('/api/config/spike-threshold', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ threshold: threshold })
+                });
+                if (res.ok) {
+                    console.log('Spike threshold updated to', threshold, '¢');
+                }
+            } catch (e) {
+                console.error('Failed to update spike threshold:', e);
+            }
+        }
+        
+        // Format qty increment for display
+        function formatQtyIncrement(value) {
+            if (value >= 1000) {
+                return '+' + (value / 1000) + 'k';
+            }
+            return '+' + value;
+        }
+        
+        // Qty increment options for cycling
+        const qtyIncrementOptions = [100, 500, 1000, 2000, 5000, 10000, 25000, 50000, 100000];
+        
+        // Adjust qty increment on the fly
+        function adjustQtyIncrement(direction) {
+            const currentIndex = qtyIncrementOptions.indexOf(qtyIncrement);
+            let newIndex;
+            if (currentIndex === -1) {
+                newIndex = 2; // Default to 1000
+            } else {
+                newIndex = Math.max(0, Math.min(qtyIncrementOptions.length - 1, currentIndex + direction));
+            }
+            qtyIncrement = qtyIncrementOptions[newIndex];
+            
+            // Update the settings dropdown too
+            const select = document.getElementById('qtyIncrementInput');
+            if (select) {
+                select.value = qtyIncrement;
+            }
+            
+            renderGames();
+        }
+        
+        // Adjust FMV offset on the fly (global or per-game)
+        function adjustFmvOffset(delta, gameId = null) {
+            if (fmvOffsetGlobal || !gameId) {
+                // Global mode - adjust the global offset
+                const input = document.getElementById('fmvOffsetInput');
+                if (input) {
+                    const current = parseInt(input.value) || fmvOffset;
+                    const newValue = Math.max(0, Math.min(10, current + delta));
+                    input.value = newValue;
+                    fmvOffset = newValue;
+                    renderGames();
+                }
+            } else {
+                // Per-game mode - adjust this game's offset
+                const current = gameFmvOffsets[gameId] ?? fmvOffset;
+                const newValue = Math.max(0, Math.min(10, current + delta));
+                gameFmvOffsets[gameId] = newValue;
+                renderGames();
+            }
+        }
+        
+        // Get the FMV offset for a specific game
+        function getGameFmvOffset(gameId) {
+            if (fmvOffsetGlobal) {
+                return parseInt(document.getElementById('fmvOffsetInput')?.value) || fmvOffset;
+            }
+            return gameFmvOffsets[gameId] ?? fmvOffset;
+        }
+        
+        // Update global FMV offset (from settings input)
+        function updateGlobalFmvOffset(value) {
+            fmvOffset = value;
+            if (fmvOffsetGlobal) {
+                renderGames();
+            }
+        }
+        
+        // Toggle between global and per-game FMV offset mode
+        function toggleGlobalFmvOffset(isGlobal) {
+            fmvOffsetGlobal = isGlobal;
+            if (isGlobal) {
+                // When switching to global, apply global offset to all games
+                gameFmvOffsets = {};
+            } else {
+                // When switching to per-game, initialize all games with current global offset
+                games.forEach(g => {
+                    gameFmvOffsets[g.id] = fmvOffset;
+                });
+            }
+            renderGames();
+        }
+        
+        // FMV Stagger: Fill all prices starting from FMV - offset, staggering by 1¢
+        function fmvStaggerPrices(yesNo, gameId, side, fmvPrice) {
+            const offset = getGameFmvOffset(gameId);
+            const startPrice = Math.max(1, fmvPrice - offset);
+            
+            for (let i = 1; i <= orderRows; i++) {
+                const priceSelect = document.getElementById(`${yesNo}-price-${gameId}-${side}-${i}`);
+                if (priceSelect) {
+                    const newPrice = Math.max(1, startPrice - (i - 1));
+                    priceSelect.value = newPrice;
+                    savedInputValues[priceSelect.id] = newPrice;
+                }
+            }
+            
+            // If this was YES side and mirror is enabled, mirror everything
+            if (yesNo === 'yes' && mirrorState[`${gameId}-${side}`]) {
+                mirrorAllYesToNo(gameId, side);
+            }
+        }
+        
+        // Toggle auto-reprice for a panel
+        function toggleAutoReprice(yesNo, gameId, side, currentFmv) {
+            const key = `${gameId}-${side}-${yesNo}`;
+            const btn = document.getElementById(`auto-${yesNo}-${gameId}-${side}`);
+            
+            if (autoRepriceState[key]?.enabled) {
+                // Disable
+                autoRepriceState[key] = { enabled: false };
+                if (btn) btn.classList.remove('active');
+            } else {
+                // Enable and set initial prices
+                autoRepriceState[key] = { enabled: true, lastFmv: currentFmv };
+                if (btn) btn.classList.add('active');
+                // Fill prices initially
+                fmvStaggerPrices(yesNo, gameId, side, currentFmv);
+            }
+        }
+        
+        // Check and apply auto-reprice updates (called during FMV updates)
+        function checkAutoReprice(gameId, side, yesNo, newFmv) {
+            const key = `${gameId}-${side}-${yesNo}`;
+            const state = autoRepriceState[key];
+            
+            if (state?.enabled && state.lastFmv !== newFmv) {
+                const delta = newFmv - state.lastFmv;
+                
+                // Update each price by the delta
+                for (let i = 1; i <= orderRows; i++) {
+                    const priceSelect = document.getElementById(`${yesNo}-price-${gameId}-${side}-${i}`);
+                    if (priceSelect && priceSelect.value) {
+                        const currentPrice = parseInt(priceSelect.value);
+                        const newPrice = Math.max(1, Math.min(99, currentPrice + delta));
+                        priceSelect.value = newPrice;
+                        savedInputValues[priceSelect.id] = newPrice;
+                    }
+                }
+                
+                // Update mirror if enabled
+                if (yesNo === 'yes' && mirrorState[`${gameId}-${side}`]) {
+                    mirrorAllYesToNo(gameId, side);
+                }
+                
+                // Update last FMV
+                autoRepriceState[key].lastFmv = newFmv;
+            }
+        }
+        
+        // Restore auto-reprice button states after re-render
+        function restoreAutoRepriceStates() {
+            Object.keys(autoRepriceState).forEach(key => {
+                if (autoRepriceState[key]?.enabled) {
+                    const parts = key.split('-');
+                    // key format: "gameId-side-yesNo"
+                    const yesNo = parts.pop();
+                    const side = parts.pop();
+                    const gameId = parts.join('-');
+                    const btn = document.getElementById(`auto-${yesNo}-${gameId}-${side}`);
+                    if (btn) btn.classList.add('active');
+                }
+            });
+        }
+        
+        // Stagger prices by 1¢ from first row
+        function staggerPrices(yesNo, gameId, side) {
+            const firstPrice = document.getElementById(`${yesNo}-price-${gameId}-${side}-1`);
+            if (!firstPrice || !firstPrice.value) return;
+            
+            const startPrice = parseInt(firstPrice.value);
+            
+            for (let i = 2; i <= orderRows; i++) {
+                const priceSelect = document.getElementById(`${yesNo}-price-${gameId}-${side}-${i}`);
+                if (priceSelect) {
+                    const newPrice = Math.max(1, startPrice - (i - 1));
+                    priceSelect.value = newPrice;
+                    savedInputValues[priceSelect.id] = newPrice;
+                }
+            }
+        }
+        
+        // Lock qty: copy row 1 qty to all rows
+        function lockQty(yesNo, gameId, side) {
+            const firstQty = document.getElementById(`${yesNo}-qty-${gameId}-${side}-1`);
+            if (!firstQty || !firstQty.value) return;
+            
+            const baseQty = parseInt(firstQty.value);
+            
+            for (let i = 1; i <= orderRows; i++) {
+                const qtyInput = document.getElementById(`${yesNo}-qty-${gameId}-${side}-${i}`);
+                if (qtyInput) {
+                    qtyInput.value = baseQty;
+                    savedInputValues[qtyInput.id] = baseQty;
+                }
+            }
+            
+            // If this was YES side and mirror is enabled, mirror everything
+            if (yesNo === 'yes' && mirrorState[`${gameId}-${side}`]) {
+                mirrorAllYesToNo(gameId, side);
+            }
+        }
+        
+        // Stagger qty: increase by % each row
+        function staggerQty(yesNo, gameId, side) {
+            const firstQty = document.getElementById(`${yesNo}-qty-${gameId}-${side}-1`);
+            if (!firstQty || !firstQty.value) return;
+            
+            const baseQty = parseInt(firstQty.value);
+            const pct = parseInt(document.getElementById('qtyStaggerPct')?.value) || qtyStaggerPct;
+            
+            for (let i = 1; i <= orderRows; i++) {
+                const qtyInput = document.getElementById(`${yesNo}-qty-${gameId}-${side}-${i}`);
+                if (qtyInput) {
+                    // Increase by pct% for each row (row 1 stays at base)
+                    const multiplier = 1 + (pct / 100) * (i - 1);
+                    const newQty = Math.round(baseQty * multiplier);
+                    qtyInput.value = newQty;
+                    savedInputValues[qtyInput.id] = newQty;
+                }
+            }
+            
+            // If this was YES side and mirror is enabled, mirror everything
+            if (yesNo === 'yes' && mirrorState[`${gameId}-${side}`]) {
+                mirrorAllYesToNo(gameId, side);
+            }
+        }
+        
+        // Quick button: Set price based on FMV minus offset
+        function setFmvPrice(selectId, fmv, offset) {
+            const select = document.getElementById(selectId);
+            if (select && fmv !== '--' && !isNaN(fmv)) {
+                const price = Math.max(1, Math.min(99, Math.round(fmv) - offset));
+                select.value = price;
+                // Save to prevent wipe on re-render
+                savedInputValues[selectId] = price.toString();
+            }
+        }
+
+        function updateMarketSelection(gameId) {
+            // Re-render to update the panels with new market
+            renderGames();
+        }
+
+        function toggleArm(gameId, side, team, gameKey) {
+            const orderKey = `${gameKey}-${team}`;
+            
+            if (!armedOrders[orderKey]) {
+                armedOrders[orderKey] = { orders: [], armed: false };
+            }
+
+            // Collect orders from inputs
+            const orders = [];
+            for (let i = 1; i <= orderRows; i++) {
+                const yesPrice = document.getElementById(`yes-price-${gameId}-${side}-${i}`)?.value;
+                const yesQty = document.getElementById(`yes-qty-${gameId}-${side}-${i}`)?.value;
+                const noPrice = document.getElementById(`no-price-${gameId}-${side}-${i}`)?.value;
+                const noQty = document.getElementById(`no-qty-${gameId}-${side}-${i}`)?.value;
+
+                if (yesPrice && yesQty) {
+                    orders.push({ side: 'yes', price: parseInt(yesPrice), qty: parseInt(yesQty) });
+                }
+                if (noPrice && noQty) {
+                    orders.push({ side: 'no', price: parseInt(noPrice), qty: parseInt(noQty) });
+                }
+            }
+
+            armedOrders[orderKey].orders = orders;
+            armedOrders[orderKey].armed = !armedOrders[orderKey].armed;
+
+            if (armedOrders[orderKey].armed) {
+                speak(`Armed ${teamNames[team] || team}`);
+            }
+
+            renderGames();
+        }
+
+        function submitNow(gameId, side, team) {
+            const game = games.find(g => g.id === gameId);
+            if (!game) {
+                console.error('Game not found:', gameId);
+                return;
+            }
+            
+            const gameKey = game.marketKey;
+            const market = kalshiMarkets[gameKey];
+            
+            // Get Kalshi abbreviation variant
+            const variants = { 'LAK': 'LA', 'SJS': 'SJ', 'TBL': 'TB', 'NJD': 'NJ' };
+            const teamK = variants[team] || team;
+            const opponent = side === 'home' ? game.awayAbbrev : game.homeAbbrev;
+            const oppK = variants[opponent] || opponent;
+            
+            // Collect orders from inputs
+            const orders = [];
+            for (let i = 1; i <= orderRows; i++) {
+                const yesPrice = document.getElementById(`yes-price-${gameId}-${side}-${i}`)?.value;
+                const yesQty = document.getElementById(`yes-qty-${gameId}-${side}-${i}`)?.value;
+                const noPrice = document.getElementById(`no-price-${gameId}-${side}-${i}`)?.value;
+                const noQty = document.getElementById(`no-qty-${gameId}-${side}-${i}`)?.value;
+
+                if (yesPrice && yesQty) {
+                    // YES order for this team
+                    const ticker = market?.tickers?.[teamK]?.ticker || market?.tickers?.[team]?.ticker;
+                    if (ticker) {
+                        orders.push({ ticker, side: 'yes', price: parseInt(yesPrice), count: parseInt(yesQty) });
+                    }
+                }
+                if (noPrice && noQty) {
+                    // NO order for opponent (betting team scores = opponent doesn't score)
+                    const ticker = market?.tickers?.[oppK]?.ticker || market?.tickers?.[opponent]?.ticker;
+                    if (ticker) {
+                        orders.push({ ticker, side: 'no', price: parseInt(noPrice), count: parseInt(noQty) });
+                    }
+                }
+            }
+            
+            if (orders.length === 0) {
+                speak('No orders to submit');
+                return;
+            }
+            
+            speak(`Submitting ${orders.length} orders for ${teamNames[team] || team}`);
+            
+            // Submit each order
+            orders.forEach(async (order) => {
+                try {
+                    const response = await fetch('/api/kalshi/order', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            ticker: order.ticker,
+                            action: 'buy',
+                            side: order.side,
+                            type: 'limit',
+                            count: order.count,
+                            yes_price: order.side === 'yes' ? order.price : undefined,
+                            no_price: order.side === 'no' ? order.price : undefined
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        console.log('Order placed:', result);
+                        speak(`Order filled`);
+                    } else {
+                        console.error('Order failed:', result);
+                        speak(`Order failed: ${result.error || 'Unknown error'}`);
+                    }
+                } catch (err) {
+                    console.error('Order error:', err);
+                    speak(`Order error`);
+                }
+            });
+        }
+
+        // Controls
+        document.getElementById('soundBtn').onclick = async () => {
+            if (!audioContext) await initAudio();
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundBtn').className = 'btn' + (soundEnabled ? ' active' : '');
+            document.getElementById('soundBtn').textContent = soundEnabled ? '🔊 Sound' : '🔇 Muted';
+        };
+
+        // Settings modal
+        const settingsOverlay = document.getElementById('settingsOverlay');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsClose = document.getElementById('settingsClose');
+        const spikeThresholdInput = document.getElementById('spikeThreshold');
+
+        settingsBtn.onclick = () => {
+            settingsOverlay.classList.add('open');
+        };
+
+        settingsClose.onclick = () => {
+            settingsOverlay.classList.remove('open');
+        };
+
+        settingsOverlay.onclick = (e) => {
+            if (e.target === settingsOverlay) {
+                settingsOverlay.classList.remove('open');
+            }
+        };
+
+        spikeThresholdInput.onchange = () => {
+            const val = parseInt(spikeThresholdInput.value);
+            if (val >= 1 && val <= 50) {
+                spikeThreshold = val;
+                // Send to server if connected
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'set_threshold', threshold: spikeThreshold }));
+                }
+            }
+        };
+        
+        // ==========================================
+        // PORTFOLIO FUNCTIONS
+        // ==========================================
+        
+        async function fetchBalance() {
+            try {
+                const res = await fetch('/api/kalshi/balance');
+                const data = await res.json();
+                if (data.balance !== undefined) {
+                    portfolioBalance = data.balance / 100; // Convert cents to dollars
+                    document.getElementById('balanceDisplay').textContent = `$${portfolioBalance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                }
+            } catch (e) {
+                console.error('Failed to fetch balance:', e);
+            }
+        }
+        
+        async function fetchPositions() {
+            try {
+                const res = await fetch('/api/kalshi/positions');
+                const data = await res.json();
+                
+                // Build positions map by ticker
+                portfolioPositions = {};
+                if (data.market_positions) {
+                    data.market_positions.forEach(pos => {
+                        if (pos.ticker && pos.ticker.includes('KXNHLGAME')) {
+                            // Calculate avg price from exposure and position
+                            const position = pos.position || 0;
+                            const exposureDollars = parseFloat(pos.market_exposure_dollars) || 0;
+                            const avgPrice = position !== 0 ? Math.round((exposureDollars / Math.abs(position)) * 100) : 0;
+                            
+                            portfolioPositions[pos.ticker] = {
+                                position: position,
+                                avgPrice: avgPrice, // calculated from exposure
+                                marketValue: exposureDollars,
+                                realizedPnl: parseFloat(pos.realized_pnl_dollars) || 0
+                            };
+                        }
+                    });
+                }
+                
+                // Also fetch pending orders
+                await fetchPendingOrders();
+                
+                // Only re-render if user is NOT focused on an input/select
+                const activeEl = document.activeElement;
+                const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'SELECT');
+                
+                if (!isTyping && games.length > 0) {
+                    renderGames();
+                }
+            } catch (e) {
+                console.error('Failed to fetch positions:', e);
+            }
+        }
+        
+        async function fetchPendingOrders() {
+            try {
+                const res = await fetch('/api/kalshi/orders');
+                const data = await res.json();
+                
+                // Build pending orders map by ticker
+                pendingOrders = {};
+                if (data.orders) {
+                    data.orders.forEach(order => {
+                        if (order.ticker && order.ticker.includes('KXNHLGAME')) {
+                            if (!pendingOrders[order.ticker]) {
+                                pendingOrders[order.ticker] = [];
+                            }
+                            pendingOrders[order.ticker].push({
+                                orderId: order.order_id,
+                                action: order.action, // 'buy' or 'sell'
+                                side: order.side, // 'yes' or 'no'
+                                price: order.yes_price || order.no_price,
+                                qty: order.remaining_count || order.count,
+                                filled: order.filled_count || 0
+                            });
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error('Failed to fetch pending orders:', e);
+            }
+        }
+        
+        async function cancelOrder(orderId) {
+            try {
+                const res = await fetch(`/api/kalshi/order/${orderId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (res.ok) {
+                    // Refresh positions and orders
+                    await fetchPositions();
+                } else {
+                    const data = await res.json();
+                    alert('Cancel failed: ' + (data.error || 'Unknown error'));
+                }
+            } catch (e) {
+                console.error('Failed to cancel order:', e);
+                alert('Cancel error: ' + e.message);
+            }
+        }
+        
+        async function quickSell(ticker, team, position, side, avgPrice) {
+            const markupCents = parseInt(document.getElementById('quickSellMarkup')?.value) || 5;
+            const sellPrice = Math.min(99, avgPrice + markupCents);
+            const qty = Math.abs(position);
+            
+            if (!confirm(`Quick sell ${qty} ${team} ${side.toUpperCase()} at ${sellPrice}¢ (avg ${avgPrice}¢ + ${markupCents}¢)?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/kalshi/order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ticker,
+                        action: 'sell',
+                        side,
+                        type: 'limit',
+                        count: qty,
+                        yes_price: side === 'yes' ? sellPrice : undefined,
+                        no_price: side === 'no' ? sellPrice : undefined
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    speak(`Quick sell placed at ${sellPrice} cents`);
+                    setTimeout(fetchPositions, 1000);
+                    setTimeout(fetchBalance, 1000);
+                } else {
+                    alert('Quick sell failed: ' + (result.error || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error('Quick sell error:', err);
+                alert('Quick sell error: ' + err.message);
+            }
+        }
+        
+        function getPositionForTeam(gameKey, team) {
+            const market = kalshiMarkets[gameKey];
+            if (!market) return null;
+            
+            const teamData = market.tickers[team];
+            if (!teamData || !teamData.ticker) return null;
+            
+            return portfolioPositions[teamData.ticker];
+        }
+        
+        function openSellModal(ticker, team, position, side, avgPrice, currentBid, currentAsk) {
+            currentSellPosition = { ticker, team, position, side, currentBid, currentAsk };
+            document.getElementById('sellPositionInfo').textContent = `${Math.abs(position)} ${team} ${side.toUpperCase()}`;
+            document.getElementById('sellQty').value = Math.abs(position);
+            document.getElementById('sellQty').max = Math.abs(position);
+            
+            // Show bid/ask
+            document.getElementById('sellBidAsk').textContent = `${currentBid || '--'}¢ / ${currentAsk || '--'}¢`;
+            
+            // Populate price dropdown
+            const sellPriceSelect = document.getElementById('sellPrice');
+            sellPriceSelect.innerHTML = Array.from({length: 99}, (_, i) => {
+                const price = 99 - i;
+                return `<option value="${price}">${price}¢</option>`;
+            }).join('');
+            
+            // Set default price to currentAsk + 1 (or 50 if not available)
+            const defaultPrice = currentAsk ? Math.min(99, currentAsk + 1) : 50;
+            sellPriceSelect.value = defaultPrice;
+            
+            // Update market sell preview
+            updateMarketSellPreview();
+            
+            document.getElementById('sellModalOverlay').classList.add('active');
+        }
+        
+        // Calculate market sell price based on settings
+        function getMarketSellPrice() {
+            if (!currentSellPosition) return null;
+            
+            const ref = document.getElementById('marketSellRef')?.value || 'bid';
+            const dir = document.getElementById('marketSellDir')?.value || 'below';
+            const offset = parseInt(document.getElementById('marketSellOffset')?.value) || 2;
+            
+            let basePrice;
+            if (ref === 'bid') {
+                basePrice = currentSellPosition.currentBid || (currentSellPosition.currentAsk ? currentSellPosition.currentAsk - 1 : 50);
+            } else {
+                basePrice = currentSellPosition.currentAsk || 50;
+            }
+            
+            let marketPrice;
+            if (dir === 'below') {
+                marketPrice = basePrice - offset;
+            } else {
+                marketPrice = basePrice + offset;
+            }
+            
+            return Math.max(1, Math.min(99, marketPrice));
+        }
+        
+        // Update market sell price preview
+        function updateMarketSellPreview() {
+            const price = getMarketSellPrice();
+            document.getElementById('marketSellPreview').textContent = price || '--';
+        }
+        
+        function closeSellModal() {
+            document.getElementById('sellModalOverlay').classList.remove('active');
+            currentSellPosition = null;
+        }
+        
+        // Set sell qty to percentage of position
+        function setSellPct(pct) {
+            if (!currentSellPosition) return;
+            const totalQty = Math.abs(currentSellPosition.position);
+            const qty = Math.max(1, Math.round(totalQty * pct / 100));
+            document.getElementById('sellQty').value = qty;
+        }
+        
+        // Market sell using calculated price
+        async function marketSell() {
+            if (!currentSellPosition) return;
+            
+            const qty = parseInt(document.getElementById('sellQty').value);
+            const marketPrice = getMarketSellPrice();
+            
+            if (!qty || qty < 1) {
+                alert('Invalid quantity');
+                return;
+            }
+            
+            if (!marketPrice) {
+                alert('Could not calculate market price');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/kalshi/order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ticker: currentSellPosition.ticker,
+                        action: 'sell',
+                        side: currentSellPosition.side,
+                        type: 'limit',
+                        count: qty,
+                        yes_price: currentSellPosition.side === 'yes' ? marketPrice : undefined,
+                        no_price: currentSellPosition.side === 'no' ? marketPrice : undefined
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    closeSellModal();
+                    speak('Market sell executed');
+                    setTimeout(fetchPositions, 1000);
+                    setTimeout(fetchBalance, 1000);
+                } else {
+                    alert('Market sell failed: ' + (result.error || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error('Market sell error:', err);
+                alert('Market sell error: ' + err.message);
+            }
+        }
+        
+        async function confirmSell() {
+            if (!currentSellPosition) return;
+            
+            const qty = parseInt(document.getElementById('sellQty').value);
+            const price = parseInt(document.getElementById('sellPrice').value);
+            
+            if (!qty || qty < 1 || !price) {
+                alert('Invalid quantity or price');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/kalshi/order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ticker: currentSellPosition.ticker,
+                        action: 'sell',
+                        side: currentSellPosition.side,
+                        type: 'limit',
+                        count: qty,
+                        yes_price: currentSellPosition.side === 'yes' ? price : undefined,
+                        no_price: currentSellPosition.side === 'no' ? price : undefined
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    closeSellModal();
+                    // Refresh positions after a moment
+                    setTimeout(fetchPositions, 1000);
+                    setTimeout(fetchBalance, 1000);
+                } else {
+                    alert('Sell order failed: ' + (result.error || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error('Sell order error:', err);
+                alert('Sell order error: ' + err.message);
+            }
+        }
+
+        // Init
+        (async () => {
+            await initAudio();
+            connect();
+            // Fetch game times from NHL API
+            await fetchGameTimes();
+            // Fetch portfolio data
+            fetchBalance();
+            fetchPositions();
+            // Refresh portfolio every 30 seconds
+            setInterval(fetchBalance, 1000);
+            setInterval(fetchPositions, 1000);
+            // Refresh game times - 1s when live games, 5min otherwise
+            let lastLiveCheck = Date.now(); // Initialize to now since we just fetched
+            async function smartFetchGameTimes() {
+                const hasLiveGames = games.some(g => g.state === 'live');
+                const now = Date.now();
+                // If live games, fetch every 1 second; otherwise every 5 minutes
+                const interval = hasLiveGames ? 1000 : 300000;
+                if (now - lastLiveCheck >= interval) {
+                    lastLiveCheck = now;
+                    await fetchGameTimes();
+                    await fetchLiveGameData(); // Also fetch live scores
+                }
+            }
+            // Also do initial live data fetch
+            await fetchLiveGameData();
+            setInterval(smartFetchGameTimes, 1000); // Check every 1s
+            // Update countdowns every minute
+            setInterval(() => {
+                if (games.some(g => g.state === 'pregame')) {
+                    renderGames();
+                }
+            }, 60000);
+        })();
+    </script>
+</body>
+</html>
