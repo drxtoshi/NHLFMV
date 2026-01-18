@@ -3276,9 +3276,19 @@
         // Adjust FMV offset on the fly (global or per-game)
         function adjustFmvOffset(delta, gameId = null) {
             // Check the actual checkbox state
-            const isGlobal = document.getElementById('fmvOffsetGlobal')?.checked !== false;
+            const checkbox = document.getElementById('fmvOffsetGlobal');
+            const isGlobal = checkbox ? checkbox.checked : true;
+            
+            console.log('=== adjustFmvOffset ===');
+            console.log('delta:', delta);
+            console.log('gameId:', gameId);
+            console.log('checkbox element:', checkbox);
+            console.log('checkbox.checked:', checkbox?.checked);
+            console.log('isGlobal:', isGlobal);
+            console.log('gameFmvOffsets:', JSON.stringify(gameFmvOffsets));
             
             if (isGlobal) {
+                console.log('>>> GLOBAL MODE');
                 // Global mode - adjust the global offset and update all buttons
                 const input = document.getElementById('fmvOffsetInput');
                 if (input) {
@@ -3292,6 +3302,7 @@
                     });
                 }
             } else if (gameId) {
+                console.log('>>> PER-GAME MODE for:', gameId);
                 // Per-game mode - adjust only this game's offset
                 if (gameFmvOffsets[gameId] === undefined) {
                     gameFmvOffsets[gameId] = fmvOffset;
@@ -3299,14 +3310,19 @@
                 const current = gameFmvOffsets[gameId];
                 const newValue = Math.max(0, Math.min(10, current + delta));
                 gameFmvOffsets[gameId] = newValue;
+                console.log('New offset for', gameId, ':', newValue);
                 
                 // Update only this game's FMV buttons (both YES and NO sides, both home and away panels)
+                let updatedCount = 0;
                 document.querySelectorAll('.fmv-stagger-btn').forEach(btn => {
                     const onclick = btn.getAttribute('onclick') || '';
                     if (onclick.includes(`'${gameId}'`)) {
                         btn.textContent = `-${newValue}¢`;
+                        updatedCount++;
+                        console.log('Updated button:', onclick.substring(0, 50));
                     }
                 });
+                console.log('Updated', updatedCount, 'buttons');
             }
         }
         
