@@ -3323,7 +3323,11 @@
         }
         
         // Toggle between global and per-game FMV offset mode
+        let toggleDebounce = false;
         function toggleGlobalFmvOffset(isGlobal) {
+            if (toggleDebounce) return;
+            toggleDebounce = true;
+            
             console.log('toggleGlobalFmvOffset:', isGlobal);
             fmvOffsetGlobal = isGlobal;
             if (isGlobal) {
@@ -3336,7 +3340,21 @@
                 });
                 console.log('Initialized gameFmvOffsets:', gameFmvOffsets);
             }
-            renderGames();
+            
+            // Update button text without full re-render
+            document.querySelectorAll('.fmv-stagger-btn').forEach(btn => {
+                const onclick = btn.getAttribute('onclick');
+                if (onclick) {
+                    const match = onclick.match(/fmvStaggerPrices\('(?:yes|no)',\s*'([^']+)'/);
+                    if (match) {
+                        const gameId = match[1];
+                        const offset = isGlobal ? fmvOffset : (gameFmvOffsets[gameId] ?? fmvOffset);
+                        btn.textContent = `-${offset}¢`;
+                    }
+                }
+            });
+            
+            setTimeout(() => { toggleDebounce = false; }, 100);
         }
         
         // FMV Stagger: Fill all prices starting from FMV - offset, staggering by 1¢
