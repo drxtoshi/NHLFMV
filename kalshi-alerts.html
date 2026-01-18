@@ -3276,10 +3276,14 @@
         // Adjust FMV offset on the fly (global or per-game)
         function adjustFmvOffset(delta, gameId = null) {
             // Check checkbox state directly to ensure we have current value
-            const isGlobal = document.getElementById('fmvOffsetGlobal')?.checked ?? true;
+            const checkbox = document.getElementById('fmvOffsetGlobal');
+            const isGlobal = checkbox ? checkbox.checked : true;
+            
+            console.log('adjustFmvOffset called:', { delta, gameId, isGlobal, checkboxExists: !!checkbox, checkboxChecked: checkbox?.checked });
             
             if (isGlobal || !gameId) {
                 // Global mode - adjust the global offset
+                console.log('Using GLOBAL mode');
                 const input = document.getElementById('fmvOffsetInput');
                 if (input) {
                     const current = parseInt(input.value) || fmvOffset;
@@ -3290,9 +3294,11 @@
                 }
             } else {
                 // Per-game mode - adjust this game's offset
+                console.log('Using PER-GAME mode for game:', gameId);
                 const current = gameFmvOffsets[gameId] ?? fmvOffset;
                 const newValue = Math.max(0, Math.min(10, current + delta));
                 gameFmvOffsets[gameId] = newValue;
+                console.log('Updated gameFmvOffsets:', gameFmvOffsets);
                 renderGames();
             }
         }
