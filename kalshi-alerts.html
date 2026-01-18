@@ -3275,40 +3275,45 @@
         
         // Adjust FMV offset on the fly (global or per-game)
         function adjustFmvOffset(delta, gameId = null) {
-            console.log('adjustFmvOffset:', { delta, gameId, fmvOffsetGlobal, gameFmvOffsets });
+            // Check the actual checkbox state
+            const isGlobal = document.getElementById('fmvOffsetGlobal')?.checked !== false;
             
-            if (fmvOffsetGlobal || !gameId) {
-                // Global mode - adjust the global offset
+            if (isGlobal) {
+                // Global mode - adjust the global offset and update all buttons
                 const input = document.getElementById('fmvOffsetInput');
                 if (input) {
                     const current = parseInt(input.value) || fmvOffset;
                     const newValue = Math.max(0, Math.min(10, current + delta));
                     input.value = newValue;
                     fmvOffset = newValue;
-                    renderGames();
+                    // Update all FMV buttons
+                    document.querySelectorAll('.fmv-stagger-btn').forEach(btn => {
+                        btn.textContent = `-${newValue}¢`;
+                    });
                 }
-            } else {
-                // Per-game mode - adjust this game's offset only
-                const current = gameFmvOffsets[gameId] ?? fmvOffset;
+            } else if (gameId) {
+                // Per-game mode - adjust only this game's offset
+                if (gameFmvOffsets[gameId] === undefined) {
+                    gameFmvOffsets[gameId] = fmvOffset;
+                }
+                const current = gameFmvOffsets[gameId];
                 const newValue = Math.max(0, Math.min(10, current + delta));
                 gameFmvOffsets[gameId] = newValue;
-                // Only update this game's buttons, not full re-render
-                updateGameFmvButtons(gameId);
+                
+                // Update only this game's FMV buttons (both YES and NO sides, both home and away panels)
+                document.querySelectorAll('.fmv-stagger-btn').forEach(btn => {
+                    const onclick = btn.getAttribute('onclick') || '';
+                    if (onclick.includes(`'${gameId}'`)) {
+                        btn.textContent = `-${newValue}¢`;
+                    }
+                });
             }
-        }
-        
-        // Update just the FMV buttons for a specific game without full re-render
-        function updateGameFmvButtons(gameId) {
-            const offset = gameFmvOffsets[gameId] ?? fmvOffset;
-            // Find all fmv-stagger-btn elements for this game and update their text
-            document.querySelectorAll(`[onclick*="'${gameId}'"].fmv-stagger-btn`).forEach(btn => {
-                btn.textContent = `-${offset}¢`;
-            });
         }
         
         // Get the FMV offset for a specific game
         function getGameFmvOffset(gameId) {
-            if (fmvOffsetGlobal) {
+            const isGlobal = document.getElementById('fmvOffsetGlobal')?.checked !== false;
+            if (isGlobal) {
                 return parseInt(document.getElementById('fmvOffsetInput')?.value) || fmvOffset;
             }
             return gameFmvOffsets[gameId] ?? fmvOffset;
@@ -3317,44 +3322,32 @@
         // Update global FMV offset (from settings input)
         function updateGlobalFmvOffset(value) {
             fmvOffset = value;
-            if (fmvOffsetGlobal) {
-                renderGames();
+            const isGlobal = document.getElementById('fmvOffsetGlobal')?.checked !== false;
+            if (isGlobal) {
+                // Update all FMV buttons
+                document.querySelectorAll('.fmv-stagger-btn').forEach(btn => {
+                    btn.textContent = `-${value}¢`;
+                });
             }
         }
         
         // Toggle between global and per-game FMV offset mode
-        let toggleDebounce = false;
         function toggleGlobalFmvOffset(isGlobal) {
-            if (toggleDebounce) return;
-            toggleDebounce = true;
-            
-            console.log('toggleGlobalFmvOffset:', isGlobal);
             fmvOffsetGlobal = isGlobal;
             if (isGlobal) {
-                // When switching to global, clear per-game offsets
+                // When switching to global, update all buttons to show global offset
+                const globalOffset = parseInt(document.getElementById('fmvOffsetInput')?.value) || fmvOffset;
+                document.querySelectorAll('.fmv-stagger-btn').forEach(btn => {
+                    btn.textContent = `-${globalOffset}¢`;
+                });
                 gameFmvOffsets = {};
             } else {
                 // When switching to per-game, initialize all games with current global offset
+                const globalOffset = parseInt(document.getElementById('fmvOffsetInput')?.value) || fmvOffset;
                 games.forEach(g => {
-                    gameFmvOffsets[g.id] = fmvOffset;
+                    gameFmvOffsets[g.id] = globalOffset;
                 });
-                console.log('Initialized gameFmvOffsets:', gameFmvOffsets);
             }
-            
-            // Update button text without full re-render
-            document.querySelectorAll('.fmv-stagger-btn').forEach(btn => {
-                const onclick = btn.getAttribute('onclick');
-                if (onclick) {
-                    const match = onclick.match(/fmvStaggerPrices\('(?:yes|no)',\s*'([^']+)'/);
-                    if (match) {
-                        const gameId = match[1];
-                        const offset = isGlobal ? fmvOffset : (gameFmvOffsets[gameId] ?? fmvOffset);
-                        btn.textContent = `-${offset}¢`;
-                    }
-                }
-            });
-            
-            setTimeout(() => { toggleDebounce = false; }, 100);
         }
         
         // FMV Stagger: Fill all prices starting from FMV - offset, staggering by 1¢
