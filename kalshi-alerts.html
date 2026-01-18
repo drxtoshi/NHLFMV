@@ -3275,15 +3275,10 @@
         
         // Adjust FMV offset on the fly (global or per-game)
         function adjustFmvOffset(delta, gameId = null) {
-            // Check checkbox state directly to ensure we have current value
-            const checkbox = document.getElementById('fmvOffsetGlobal');
-            const isGlobal = checkbox ? checkbox.checked : true;
+            console.log('adjustFmvOffset:', { delta, gameId, fmvOffsetGlobal, gameFmvOffsets });
             
-            console.log('adjustFmvOffset called:', { delta, gameId, isGlobal, checkboxExists: !!checkbox, checkboxChecked: checkbox?.checked });
-            
-            if (isGlobal || !gameId) {
+            if (fmvOffsetGlobal || !gameId) {
                 // Global mode - adjust the global offset
-                console.log('Using GLOBAL mode');
                 const input = document.getElementById('fmvOffsetInput');
                 if (input) {
                     const current = parseInt(input.value) || fmvOffset;
@@ -3293,22 +3288,27 @@
                     renderGames();
                 }
             } else {
-                // Per-game mode - adjust this game's offset
-                console.log('Using PER-GAME mode for game:', gameId);
+                // Per-game mode - adjust this game's offset only
                 const current = gameFmvOffsets[gameId] ?? fmvOffset;
                 const newValue = Math.max(0, Math.min(10, current + delta));
                 gameFmvOffsets[gameId] = newValue;
-                console.log('Updated gameFmvOffsets:', gameFmvOffsets);
-                renderGames();
+                // Only update this game's buttons, not full re-render
+                updateGameFmvButtons(gameId);
             }
+        }
+        
+        // Update just the FMV buttons for a specific game without full re-render
+        function updateGameFmvButtons(gameId) {
+            const offset = gameFmvOffsets[gameId] ?? fmvOffset;
+            // Find all fmv-stagger-btn elements for this game and update their text
+            document.querySelectorAll(`[onclick*="'${gameId}'"].fmv-stagger-btn`).forEach(btn => {
+                btn.textContent = `-${offset}¢`;
+            });
         }
         
         // Get the FMV offset for a specific game
         function getGameFmvOffset(gameId) {
-            // Check checkbox state directly
-            const isGlobal = document.getElementById('fmvOffsetGlobal')?.checked ?? true;
-            
-            if (isGlobal) {
+            if (fmvOffsetGlobal) {
                 return parseInt(document.getElementById('fmvOffsetInput')?.value) || fmvOffset;
             }
             return gameFmvOffsets[gameId] ?? fmvOffset;
@@ -3317,23 +3317,24 @@
         // Update global FMV offset (from settings input)
         function updateGlobalFmvOffset(value) {
             fmvOffset = value;
-            const isGlobal = document.getElementById('fmvOffsetGlobal')?.checked ?? true;
-            if (isGlobal) {
+            if (fmvOffsetGlobal) {
                 renderGames();
             }
         }
         
         // Toggle between global and per-game FMV offset mode
         function toggleGlobalFmvOffset(isGlobal) {
+            console.log('toggleGlobalFmvOffset:', isGlobal);
             fmvOffsetGlobal = isGlobal;
             if (isGlobal) {
-                // When switching to global, apply global offset to all games
+                // When switching to global, clear per-game offsets
                 gameFmvOffsets = {};
             } else {
                 // When switching to per-game, initialize all games with current global offset
                 games.forEach(g => {
                     gameFmvOffsets[g.id] = fmvOffset;
                 });
+                console.log('Initialized gameFmvOffsets:', gameFmvOffsets);
             }
             renderGames();
         }
